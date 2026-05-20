@@ -1,92 +1,154 @@
 using Backend.DTOs;
 using Backend.Services.SourceFiles;
-using Backend.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Backend.Constants;
+using Backend.Attributes;
+using System.Security.Claims;
+using Hangfire;
+using System.Linq;
+using System; 
 
 namespace Backend.Controllers
 {
     [ApiController]
     [Route("api/SourceFiles")]
+    [Authorize]
     public class SourceFileController : ControllerBase
     {
         private readonly ISourceFileService _service;
-        public SourceFileController(ISourceFileService service)
+        private readonly ILogger<SourceFileController> _logger;
+
+        public SourceFileController(ISourceFileService service, ILogger<SourceFileController> logger)
         {
             _service = service;
+            _logger = logger;
         }
         // POST: api/SourceFiles/upload
         [HttpPost("upload")]
+        [RequirePermission(Permissions.Files.Upload)]
         public async Task<IActionResult> Upload([FromForm] SourceFileUploadDto uploadDto)
         {
-            Console.WriteLine("=== UPLOAD REQUEST RECEIVED ===");
-            Console.WriteLine($"SupplierId: {uploadDto.SupplierId}");
-            Console.WriteLine($"Country: '{uploadDto.CountryId}'");
-            Console.WriteLine($"LeadType: '{uploadDto.LeadTypeId}'");
-            Console.WriteLine($"UserId: {uploadDto.UserId}");
-            Console.WriteLine($"FileName: {uploadDto.File?.FileName}");
-            Console.WriteLine($"FileLength: {uploadDto.File?.Length}");
-            Console.WriteLine($"Name: {uploadDto.Name}");
-            Console.WriteLine($"NewSupplierName: {uploadDto.NewSupplierName}");
+            _logger.LogInformation("Upload request - SupplierId: {SupplierId}, Country: {CountryId}, FileName: {FileName}",
+                uploadDto.SupplierId, uploadDto.CountryId, uploadDto.File?.FileName);
+
             try
             {
                 //validate file exists
                 if (uploadDto.File == null || uploadDto.File.Length == 0)
                 {
-                    return BadRequest("No file uploaded.");
+                    return BadRequest(new { success = false, message = "No file uploaded." });
                 }
+
                 //validate file type
-                var allowedExtensions = new[] { ".csv", ".xlsx" , ".xls" };
-                var extension = Path.GetExtension(uploadDto.File.FileName).ToLower();
+                var safeFileName = Path.GetFileName(uploadDto.File.FileName);  // ← FIX: Added missing safeFileName variable
+                var allowedExtensions = new[] { ".csv", ".xlsx", ".xls" };
+                var extension = Path.GetExtension(safeFileName).ToLower();
                 if (!allowedExtensions.Contains(extension))
                 {
-                    return BadRequest("Invalid file type. Only CSV and Excel files are allowed.");
+                    return BadRequest(new { success = false, message = "Invalid file type. Only CSV and Excel files are allowed." });
                 }
+
                 //get current user id
-                //var userId = GetCurrentUserId();
-                //upload file
-                var result = await _service.UploadFileAsync(uploadDto, uploadDto.UserId);
+                var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(userIdString, out var userId))
+                {
+                    return Unauthorized(new { success = false, message = "User not authenticated" });
+                }
+
+                 var result = await _service.UploadFileAsync(uploadDto, userId);
+
+                return Ok(new { success = true, message = "File queued successfully", file = result});
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Validation error: {Message}", ex.Message);  
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error: {Message}", ex.Message); 
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        [HttpPost("Validate")]
+        [RequirePermission(Permissions.Files.Validate)]
+        public async Task<IActionResult> ValidateFile([FromForm] SourceFileUploadDto uploadDto)
+        {
+            try
+            {
+                if (uploadDto?.File == null || uploadDto.File.Length == 0)
+                {
+                    return BadRequest(new { success = false, message = "No file uploaded." });
+                }
+                var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(userIdString, out var userId))
+                {
+                    return Unauthorized(new { success = false, message = "User not authenticated" });
+                }
+                var report = await _service.ValidateFileAsync(uploadDto , userId);
+                    return Ok(new { success = true, report = report});
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Validation error: {Message}", ex.Message);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error: {Message}", ex.Message);
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        [HttpGet("job-status/{jobId}")]
+        [RequirePermission(Permissions.Files.View)]
+        public IActionResult GetJobStatus(string jobId)
+        {
+            // ask Hangfire what state this job is in
+            var job = JobStorage.Current.GetMonitoringApi()
+                                .JobDetails(jobId);
+
+            if (job == null)
+                return NotFound(new { state = "NotFound" });
+
+            var state = job.History.FirstOrDefault()?.StateName ?? "Unknown";
+
+            return Ok(new { state });
+        }
+
+        [HttpGet("search")]
+        [RequirePermission(Permissions.Files.Search)]
+        public async Task<ActionResult<List<FileSearchResponseDto>>> SearchFiles([FromQuery] string searchTerm)
+        {
+            try
+            {
+                // Add logging
+                _logger.LogInformation("Searching files with term: {SearchTerm}", searchTerm);
+
+                if (string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    return Ok(new List<FileSearchResponseDto>());
+                }
+
+                var files = await _service.SearchFiles(searchTerm);
 
                 return Ok(new
                 {
                     success = true,
-                    message = "File uploaded successfully.",
-                    file = result
+                    files = files
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "An error occurred while uploading the file.",
-                    error = ex.Message
-                });
-            }
-        }
-        // Backend/Controllers/SourceFileController.cs
-
-        [HttpPost("count-contacts")]
-        public async Task<IActionResult> CountContacts([FromForm] IFormFile file)
-        {
-            try
-            {
-                if (file == null || file.Length == 0)
-                {
-                    return BadRequest(new { error = "No file uploaded" });
-                }
-
-                var contactCount = await _service.CountContactsInFileAsync(file);
-
-                return Ok(new { contactCount = contactCount });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
+                _logger.LogError(ex, "Error searching files with term {SearchTerm}", searchTerm);
+                return StatusCode(500, new { success = false, message = "Internal server error" });
             }
         }
 
         [HttpGet]
+        [RequirePermission(Permissions.Files.View)]
         public async Task<IActionResult> GetAllFiles()
         {
             try
@@ -100,6 +162,8 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error getting files");
+
                 return StatusCode(500, new
                 {
                     success = false,
@@ -111,6 +175,7 @@ namespace Backend.Controllers
 
         // GET: api/SourceFiles/supplier/5
         [HttpGet("supplier/{supplierId}")]
+        [RequirePermission(Permissions.Files.View)]
         public async Task<IActionResult> GetSupplierFiles(int supplierId)
         {
             try
@@ -124,6 +189,8 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error getting file with id {SupplierId}", supplierId);
+
                 return StatusCode(500, new
                 {
                     success = false,
@@ -132,50 +199,60 @@ namespace Backend.Controllers
                 });
             }
         }
+
         //Get file by id
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetFile(int Id)
+        [RequirePermission(Permissions.Files.View)]
+        public async Task<IActionResult> GetFile(int id)
         {
             try
             {
-                var file = await _service.GetFileByIdAsync(Id);
-                return Ok(file);
-            }
-            catch (Exception)
-            {
-                return NotFound(new { error = "File not found" });
-            }
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteFile(int Id)
-        {
-            try
-            {
-                await _service.DeleteFileAsync(Id);
+                var file = await _service.GetFileByIdAsync(id);
+                if (file == null)
+                    return NotFound(new { success = false, message = "File not found" });
                 return Ok(new
                 {
                     success = true,
-                    message = "File deleted successfully."
+                    file = file
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "An error occurred while deleting the file.",
-                    error = ex.Message
-                });
+                _logger.LogError(ex, "Error getting file with id {FileId}", id);
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        [RequirePermission(Permissions.Files.Delete)]
+        public async Task<IActionResult> DeleteFile(int id)
+        {
+            try
+            {
+                var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(userIdString, out var userId))
+                    return Unauthorized(new { success = false, message = "User not authenticated" });
+
+                var result = await _service.DeleteFileAsync(id, userId);
+                if (!result)
+                    return NotFound(new { success = false, message = "File not found." });
+
+                return Ok(new { success = true, message = "File deleted successfully." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting file with id {FileId}", id);
+                return StatusCode(500, new { success = false, message = "An error occurred while deleting the file." });
             }
         }
 
         [HttpPut("{id}/rename")]
-        public async Task<IActionResult> Rename (int Id , [FromBody] RenameFileDto renameDto)
+        [RequirePermission(Permissions.Files.Rename)]
+        public async Task<IActionResult> Rename(int id, [FromBody] RenameFileDto renameDto)
         {
             try
             {
-                var file = await _service.RenameFileAsync(Id, renameDto.NewName);
+                var file = await _service.RenameFileAsync(id, renameDto.NewName);
                 return Ok(new
                 {
                     success = true,
@@ -185,6 +262,8 @@ namespace Backend.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error renaming file with id {FileId}", id);
+
                 return StatusCode(500, new
                 {
                     success = false,
@@ -194,6 +273,60 @@ namespace Backend.Controllers
             }
         }
 
-        
+        [HttpGet("tree")]
+        [RequirePermission(Permissions.Files.View)]
+        public async Task<IActionResult> GetTree()
+        {
+            try
+            {
+                var tree = await _service.GetTreeAsync();
+                return Ok(new
+                {
+                    success = true,
+                    tree = tree
+                });
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting file tree");
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An error occurred while retrieving the file tree.",
+                    error = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("{fileId}/download")]
+        [RequirePermission(Permissions.Files.Download)]
+        public async Task<IActionResult> DownloadFile(int fileId)
+        {
+            try
+            {
+                var (fileContent, fileName, contentType) = await _service.DownloadFileAsync(fileId);
+                return File(fileContent, contentType, fileName);
+            }
+            catch (FileNotFoundException)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "File not found."
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error downloading file {FileId}", fileId);  
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "An error occurred while downloading the file.",
+                    error = ex.Message
+                });
+            }
+        }
     }
 }

@@ -1,11 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
-using Backend.Models;
 using Backend.Entities;
 using Backend.DTOs.Auth;
 namespace Backend.Services.Auth;
 
-public class AuthService
+public class AuthService: IAuthService  
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly JwtTokenGenerator _jwtTokenGenerator;
@@ -24,7 +23,9 @@ public class AuthService
     // ---------------- LOGIN ----------------
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
     {
-        var allUsers = await _dbContext.Users.ToListAsync();
+        var allUsers = await _dbContext.Users
+            .Include(u => u.Role) // Include roles for better debugging
+            .ToListAsync();
         Console.WriteLine($"Total users in DB: {allUsers.Count}");
         foreach (var u in allUsers)
         {
@@ -32,12 +33,21 @@ public class AuthService
         }
 
         var user = await _dbContext.Users
-        .FirstOrDefaultAsync(u => u.Email == request.Email);
+            .FirstOrDefaultAsync(u => u.Email == request.Email);
 
-        if (user == null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
+        // Verify password
+        bool isValid = _passwordHasher.VerifyPassword(request.Password, user.PasswordHash);
+        Console.WriteLine($"7. Password verification result: {isValid}");
+
+        if (!isValid)
+        {
+            Console.WriteLine("8. ❌ Password mismatch!");
             throw new Exception("Invalid email or password");
+        }
 
-        var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
+
+        // ✅ FIXED - Added await
+        var accessToken = await _jwtTokenGenerator.GenerateAccessToken(user);
         var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
 
         user.RefreshToken = refreshToken;
@@ -70,19 +80,46 @@ public class AuthService
         if (await _dbContext.Users.AnyAsync(u => u.Email == request.Email))
             throw new InvalidOperationException("Email already registered");
 
+        // ✅ FIX: Get the existing role from database, don't use request.Role directly
+        Role existingRole = null;
+
+        if (request.Role != null && request.Role.Id > 0)
+        {
+            // Fetch the role from database (ATTACHED to context)
+            existingRole = await _dbContext.Roles
+                .FirstOrDefaultAsync(r => r.Id == request.Role.Id);
+        }
+
+        // If role not found, get default role (e.g., "Agent")
+        if (existingRole == null)
+        {
+            existingRole = await _dbContext.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Agent");
+        }
+
+        if (existingRole == null)
+        {
+            throw new InvalidOperationException("No valid role found. Please ensure roles exist in database.");
+        }
+
         var user = new User
         {
             FirstName = request.FirstName,
             LastName = request.LastName,
             Email = request.Email,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
-            Role = request.Role,
+            RoleId = existingRole.Id,  // ✅ Use RoleId, not Role object
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
 
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync();
+
+        // Load the role for the response
+        await _dbContext.Entry(user)
+            .Reference(u => u.Role)
+            .LoadAsync();
 
         return new UserDto
         {
@@ -95,6 +132,22 @@ public class AuthService
         };
     }
 
+    public async Task<UserDto> GetUserByIdAsync(int id)
+    {
+        var user = await _dbContext.Users.FindAsync(id);
+        if (user == null)
+            throw new KeyNotFoundException($"User with ID {id} not found");
+
+        return new UserDto
+        {
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Role = user.Role,
+            Avatar = user.Avatar
+        };
+    }
     // ---------------- GET CURRENT USER ----------------
     public async Task<UserDto> GetCurrentUserAsync(int userId)
     {
@@ -122,7 +175,8 @@ public class AuthService
         if (user == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
             throw new Exception("Invalid or expired refresh token");
 
-        var newAccessToken = _jwtTokenGenerator.GenerateAccessToken(user);
+        // ✅ FIXED - Added await
+        var newAccessToken = await _jwtTokenGenerator.GenerateAccessToken(user);
         var newRefreshToken = _jwtTokenGenerator.GenerateRefreshToken();
 
         user.RefreshToken = newRefreshToken;

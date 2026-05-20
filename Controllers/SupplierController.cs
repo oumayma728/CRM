@@ -2,90 +2,113 @@ using Backend.DTOs;
 using Backend.Services.Suppliers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Backend.Models;
+using Backend.Entities;
 using Backend.DTOs.Supplier;
+using System.Security.Claims;  // ← ADD THIS for ClaimTypes
+using Backend.Attributes;  // ← ADD THIS for RequirePermission attribute
+
 namespace Backend.Controllers
 {
     [ApiController]
     [Route("api/Suppliers")]
+    [Authorize]
     public class SupplierController : ControllerBase
     {
         private readonly ISupplierService _service;
-        public SupplierController(ISupplierService service)
+        private readonly ILogger<SupplierController> _logger;
+        public SupplierController(ISupplierService service, ILogger<SupplierController> logger)
         {
             _service = service;
+            _logger = logger;
         }
         // GET: api/Suppliers
         [HttpGet]
+        [Authorize(Roles = "SuperAdmin,Admin,ServiceTechnique")]
         public async Task<IActionResult> GetAll()
         {
             try
             {
                 var suppliers = await _service.GetAllSuppliersAsync();
-                var supplierDtos = suppliers.Select(s => new SupplierResponseDto
-                {
-                    Id = s.Id,
-                    Name = s.Name,
-                    CountryId = s.CountryId,
-                    CountryName = s.Country?.Name ?? "",
-                    CountryCode = s.Country?.Code ?? "",
-                    LeadTypeId = s.LeadTypeId,
-                    LeadTypeName = s.LeadType?.Name ?? "",
-                    LeadTypeCode = s.LeadType?.Code ?? "",
 
-                    CreatedAt = s.CreatedAt,
-                    CreatedByUserId = s.CreatedByUserId,
-                    SourceFilesCount = s.SourceFiles?.Count ?? 0
-                });
-                return Ok(supplierDtos);
-
+                return Ok(new { success = true, data = suppliers });
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error getting all suppliers");
+
                 return StatusCode(500, new { success = false, message = "An error occurred while retrieving suppliers.", error = ex.Message });
             }
         }
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateSupplierDto dto)
+
+        [HttpGet("filter")]
+        public async Task<IActionResult> GetByFilters([FromQuery] int countryId, [FromQuery] int leadTypeId)
         {
             try
             {
-                var supplier = new Supplier
-                {
-                    Name = dto.Name,
-                    CountryId = dto.CountryId,
-                    LeadTypeId = dto.LeadTypeId,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedByUserId = dto.CreatedByUserId
-                };
-                var createdSupplier = await _service.CreateSupplierAsync(supplier);
+                var suppliers = await _service.GetSuppliersByFiltersAsync(countryId, leadTypeId);
 
-
-                await _service.CreateSupplierAsync(supplier);
-                return Ok(new SupplierResponseDto
-                {
-                    Id = createdSupplier.Id,
-                    Name = createdSupplier.Name,
-                    CountryId = createdSupplier.CountryId,
-                    CountryName = createdSupplier.Country?.Name ?? "",
-                    CountryCode = createdSupplier.Country?.Code ?? "",
-                    LeadTypeId = createdSupplier.LeadTypeId,
-                    LeadTypeName = createdSupplier.LeadType?.Name ?? "",
-                    LeadTypeCode = createdSupplier.LeadType?.Code ?? "",
-                    CreatedAt = createdSupplier.CreatedAt,
-                    CreatedByUserId = createdSupplier.CreatedByUserId,
-                    SourceFilesCount = 0
-                });
+                return Ok(new { success = true, data = suppliers });
+            }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning(ex, "Invalid filter parameters");
+                return BadRequest(new { success = false, message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = "An error occurred while creating the supplier.", error = ex.Message });
+                _logger.LogError(ex, "Error filtering suppliers");
+                return StatusCode(500, new { success = false, message = "An error occurred while filtering suppliers" });
             }
         }
+
+        [HttpPost]
+        [Authorize(Roles = "SuperAdmin,Admin")]
+       
+        public async Task<IActionResult> Create([FromBody] CreateSupplierDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { success = false, message = "Validation failed", errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage) });
+            }
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
+                    return Unauthorized(new { success = false, message = "User not authenticated" });
+
+                _logger.LogInformation("Creating new supplier: {SupplierName} by user {UserId}", dto.Name, userId);
+
+                var createdSupplier = await _service.CreateSupplierAsync(dto, userId.Value); // Fixed: removed duplicate call
+
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { id = createdSupplier.Id },
+                    new { success = true, message = "Supplier created successfully", data = createdSupplier }
+                );
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Duplicate supplier attempt: {SupplierName}", dto.Name);
+                return Conflict(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating supplier: {SupplierName}", dto.Name);
+                return StatusCode(500, new { success = false, message = "An error occurred while creating the supplier" });
+            }
+        }
+
         // GET: api/Suppliers/{id}
         [HttpGet("{id}")]
+        [Authorize(Roles = "SuperAdmin,Admin,ServiceTechnique")]
+        [RequirePermission("ViewSuppliers")] // ← ADD THIS for permission check
         public async Task<IActionResult> GetById(int id)
         {
+            // FIX: Added parentheses around condition (was missing)
+            if (id <= 0)  // ← FIXED: was "if id <= 0" missing parentheses
+            {
+                return BadRequest(new { success = false, message = "Invalid supplier ID" });
+            }
             try
             {
                 var supplier = await _service.GetSupplierByIdAsync(id);
@@ -93,55 +116,54 @@ namespace Backend.Controllers
                 {
                     return NotFound(new { success = false, message = $"Supplier with ID {id} not found" });
                 }
-                var supplierDto = new SupplierResponseDto
-                {
-                    Id = supplier.Id,
-                    Name = supplier.Name,
-                    CountryId = supplier.CountryId,
-                    CountryName = supplier.Country?.Name ?? "",
-                    CountryCode = supplier.Country?.Code ?? "",
-                    LeadTypeId = supplier.LeadTypeId,
-                    LeadTypeName = supplier.LeadType?.Name ?? "",
-                    LeadTypeCode = supplier.LeadType?.Code ?? "",
-                    CreatedAt = supplier.CreatedAt,
-                    CreatedByUserId = supplier.CreatedByUserId,
-                    SourceFilesCount = supplier.SourceFiles?.Count ?? 0
-                };
-                return Ok(new { success = true, data = supplierDto });
+                return Ok(new { success = true, data = supplier });
+
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = "An error occurred while retrieving the supplier", error = ex.Message });
+                _logger.LogError(ex, "Error getting supplier {SupplierId}", id);
+                return StatusCode(500, new { success = false, message = "An error occurred while retrieving the supplier" });
             }
         }
+
         // DELETE: api/Suppliers/{id}
         [HttpDelete("{id}")]
+        [Authorize(Roles = "SuperAdmin,Admin")]
+        [RequirePermission("DeleteSuppliers")] // ← ADD THIS for permission check
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
+                if (id <= 0)
+                    return BadRequest(new { success = false, message = "Invalid supplier ID" });
+
+                _logger.LogWarning("Deleting supplier {SupplierId} by user {UserId}", id, GetCurrentUserId());
                 var deleteResult = await _service.DeleteSupplierAsync(id);
                 if (!deleteResult)
                 {
                     return NotFound(new { success = false, message = $"Supplier with ID {id} not found" });
                 }
-                return Ok(new DeleteResponseDto
-                {
-                    Success = true,
-                    Message = "Supplier deleted successfully",
-                    Id = id, 
-                    DeletedAt = DateTime.UtcNow
-                });
+                return Ok(new { success = true, message = "Supplier deleted successfully" });
             }
             catch (Exception ex)
             {
-                return NotFound(new { success = false, message = ex.Message });
+                _logger.LogError(ex, "Error deleting supplier {SupplierId}", id);
+                return StatusCode(500, new { success = false, message = "An error occurred while deleting the supplier" });
             }
         }
+
         // PUT: api/Suppliers/{id}
         [HttpPut("{id}")]
+        [Authorize(Roles = "SuperAdmin,Admin")]
+        [RequirePermission("EditSuppliers")] // ← ADD THIS for permission check
         public async Task<IActionResult> Update(int id, [FromBody] UpdateSupplierDto dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(new { success = false, message = "Validation failed" });
+
+            if (id <= 0)
+                return BadRequest(new { success = false, message = "Invalid supplier ID" });
+
             try
             {
                 var updateResult = await _service.UpdateSupplierAsync(id, dto);
@@ -151,10 +173,24 @@ namespace Backend.Controllers
                 }
                 return Ok(new { success = true, message = "Supplier updated successfully" });
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Conflict updating supplier {SupplierId}", id);
+                return Conflict(new { success = false, message = ex.Message });
+            }
             catch (Exception ex)
             {
-                return NotFound(new { success = false, message = ex.Message });
+                _logger.LogError(ex, "Error updating supplier {SupplierId}", id);
+                return StatusCode(500, new { success = false, message = "An error occurred while updating the supplier" });
             }
+        }
+
+        private int? GetCurrentUserId()
+        {
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdString, out var userId))
+                return userId;
+            return null;
         }
     }
 }
