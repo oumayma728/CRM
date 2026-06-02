@@ -64,11 +64,6 @@ namespace Backend.Constants
             public const string Confirm = "Appointments.Confirm";             // Confirmatrice actions
             public const string Assign = "Appointments.Assign";               // Assign to Commercial
         }
-        public static class Roles
-        {
-            public const string View = "Roles.View";
-            public const string Manage = "Roles.Manage";          // Only SuperAdmin
-        }
 
         // ====================== STATISTICS ======================
         public static class Statistics
