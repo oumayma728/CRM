@@ -99,12 +99,65 @@ namespace Backend.Entities
 
         // Tracking
         [Column("assigned_at")]
-        public DateTime AssignedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? AssignedAt { get; set; } = DateTime.UtcNow;
 
         [Column("qualified_at")]
         public DateTime? QualifiedAt { get; set; }
 
         [Column("completed_at")]
         public DateTime? CompletedAt { get; set; }
+
+        [Column("projet")]
+        public string? Projet { get; set; }
+        //fiche de clients
+        [Column("proprietaire_depuis")]
+        public int? ProprietaireDepuis { get; set; }
+
+        [Column("mode_chauffage")]
+        [MaxLength(50)]
+        public string? ModeChauffage { get; set; }
+
+        [Column("consommation_chauffage")]
+        [MaxLength(50)]
+        public string? ConsommationChauffage { get; set; }
+
+        [Column("age_chaudiere")]
+        public int? AgeChaudiere { get; set; }
+
+        [Column("equipe_pv")]
+        public bool? EquipePV { get; set; }
+
+        [Column("equipe_pac")]
+        public bool? EquipePAC { get; set; }
+
+        [Column("etat_toiture")]
+        [MaxLength(50)]
+        public string? EtatToiture { get; set; }
+
+        [Column("etat_isolation")]
+        [MaxLength(50)]
+        public string? EtatIsolation { get; set; }
+
+        [Column("nbre_personnes")]
+        public int? NbrePersonnes { get; set; }
+
+        [Column("profession_mr")]
+        [MaxLength(100)]
+        public string? ProfessionMr { get; set; }
+
+        [Column("profession_mme")]
+        [MaxLength(100)]
+        public string? ProfessionMme { get; set; }
+
+        [Column("revenus")]
+        [MaxLength(50)]
+        public string? Revenus { get; set; }
+
+        [Column("credits")]
+        public bool? Credits { get; set; }
+
+        [Column("fichage")]
+        public bool? Fichage { get; set; }
+
     }
 }
