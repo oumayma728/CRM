@@ -19,8 +19,7 @@ namespace Backend.Entities
         [Column("email")]       // ← ADD THIS
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
-        [Column("type_contrat")]
-        public string? TypeContrat { get; set; }
+  
         [Column("PasswordHash")]  // ← ADD THIS
         public string PasswordHash { get; set; } = string.Empty;
 
@@ -33,29 +32,43 @@ namespace Backend.Entities
         [Column("phone")]       // ← ADD THIS
         public string? Phone { get; set; }
 
-        [Column("is_active")]   // ← ADD THIS
+        [Column("is_active")]  
         public bool IsActive { get; set; } = true;
-        [Column("is_online")]   // ← ADD THIS
+        [Column("is_online")]  
         public bool IsOnline { get; set; } = true;
-        [Column("is_deleted")]  // ← ADD THIS
+        [Column("is_deleted")]  
         public bool IsDeleted { get; set; } = false;
 
-        [Column("refresh_token")]  // ← ADD THIS
+        [Column("refresh_token")]  
         public string? RefreshToken { get; set; }
 
-        [Column("refresh_token_expiry_time")]  // ← ADD THIS
+        [Column("refresh_token_expiry_time")] 
         public DateTime? RefreshTokenExpiryTime { get; set; }
+        [Column("password_reset_token")]
+        public string? PasswordResetToken { get; set; }
 
-        [Column("created_at")]   // ← ADD THIS
+        [Column("password_reset_token_expiry")]
+        public DateTime? PasswordResetTokenExpiry { get; set; }
+        [Column("created_at")]  
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        [Column("updated_at")]   // ← ADD THIS
+        [Column("updated_at")]  
         public DateTime? UpdatedAt { get; set; }
 
-        [Column("last_login_at")]  // ← ADD THIS
+        [Column("last_login_at")]  
         public DateTime? LastLoginAt { get; set; }
 
         [ForeignKey("RoleId")]
         public Role Role { get; set; } = null!;
+        [Column("must_change_password")]
+        public bool MustChangePassword { get; set; } = false;
+
+        [Column("password_reset_by_user_id")]
+        public int? PasswordResetByUserId { get; set; }
+        [ForeignKey("PasswordResetByUserId")]
+        public User? PasswordResetBy { get; set; }
+        public AgentProfile? AgentProfile { get; set; }
+        public ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
+
     }
 }
