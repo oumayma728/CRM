@@ -1,0 +1,201 @@
+using Microsoft.EntityFrameworkCore;
+using Backend.Entities;
+
+namespace Backend.Data;
+
+public class ApplicationDbContext : DbContext
+{
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+
+    // ─── MY EXISTING DbSets (TPH CRM) ────────────────────────────────────────
+    public DbSet<Agent> Agents => Set<Agent>();
+    public DbSet<Commercial> Commerciaux => Set<Commercial>();
+    public DbSet<Contact> Contacts => Set<Contact>();
+    public DbSet<Appel> Appels => Set<Appel>();
+    public DbSet<RendezVous> RendezVous => Set<RendezVous>();
+    public DbSet<Performance> Performances => Set<Performance>();
+    public DbSet<Pointage> Pointages => Set<Pointage>();
+    public DbSet<Agenda> Agendas => Set<Agenda>();
+    public DbSet<FichierImport> FichiersImport => Set<FichierImport>();
+    public DbSet<Conge> Conges => Set<Conge>();
+    public DbSet<Confirmatrice> Confirmatrices => Set<Confirmatrice>();
+
+    // ─── COLLEAGUE'S DbSets (Supplier/Campaign system) ───────────────────────
+    public DbSet<User> Users { get; set; }
+    public DbSet<Role> Roles { get; set; }
+    public DbSet<Permission> Permissions { get; set; }
+    public DbSet<RolePermission> RolePermissions { get; set; }
+    public DbSet<UserPermission> UserPermissions { get; set; }
+    public DbSet<Supplier> Suppliers { get; set; }
+    public DbSet<Country> Countries { get; set; }
+    public DbSet<LeadType> LeadTypes { get; set; }
+    public DbSet<SourceFile> SourceFiles { get; set; }
+    public DbSet<SourceFileContact> SourceFileContacts { get; set; }
+    public DbSet<SourceFileInvalidRow> SourceFileInvalidRows { get; set; }
+    public DbSet<ImportJob> ImportJobs { get; set; }
+    public DbSet<Campaign> Campaigns { get; set; }
+    public DbSet<CampaignFile> CampaignFiles { get; set; }
+    public DbSet<CampaignFileContact> CampaignFileContacts { get; set; }
+    public DbSet<CampaignAgents> CampaignAgents { get; set; }
+    public DbSet<CallAttempt> CallAttempts { get; set; }
+    public DbSet<AgentProfile> AgentProfiles { get; set; }
+    public DbSet<DistributedContact> DistributedContacts { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // ─── MY EXISTING: Héritage TPH ────────────────────────────────────────
+        modelBuilder.Entity<Utilisateur>()
+            .HasDiscriminator<string>("Role")
+            .HasValue<Agent>("AGENT")
+            .HasValue<Commercial>("COMMERCIAL")
+            .HasValue<Admin>("ADMIN")
+            .HasValue<Confirmatrice>("CONFIRMATRICE");
+        
+        modelBuilder.Entity<Confirmatrice>()
+            .Property(c => c.Type)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<Agent>(entity =>
+        {
+            entity.Property(a => a.TypeContrat).HasConversion<string>();
+            entity.HasOne(a => a.Agenda).WithOne(ag => ag.Agent)
+                .HasForeignKey<Agenda>(ag => ag.AgentId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(a => a.Contacts).WithOne(c => c.Agent)
+                .HasForeignKey(c => c.AgentId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasMany(a => a.Appels).WithOne(ap => ap.Agent)
+                .HasForeignKey(ap => ap.AgentId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(a => a.RendezVous).WithOne(r => r.Agent)
+                .HasForeignKey(r => r.AgentId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasMany(a => a.Performances).WithOne(p => p.Agent)
+                .HasForeignKey(p => p.AgentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ─── COLLEAGUE'S: RolePermission (composite key) ─────────────────────
+        modelBuilder.Entity<RolePermission>()
+            .HasKey(rp => new { rp.RoleId, rp.PermissionId });
+
+        modelBuilder.Entity<RolePermission>()
+            .HasOne(rp => rp.Role)
+            .WithMany(r => r.RolePermissions)
+            .HasForeignKey(rp => rp.RoleId);
+
+        modelBuilder.Entity<RolePermission>()
+            .HasOne(rp => rp.Permission)
+            .WithMany(p => p.RolePermissions)
+            .HasForeignKey(rp => rp.PermissionId);
+
+        // ─── SOURCE FILE CONTACTS ─────────────────────────────────────────────
+        modelBuilder.Entity<SourceFileContact>(entity =>
+        {
+            entity.ToTable("source_file_contacts");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.SourceFile)
+                .WithMany()
+                .HasForeignKey(e => e.SourceFileId)
+                .HasConstraintName("fk_source_file_contacts_source_file");
+        });
+
+        // ─── IMPORT JOBS ──────────────────────────────────────────────────────
+        modelBuilder.Entity<ImportJob>(entity =>
+        {
+            entity.ToTable("import_jobs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status).HasConversion<int>();
+        });
+
+        // ─── CAMPAIGN ─────────────────────────────────────────────────────────
+        modelBuilder.Entity<Campaign>(entity =>
+        {
+            entity.ToTable("campaigns");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Status).HasConversion<int>();
+        });
+
+        // ─── CAMPAIGN FILE ────────────────────────────────────────────────────
+        modelBuilder.Entity<CampaignFile>(entity =>
+        {
+            entity.ToTable("campaign_files");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(cf => cf.Campaign)
+                .WithMany(c => c.CampaignFiles)
+                .HasForeignKey(cf => cf.CampaignId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(cf => cf.SourceFile)
+                .WithMany()
+                .HasForeignKey(cf => cf.SourceFileId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ─── CAMPAIGN FILE CONTACT ────────────────────────────────────────────
+        modelBuilder.Entity<CampaignFileContact>(entity =>
+        {
+            entity.ToTable("campaign_file_contacts");
+            entity.HasKey(e => e.Id);
+        });
+
+        // ─── CAMPAIGN AGENTS ──────────────────────────────────────────────────
+        modelBuilder.Entity<CampaignAgents>(entity =>
+        {
+            entity.ToTable("campaign_agents");
+            entity.HasKey(e => e.Id);
+        });
+
+        // ─── SOURCE FILE ──────────────────────────────────────────────────────
+        modelBuilder.Entity<SourceFile>(entity =>
+        {
+            entity.ToTable("source_files");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Type).HasConversion<int>();
+            entity.HasOne(sf => sf.Supplier)
+                .WithMany(s => s.SourceFiles)
+                .HasForeignKey(sf => sf.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ─── SUPPLIER ─────────────────────────────────────────────────────────
+        modelBuilder.Entity<Supplier>(entity =>
+        {
+            entity.ToTable("suppliers");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(s => s.Country)
+                .WithMany(c => c.Suppliers)
+                .HasForeignKey(s => s.CountryId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(s => s.LeadType)
+                .WithMany(lt => lt.Suppliers)
+                .HasForeignKey(s => s.LeadTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ─── USER (colleague's User entity, separate from Utilisateur) ────────
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.ToTable("users");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(u => u.Role)
+                .WithMany(r => r.Users)
+                .HasForeignKey(u => u.RoleId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ─── AGENT PROFILE ────────────────────────────────────────────────────
+        modelBuilder.Entity<AgentProfile>(entity =>
+        {
+            entity.ToTable("agent_profiles");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(ap => ap.User)
+                .WithOne(u => u.AgentProfile)
+                .HasForeignKey<AgentProfile>(ap => ap.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ─── DISTRIBUTED CONTACT ──────────────────────────────────────────────
+        modelBuilder.Entity<DistributedContact>(entity =>
+        {
+            entity.ToTable("contacts");
+            entity.HasKey(e => e.Id);
+        });
+    }
+}

@@ -1,0 +1,12 @@
+﻿# Windows
+Thumbs.db
+*.suo
+
+# Backend
+Backend/bin/
+Backend/obj/
+
+# Frontend
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.env.local
