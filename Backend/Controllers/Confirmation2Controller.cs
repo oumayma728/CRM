@@ -9,7 +9,7 @@ namespace Backend.Controllers;
 
 [ApiController]
 [Route("api/confirmation2")]
-[Authorize(Roles = "CONF2")]
+[Authorize(Roles = "CONFIRMATRICE")]
 public class Confirmation2Controller : ControllerBase
 {
     private readonly ApplicationDbContext _context;

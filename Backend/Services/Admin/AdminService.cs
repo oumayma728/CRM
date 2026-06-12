@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.DTOs.Admin;
 using Backend.Entities;
+using Backend.Services.Email;
 using AdminEntity = Backend.Entities.Admin;
 using AgentEntity = Backend.Entities.Agent;
 
@@ -10,11 +11,13 @@ namespace Backend.Services.Admin;
 public class AdminService : IAdminService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IEmailService _emailService;
     private static ConfigurationIADTO _iaConfig = new();
 
-    public AdminService(ApplicationDbContext context)
+    public AdminService(ApplicationDbContext context, IEmailService emailService)
     {
         _context = context;
+        _emailService = emailService;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -307,33 +310,36 @@ public class AdminService : IAdminService
 
     public async Task<List<UtilisateurDTO>> GetUtilisateursAsync()
     {
-        var utilisateurs = await _context.Set<Utilisateur>()
-            .Select(u => new UtilisateurDTO
-            {
-                Id = u.Id,
-                Nom = u.Nom,
-                Prenom = u.Prenom,
-                Email = u.Email,
-                Role = u.Role,
-                Statut = u.Statut,  
-                Actif = u.Actif,
-                DateCreation = u.DateCreation,
-                DerniereConnexion = u.DerniereConnexion
-            })
-            .ToListAsync();
-        
-        return utilisateurs;
+        // Load into memory first so we can access derived type properties (Confirmatrice.Type)
+        var utilisateurs = await _context.Set<Utilisateur>().ToListAsync();
+
+        return utilisateurs.Select(u => new UtilisateurDTO
+        {
+            Id = u.Id,
+            Nom = u.Nom,
+            Prenom = u.Prenom,
+            Email = u.Email,
+            Role = u.Role,
+            Type = u is Confirmatrice c ? c.Type.ToString() : null,
+            Statut = u.Statut,
+            Actif = u.Actif,
+            DateCreation = u.DateCreation,
+            DerniereConnexion = u.DerniereConnexion
+        }).ToList();
     }
 
     public async Task<UtilisateurDTO> CreateUtilisateurAsync(UtilisateurRequestDTO request)
     {
         Utilisateur utilisateur;
-        
+        var plainPassword = request.MotDePasse; // capture before hashing
+
         // Rôle simplifié pour la base de données (max 13 caractères)
         string roleDb = request.Role.ToLower() switch
         {
-            "confirmatrice1" => "CONFIRMATRICE",  // ← Changé : utiliser CONFIRMATRICE
-            "confirmatrice2" => "CONFIRMATRICE",  // ← Changé : utiliser CONFIRMATRICE
+            "confirmatrice1" => "CONFIRMATRICE",
+            "confirmatrice2" => "CONFIRMATRICE",
+            "confirmatriceclient" => "CONFIRMATRICE",
+            "confclient" => "CONFIRMATRICE",
             "technique" => "TECH",
             "qualite" => "QUAL",
             "agent" => "AGENT",
@@ -362,39 +368,38 @@ public class AdminService : IAdminService
                 break;
                 
             case "confirmatrice1":
-                // Créer une vraie Confirmatrice avec Type CONF1
                 utilisateur = new Confirmatrice
                 {
                     Nom = request.Nom,
                     Prenom = request.Prenom,
                     Email = request.Email,
                     MotDePasse = BCrypt.Net.BCrypt.HashPassword(request.MotDePasse),
-                    Role = "CONFIRMATRICE",  // Discriminateur pour EF
+                    Role = "CONFIRMATRICE",
                     Type = TypeConfirmatrice.CONF1,
                     Actif = true,
-                    Statut = "ACTIF",  // Confirmatrices actives directement
+                    Statut = "EN_ATTENTE",
                     DateCreation = DateTime.UtcNow,
                     Specialite = request.Equipe ?? "Confirmation"
                 };
                 break;
-                
+
             case "confirmatrice2":
-                // Créer une vraie Confirmatrice avec Type CONF2
                 utilisateur = new Confirmatrice
                 {
                     Nom = request.Nom,
                     Prenom = request.Prenom,
                     Email = request.Email,
                     MotDePasse = BCrypt.Net.BCrypt.HashPassword(request.MotDePasse),
-                    Role = "CONFIRMATRICE",  // Discriminateur pour EF
+                    Role = "CONFIRMATRICE",
                     Type = TypeConfirmatrice.CONF2,
                     Actif = true,
-                    Statut = "ACTIF",  // Confirmatrices actives directement
+                    Statut = "EN_ATTENTE",
                     DateCreation = DateTime.UtcNow,
                     Specialite = request.Equipe ?? "Confirmation"
                 };
                 break;
-            
+
+            case "confirmatriceclient":
             case "confclient":
                 utilisateur = new Confirmatrice
                 {
@@ -405,7 +410,7 @@ public class AdminService : IAdminService
                     Role = "CONFIRMATRICE",
                     Type = TypeConfirmatrice.CONFCLIENT,
                     Actif = true,
-                    Statut = "ACTIF",
+                    Statut = "EN_ATTENTE",
                     DateCreation = DateTime.UtcNow,
                     Specialite = request.Equipe ?? "Confirmation Client"
                 };
@@ -468,21 +473,23 @@ public class AdminService : IAdminService
         
         _context.Set<Utilisateur>().Add(utilisateur);
         await _context.SaveChangesAsync();
-        
-        // Déterminer le type pour la réponse (pour les confirmatrices)
-        string typePourReponse = null;
-        if (utilisateur is Confirmatrice confirmatrice)
-        {
-            typePourReponse = confirmatrice.Type == TypeConfirmatrice.CONF1 ? "CONF1" : "CONF2";
-        }
-        
+
+        // Send welcome email with credentials (fire-and-forget — errors are logged, not thrown)
+        await _emailService.SendWelcomeEmailAsync(
+            toEmail:       utilisateur.Email,
+            nom:           utilisateur.Nom,
+            prenom:        utilisateur.Prenom,
+            role:          utilisateur.Role,
+            plainPassword: plainPassword);
+
         return new UtilisateurDTO
         {
             Id = utilisateur.Id,
             Nom = utilisateur.Nom,
             Prenom = utilisateur.Prenom,
             Email = utilisateur.Email,
-            Role = utilisateur.Role == "CONFIRMATRICE" ? (typePourReponse ?? utilisateur.Role) : utilisateur.Role,
+            Role = utilisateur.Role,
+            Type = utilisateur is Confirmatrice conf ? conf.Type.ToString() : null,
             Statut = utilisateur.Statut,
             Actif = utilisateur.Actif,
             DateCreation = utilisateur.DateCreation,

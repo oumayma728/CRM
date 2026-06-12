@@ -61,28 +61,15 @@ public class AuthService : IAuthService
         utilisateur.DerniereConnexion = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        // 6. Déterminer le rôle réel pour le frontend
-        string roleForFrontend = utilisateur.Role;
-        
-        // Si c'est une confirmatrice, retourner CONF1 ou CONF2
-        if (utilisateur is Confirmatrice confirmatrice)
-        {
-            if (confirmatrice.Type == TypeConfirmatrice.CONF1)
-                roleForFrontend = "CONF1";
-            else if (confirmatrice.Type == TypeConfirmatrice.CONF2)
-                roleForFrontend = "CONF2";
-            else if (confirmatrice.Type == TypeConfirmatrice.CONFCLIENT)
-                roleForFrontend = "CONFCLIENT";
-        }
-
-        // 7. Générer JWT avec le rôle approprié
-        var token = await GenererTokenAsync(utilisateur, roleForFrontend);  // MODIFIER: appeler la version async
+        // 6. Générer JWT avec le rôle CONFIRMATRICE pour toutes les confirmatrices
+        var token = await GenererTokenAsync(utilisateur);
         var expiration = DateTime.UtcNow.AddHours(8);
 
         return new LoginResponseDTO
         {
             Token = token,
-            Role = roleForFrontend,
+            Role = utilisateur.Role,
+            TypeConfirmatrice = utilisateur is Confirmatrice c ? c.Type.ToString() : null,
             UserId = utilisateur.Id,
             Nom = utilisateur.Nom,
             Prenom = utilisateur.Prenom,
@@ -203,23 +190,13 @@ public class AuthService : IAuthService
 
         await _context.SaveChangesAsync();
 
-        string roleForFrontend = utilisateur.Role;
-        if (utilisateur is Confirmatrice confirmatrice)
-        {
-            if (confirmatrice.Type == TypeConfirmatrice.CONF1)
-                roleForFrontend = "CONF1";
-            else if (confirmatrice.Type == TypeConfirmatrice.CONF2)
-                roleForFrontend = "CONF2";
-            else if (confirmatrice.Type == TypeConfirmatrice.CONFCLIENT)
-                roleForFrontend = "CONFCLIENT";
-        }
-
-        var token = GenererToken(utilisateur, roleForFrontend);
+        var token = GenererToken(utilisateur);
 
         return new LoginResponseDTO
         {
             Token = token,
-            Role = roleForFrontend,
+            Role = utilisateur.Role,
+            TypeConfirmatrice = utilisateur is Confirmatrice conf ? conf.Type.ToString() : null,
             UserId = utilisateur.Id,
             Nom = utilisateur.Nom,
             Prenom = utilisateur.Prenom,

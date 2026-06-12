@@ -10,17 +10,19 @@ interface User {
   name: string;
   email: string;
   role: string;
+  typeConfirmatrice?: string; // 'CONF1' | 'CONF2' | 'CONFCLIENT' | undefined
   permissions?: Permission[];
 }
 
+export type LoginResult = 'success' | 'pending_first_login' | 'error';
+
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
   switchTestRole: (role: 'conf1' | 'conf2' | 'admin' | 'agent') => void;
-  // Permission methods (from colleague)
   hasPermission: (permission: Permission) => boolean;
   hasAnyPermission: (permissions: Permission[]) => boolean;
   hasAllPermissions: (permissions: Permission[]) => boolean;
@@ -52,10 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<LoginResult> => {
     try {
-      // Backend expects: { email, motDePasse, identifiantMachine? }
-      // Backend returns: { token, role, userId, nom, prenom, email, expiration }
       const res = await axios.post(`${API_URL}/auth/login`, {
         email,
         motDePasse: password,
@@ -68,15 +68,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: `${data.prenom || ''} ${data.nom || ''}`.trim() || email,
         email: data.email || email,
         role: (data.role || 'agent').toLowerCase(),
+        typeConfirmatrice: data.typeConfirmatrice || undefined,
         permissions: data.permissions || [],
       };
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
-      return true;
+      return 'success';
     } catch (err: any) {
-      console.error('Login error:', err.response?.data || err.message);
-      return false;
+      const message: string = err.response?.data?.message || err.response?.data || err.message || '';
+      if (message.includes('COMPTE_EN_ATTENTE')) {
+        return 'pending_first_login';
+      }
+      console.error('Login error:', message);
+      return 'error';
     }
   };
 

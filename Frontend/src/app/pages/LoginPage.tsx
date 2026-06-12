@@ -17,28 +17,25 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const success = await login(email, password);
+    const result = await login(email, password);
 
-    if (success) {
+    if (result === 'pending_first_login') {
+      navigate(`/first-login?email=${encodeURIComponent(email)}`);
+    } else if (result === 'success') {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
-      console.log('User role after login:', user.role); // Debug
-      
-      // Redirection selon le rôle
-      switch (user.role) {
-        case 'admin':
-          navigate('/admin/dashboard');
-          break;
-        case 'conf1':
-          navigate('/confirmation1/dashboard');
-          break;
-        case 'conf2':
-          navigate('/confirmation2/dashboard');
-          break;
-        case 'agent':
-          navigate('/agent/dashboard');
-          break;
-        default:
-          navigate('/admin/dashboard');
+      const role = user.role?.toLowerCase();
+      const type = user.typeConfirmatrice?.toUpperCase();
+
+      if (role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (role === 'confirmatrice') {
+        if (type === 'CONF2') navigate('/confirmation2/dashboard');
+        else if (type === 'CONFCLIENT') navigate('/confirmation-client/dashboard');
+        else navigate('/confirmation1/dashboard'); // CONF1 or fallback
+      } else if (role === 'agent') {
+        navigate('/agent/dashboard');
+      } else {
+        navigate('/admin/dashboard');
       }
     } else {
       setError('Email ou mot de passe incorrect');

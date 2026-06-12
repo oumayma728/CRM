@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, KeyRound } from 'lucide-react';
+import { Mail, Lock, KeyRound } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5241/api';
 
 export default function FirstLoginPage() {
-  const [email, setEmail] = useState('');
+  const params = new URLSearchParams(window.location.search);
+  const [email, setEmail] = useState(params.get('email') || '');
   const [tempPassword, setTempPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -37,33 +38,33 @@ export default function FirstLoginPage() {
       });
       
       if (response.data.token) {
-  localStorage.setItem('token', response.data.token);
-  localStorage.setItem('user', JSON.stringify({
-    id: response.data.userId,
-    name: `${response.data.prenom} ${response.data.nom}`,
-    email: response.data.email,
-    role: response.data.role.toLowerCase()
-  }));
-  
-  // Redirection selon le rôle
-  const role = response.data.role.toLowerCase();
-      switch (role) {
-        case 'admin':
+        const data = response.data;
+        const role = (data.role || '').toLowerCase();
+        const typeConfirmatrice = data.typeConfirmatrice || undefined;
+
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify({
+          id: data.userId,
+          name: `${data.prenom} ${data.nom}`.trim(),
+          email: data.email,
+          role,
+          typeConfirmatrice,
+        }));
+
+        // Redirect based on role + type
+        if (role === 'admin') {
           window.location.href = '/admin/dashboard';
-          break;
-        case 'conf1':
-          window.location.href = '/confirmation1/dashboard';
-          break;
-        case 'conf2':
-          window.location.href = '/confirmation2/dashboard';
-          break;
-        case 'agent':
+        } else if (role === 'confirmatrice') {
+          const type = (typeConfirmatrice || '').toUpperCase();
+          if (type === 'CONF2') window.location.href = '/confirmation2/dashboard';
+          else if (type === 'CONFCLIENT') window.location.href = '/confirmation-client/dashboard';
+          else window.location.href = '/confirmation1/dashboard';
+        } else if (role === 'agent') {
           window.location.href = '/agent/dashboard';
-          break;
-        default:
+        } else {
           window.location.href = '/admin/dashboard';
+        }
       }
-    }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors de l\'activation du compte');
     } finally {

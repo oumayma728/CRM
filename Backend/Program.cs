@@ -18,6 +18,7 @@ using Backend.Services.ContactDistribution;
 using Backend.Services.Agents;
 using Backend.Services.Files;
 using Backend.Services.UserService;
+using Backend.Services.Email;
 using Backend.Filters;
 using Microsoft.AspNetCore.Http.Features;
 
@@ -61,6 +62,7 @@ builder.Services.AddDbContext<Backend.Data.ApplicationDbContext>(options =>
 builder.Services.AddScoped<IAuthService,         AuthService>();
 builder.Services.AddScoped<Backend.Services.Agent.IAgentService, Backend.Services.Agent.AgentService>();
 builder.Services.AddScoped<IAdminService,        AdminService>();
+builder.Services.AddScoped<IEmailService,        EmailService>();
 builder.Services.AddScoped<IConfirmationService, ConfirmationService>();
 builder.Services.AddScoped<IDashboardService,    DashboardService>();
 builder.Services.AddScoped<Backend.Services.Permission.IPermissionService, Backend.Services.Permission.PermissionService>();

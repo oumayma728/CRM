@@ -41,6 +41,7 @@ interface SidebarProps {
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
   const { user } = useAuth();
+  const confType = user?.typeConfirmatrice?.toUpperCase();
   
   // État pour gérer l'ouverture/fermeture du sous-menu
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
@@ -122,12 +123,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   let menuItems;
   if (userRole === 'admin') {
     menuItems = adminMenuItems;
-  } else if (userRole === 'conf1' || userRole === 'confirmatrice1') {
-    menuItems = confirmation1MenuItems;
-  } else if (userRole === 'conf2' || userRole === 'confirmatrice2') {
-    menuItems = confirmation2MenuItems;
-  } else if (userRole === 'confclient' || userRole === 'confirmatriceclient') {
-    menuItems = confirmationClientMenuItems;
+  } else if (userRole === 'confirmatrice') {
+    if (confType === 'CONF1') menuItems = confirmation1MenuItems;
+    else if (confType === 'CONF2') menuItems = confirmation2MenuItems;
+    else if (confType === 'CONFCLIENT') menuItems = confirmationClientMenuItems;
+    else menuItems = confirmation1MenuItems; // fallback
   } else {
     menuItems = agentMenuItems;
   }
@@ -213,14 +213,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   // Libellés du service pour l'affichage
   const getServiceLabel = () => {
-    switch (userRole) {
-      case 'admin': return 'Administration';
-      case 'conf1': return 'Call Client Niveau 1';
-      case 'conf2': return 'Call Client Niveau 2';
-      case 'confclient': return 'Confirmation Client';
-      case 'agent': return 'Commercial';
-      default: return '';
+    if (userRole === 'admin') return 'Administration';
+    if (userRole === 'confirmatrice') {
+      if (confType === 'CONF1') return 'Call Client Niveau 1';
+      if (confType === 'CONF2') return 'Call Client Niveau 2';
+      if (confType === 'CONFCLIENT') return 'Confirmation Client';
     }
+    if (userRole === 'agent') return 'Commercial';
+    return '';
   };
 
   return (

@@ -11,7 +11,7 @@ namespace Backend.Controllers;
 
 [ApiController]
 [Route("api/confirmation-client")]
-[Authorize(Roles = "CONFCLIENT")]
+[Authorize(Roles = "CONFIRMATRICE")]
 public class ConfirmationClientController : ControllerBase
 {
     private readonly ApplicationDbContext _context;

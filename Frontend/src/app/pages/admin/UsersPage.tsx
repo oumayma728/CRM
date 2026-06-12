@@ -9,6 +9,7 @@ interface Utilisateur {
   prenom: string;
   email: string;
   role: string;
+  type?: string; // CONF1 | CONF2 | CONFCLIENT for confirmatrices
   equipe?: string;
   statut?: string;
   actif: boolean;
@@ -20,39 +21,38 @@ const roleOptions = [
   { value: 'agent', label: 'Agent', team: 'Équipe A', icon: User },
   { value: 'confirmatrice1', label: 'Confirmatrice 1', team: 'Validation', icon: UserCheck },
   { value: 'confirmatrice2', label: 'Confirmatrice 2', team: 'Validation', icon: UserCheck },
+  { value: 'confirmatriceclient', label: 'Confirmatrice Client', team: 'Validation Client', icon: UserCheck },
   { value: 'technique', label: 'Service Technique', team: 'Technique', icon: Wrench },
   { value: 'qualite', label: 'Service Qualité', team: 'Qualité', icon: BadgeCheck },
   { value: 'admin', label: 'Administrateur', team: 'Administration', icon: Shield }
 ];
 
-const roleLabels: Record<string, string> = {
-  agent: 'Agent',
-  AGENT: 'Agent',
-  confirmatrice1: 'Confirmatrice 1',
-  CONFIRMATRICE1: 'Confirmatrice 1',
-  confirmatrice2: 'Confirmatrice 2',
-  CONFIRMATRICE2: 'Confirmatrice 2',
-  admin: 'Administrateur',
-  ADMIN: 'Administrateur',
-  qualite: 'Service Qualité',
-  QUALITE: 'Service Qualité',
-  technique: 'Service Technique',
-  TECHNIQUE: 'Service Technique'
+// Role label helper — uses type for confirmatrices
+const getRoleLabel = (user: Utilisateur): string => {
+  const role = user.role?.toUpperCase();
+  if (role === 'CONFIRMATRICE') {
+    if (user.type === 'CONF1') return 'Confirmatrice 1';
+    if (user.type === 'CONF2') return 'Confirmatrice 2';
+    if (user.type === 'CONFCLIENT') return 'Confirmatrice Client';
+    return 'Confirmatrice';
+  }
+  const labels: Record<string, string> = {
+    AGENT: 'Agent', ADMIN: 'Administrateur',
+    QUAL: 'Service Qualité', TECH: 'Service Technique',
+  };
+  return labels[role] || user.role;
 };
 
-const roleColors: Record<string, string> = {
-  agent: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  AGENT: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  confirmatrice1: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  CONFIRMATRICE1: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  confirmatrice2: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  CONFIRMATRICE2: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  admin: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  ADMIN: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  qualite: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  QUALITE: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  technique: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  TECHNIQUE: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+const getRoleColor = (user: Utilisateur): string => {
+  const role = user.role?.toUpperCase();
+  if (role === 'CONFIRMATRICE') return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+  const colors: Record<string, string> = {
+    AGENT: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    ADMIN: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    QUAL: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    TECH: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  };
+  return colors[role] || 'bg-gray-100 text-gray-700';
 };
 
 export default function UsersPage() {
@@ -134,15 +134,14 @@ export default function UsersPage() {
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Statistiques par rôle (insensible à la casse)
   const stats = {
     total: users.length,
-    agents: users.filter(u => u.role?.toLowerCase() === 'agent').length,
-    confirmatrices1: users.filter(u => u.role?.toLowerCase() === 'confirmatrice1').length,
-    confirmatrices2: users.filter(u => u.role?.toLowerCase() === 'confirmatrice2').length,
-    techniques: users.filter(u => u.role?.toLowerCase() === 'technique').length,
-    qualites: users.filter(u => u.role?.toLowerCase() === 'qualite').length,
-    admins: users.filter(u => u.role?.toLowerCase() === 'admin').length
+    agents: users.filter(u => u.role?.toUpperCase() === 'AGENT').length,
+    confirmatrices1: users.filter(u => u.role?.toUpperCase() === 'CONFIRMATRICE' && u.type === 'CONF1').length,
+    confirmatrices2: users.filter(u => u.role?.toUpperCase() === 'CONFIRMATRICE' && u.type === 'CONF2').length,
+    confirmatiresClient: users.filter(u => u.role?.toUpperCase() === 'CONFIRMATRICE' && u.type === 'CONFCLIENT').length,
+    techniques: users.filter(u => u.role?.toUpperCase() === 'TECH').length,
+    qualites: users.filter(u => u.role?.toUpperCase() === 'QUAL').length,
   };
 
   if (loading) {
@@ -173,55 +172,25 @@ export default function UsersPage() {
           </button>
         </div>
 
-        {/* Stats Cards - Tous les rôles */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total</h3>
-              <Users className="w-5 h-5 text-blue-500" />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+          {[
+            { label: 'Total', value: stats.total, icon: Users, color: 'text-blue-500' },
+            { label: 'Agents', value: stats.agents, icon: User, color: 'text-blue-500' },
+            { label: 'Conf. 1', value: stats.confirmatrices1, icon: UserCheck, color: 'text-purple-500' },
+            { label: 'Conf. 2', value: stats.confirmatrices2, icon: UserCheck, color: 'text-purple-500' },
+            { label: 'Conf. Client', value: stats.confirmatiresClient, icon: UserCheck, color: 'text-indigo-500' },
+            { label: 'Technique', value: stats.techniques, icon: Wrench, color: 'text-yellow-500' },
+            { label: 'Qualité', value: stats.qualites, icon: BadgeCheck, color: 'text-green-500' },
+          ].map(({ label, value, icon: Icon, color }) => (
+            <div key={label} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</h3>
+                <Icon className={`w-4 h-4 ${color}`} />
+              </div>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Agents</h3>
-              <User className="w-5 h-5 text-blue-500" />
-            </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.agents}</p>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Confirmatrices 1</h3>
-              <UserCheck className="w-5 h-5 text-purple-500" />
-            </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.confirmatrices1}</p>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Confirmatrices 2</h3>
-              <UserCheck className="w-5 h-5 text-purple-500" />
-            </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.confirmatrices2}</p>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Service Technique</h3>
-              <Wrench className="w-5 h-5 text-yellow-500" />
-            </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.techniques}</p>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Service Qualité</h3>
-              <BadgeCheck className="w-5 h-5 text-green-500" />
-            </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.qualites}</p>
-          </div>
+          ))}
         </div>
 
         {/* Search Bar */}
@@ -263,8 +232,8 @@ export default function UsersPage() {
                     </td>
                     <td className="p-4 text-gray-600 dark:text-gray-400">{user.email}</td>
                     <td className="p-4">
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs ${roleColors[user.role] || 'bg-gray-100 text-gray-700'}`}>
-                        {roleLabels[user.role] || user.role}
+                      <span className={`inline-flex px-2 py-1 rounded-full text-xs ${getRoleColor(user)}`}>
+                        {getRoleLabel(user)}
                       </span>
                     </td>
                     <td className="p-4 text-gray-600 dark:text-gray-400">{user.equipe || '-'}</td>

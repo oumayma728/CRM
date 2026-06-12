@@ -18,6 +18,7 @@ public class LoginResponseDTO
 {
     public string Token { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
+    public string? TypeConfirmatrice { get; set; }
     public long UserId { get; set; }
     public string Nom { get; set; } = string.Empty;
     public string Prenom { get; set; } = string.Empty;
