@@ -13,4 +13,11 @@ public abstract class Utilisateur
     public DateTime? DerniereConnexion { get; set; }
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
     public string? IdentifiantMachine { get; set; }
+
+    // ── Auth features ──────────────────────────────────────────
+    public string? RefreshToken { get; set; }
+    public DateTime? RefreshTokenExpiryTime { get; set; }
+    public string? PasswordResetToken { get; set; }
+    public DateTime? PasswordResetTokenExpiry { get; set; }
+    public bool MustChangePassword { get; set; } = false;
 }

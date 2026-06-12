@@ -14,7 +14,7 @@ interface User {
   permissions?: Permission[];
 }
 
-export type LoginResult = 'success' | 'pending_first_login' | 'error';
+export type LoginResult = 'success' | 'pending_first_login' | 'must_change_password' | 'error';
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +23,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   switchTestRole: (role: 'conf1' | 'conf2' | 'admin' | 'agent') => void;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   hasPermission: (permission: Permission) => boolean;
   hasAnyPermission: (permissions: Permission[]) => boolean;
   hasAllPermissions: (permissions: Permission[]) => boolean;
@@ -80,9 +83,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (message.includes('COMPTE_EN_ATTENTE')) {
         return 'pending_first_login';
       }
+      if (message.includes('MUST_CHANGE_PASSWORD')) {
+        return 'must_change_password';
+      }
       console.error('Login error:', message);
       return 'error';
     }
+  };
+
+  const forgotPassword = async (email: string): Promise<void> => {
+    await axios.post(`${API_URL}/auth/forgot-password`, { email });
+  };
+
+  const resetPassword = async (token: string, newPassword: string): Promise<void> => {
+    await axios.post(`${API_URL}/auth/reset-password`, { token, newPassword });
+  };
+
+  const changePassword = async (oldPassword: string, newPassword: string): Promise<void> => {
+    const token = localStorage.getItem('token');
+    await axios.post(
+      `${API_URL}/auth/change-password`,
+      { oldPassword, newPassword },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
   };
 
   const logout = () => {
@@ -143,6 +166,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: !!user,
       loading,
       switchTestRole,
+      forgotPassword,
+      resetPassword,
+      changePassword,
       hasPermission,
       hasAnyPermission,
       hasAllPermissions,

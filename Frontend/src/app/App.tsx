@@ -4,6 +4,9 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { Layout } from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import FirstLoginPage from './pages/FirstLoginPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 import LeadsPage from './pages/admin/leads/LeadsPage';
 import AgentDashboard from './pages/agent/AgentDashboard';
 import ContactPage from './pages/agent/ContactPage';
@@ -68,6 +71,9 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/first-login" element={<FirstLoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/change-password" element={<ChangePasswordPage />} />
 
       {/* ==================== AGENT ==================== */}
       <Route path="/agent/dashboard" element={<ProtectedRoute><AgentDashboard /></ProtectedRoute>} />

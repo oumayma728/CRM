@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Layout } from '../../components/Layout';
 import { adminService } from '../../../services/adminService';
-import { User, Plus, Edit, Trash2, Shield, Search, X, Users, UserCheck, UserCog, Headphones, Wrench, BadgeCheck } from 'lucide-react';
+import { User, Plus, Edit, Trash2, Shield, Search, X, Users, UserCheck, UserCog, Headphones, Wrench, BadgeCheck, KeyRound } from 'lucide-react';
+import axios from 'axios';
+
+const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5241/api';
 
 interface Utilisateur {
   id: number;
@@ -105,6 +108,21 @@ export default function UsersPage() {
       } catch (error) {
         console.error('Erreur suppression utilisateur:', error);
       }
+    }
+  };
+
+  const handleAdminResetPassword = async (id: number, nom: string, prenom: string) => {
+    if (!window.confirm(`Réinitialiser le mot de passe de ${prenom} ${nom} ? Un email avec le nouveau mot de passe temporaire sera envoyé.`)) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(
+        `${API_URL}/auth/admin-reset-password`,
+        { userId: id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert(`Mot de passe réinitialisé. Mot de passe temporaire : ${res.data.tempPassword}`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erreur lors de la réinitialisation.');
     }
   };
 
@@ -251,8 +269,16 @@ export default function UsersPage() {
                     <td className="p-4">
                       <div className="flex items-center gap-2">
                         <button
+                          onClick={() => handleAdminResetPassword(user.id, user.nom, user.prenom)}
+                          className="p-2 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded-lg transition-colors"
+                          title="Réinitialiser le mot de passe"
+                        >
+                          <KeyRound className="w-4 h-4 text-yellow-600" />
+                        </button>
+                        <button
                           onClick={() => handleDeleteUser(user.id)}
                           className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title="Supprimer"
                         >
                           <Trash2 className="w-4 h-4 text-red-500" />
                         </button>

@@ -21,6 +21,8 @@ export default function LoginPage() {
 
     if (result === 'pending_first_login') {
       navigate(`/first-login?email=${encodeURIComponent(email)}`);
+    } else if (result === 'must_change_password') {
+      navigate(`/change-password?email=${encodeURIComponent(email)}`);
     } else if (result === 'success') {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const role = user.role?.toLowerCase();
@@ -106,6 +108,16 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+            </div>
+
+            <div className="flex justify-end -mt-2">
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-sm text-primary hover:underline"
+              >
+                Mot de passe oublié ?
+              </button>
             </div>
 
             <button
