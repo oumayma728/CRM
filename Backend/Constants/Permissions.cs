@@ -81,6 +81,9 @@ namespace Backend.Constants
             public const string Qualify = "Contacts.Qualify";                 // Qualifier fiche
             public const string Update = "Contacts.Update";
             public const string ViewHistory = "Contacts.ViewHistory";
+            public const string AddNote = "Contacts.AddNote";
+            public const string EditNote = "Contacts.EditNote";
+            public const string DeleteNote = "Contacts.DeleteNote";
         }
         // ========== COUNTRY PERMISSIONS ==========
         public static class Countries
@@ -151,6 +154,15 @@ namespace Backend.Constants
 			public const string ViewAnalytics = "Dashboard.ViewAnalytics";
 			public const string ExportStats = "Dashboard.ExportStats";
 			public const string Configure = "Dashboard.Configure";
+		}
+
+		// ========== CLIENT PERMISSIONS ==========
+		public static class Clients
+		{
+			public const string View = "Clients.View";
+			public const string Create = "Clients.Create";
+			public const string Edit = "Clients.Edit";
+			public const string Delete = "Clients.Delete";
 		}
 
 		// ========== SYSTEM PERMISSIONS ==========

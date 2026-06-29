@@ -28,6 +28,79 @@ namespace Backend.Controllers
             _logger = logger;
         }
 
+        [HttpGet("me/presence")]
+        public async Task<IActionResult> GetMyPresence()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
+                    return Unauthorized(new { success = false, message = "User not authenticated." });
+
+                var presence = await _service.GetPresenceAsync(userId.Value);
+                return Ok(new { success = true, data = presence });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current user presence");
+                return StatusCode(500, new { success = false, message = "An error occurred while retrieving presence.", error = ex.Message });
+            }
+        }
+
+        [HttpPatch("me/presence")]
+        public async Task<IActionResult> UpdateMyPresence([FromBody] UpdatePresenceDto dto)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
+                    return Unauthorized(new { success = false, message = "User not authenticated." });
+
+                var presence = await _service.UpdatePresenceAsync(userId.Value, dto);
+                return Ok(new { success = true, data = presence });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating current user presence");
+                return StatusCode(500, new { success = false, message = "An error occurred while updating presence.", error = ex.Message });
+            }
+        }
+
+        [HttpPost("me/heartbeat")]
+        public async Task<IActionResult> Heartbeat()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (!userId.HasValue)
+                    return Unauthorized(new { success = false, message = "User not authenticated." });
+
+                await _service.HeartbeatAsync(userId.Value);
+                return Ok(new { success = true });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating current user heartbeat");
+                return StatusCode(500, new { success = false, message = "An error occurred while updating heartbeat.", error = ex.Message });
+            }
+        }
+
         [HttpGet]
         [RequirePermission(Permissions.Agents.ViewAll)]
         public async Task<IActionResult> GetAll()

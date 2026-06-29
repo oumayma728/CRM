@@ -1,0 +1,15 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\Constants",
+    "\\Controllers",
+    "\\Data",
+    "\\DTOs",
+    "\\DTOs\\Client",
+    "\\Entities",
+    "\\Services\\Agents",
+    "\\Services\\RingOver"
+  ],
+  "SelectedNode": "\\Entities\\User.cs",
+  "PreviewInSolutionExplorer": false
+}

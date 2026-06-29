@@ -106,6 +106,51 @@ namespace CRM.API.Migrations
                     b.ToTable("agent_profiles", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Entities.Blacklist", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("added_at");
+
+                    b.Property<int>("AddedByUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("added_by_user_id");
+
+                    b.Property<int?>("CampaignId")
+                        .HasColumnType("integer")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("phone_number");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("reason");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AddedByUserId");
+
+                    b.HasIndex("CampaignId");
+
+                    b.HasIndex("PhoneNumber")
+                        .IsUnique()
+                        .HasDatabaseName("idx_blacklist_phone_number");
+
+                    b.ToTable("blacklist", (string)null);
+                });
+
             modelBuilder.Entity("Backend.Entities.CallAttempt", b =>
                 {
                     b.Property<int>("Id")
@@ -210,6 +255,9 @@ namespace CRM.API.Migrations
                     b.HasIndex("Provider", "ProviderCallId")
                         .HasDatabaseName("idx_call_attempts_provider_call_id");
 
+                    b.HasIndex("Status", "StartedAt")
+                        .HasDatabaseName("idx_call_attempts_status_started");
+
                     b.HasIndex("CampaignId", "Status", "StartedAt")
                         .HasDatabaseName("idx_call_attempts_campaign_status_started");
 
@@ -236,6 +284,12 @@ namespace CRM.API.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true)
                         .HasColumnName("auto_pool_sizing");
+
+                    b.Property<int>("CallTimeoutMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(10)
+                        .HasColumnName("call_timeout_minutes");
 
                     b.Property<int>("ContactsPerAgentPerHour")
                         .ValueGeneratedOnAdd()
@@ -281,6 +335,12 @@ namespace CRM.API.Migrations
                         .HasColumnType("numeric")
                         .HasDefaultValue(0.30m)
                         .HasColumnName("low_pool_ratio");
+
+                    b.Property<int>("MaxAttemptsPerContact")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(3)
+                        .HasColumnName("max_attempts_per_contact");
 
                     b.Property<int>("MaxPoolTarget")
                         .ValueGeneratedOnAdd()
@@ -533,6 +593,10 @@ namespace CRM.API.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("campaign_id");
 
+                    b.Property<int?>("ClientId")
+                        .HasColumnType("integer")
+                        .HasColumnName("client_id");
+
                     b.Property<string>("CommercialComment")
                         .HasColumnType("text")
                         .HasColumnName("commercial_comment");
@@ -612,9 +676,18 @@ namespace CRM.API.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("nbre_personnes");
 
+                    b.Property<string>("NextAction")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("next_action");
+
                     b.Property<DateTime?>("NextCallAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("next_call_at");
+
+                    b.Property<int?>("PreferredAgentId")
+                        .HasColumnType("integer")
+                        .HasColumnName("preferred_agent_id");
 
                     b.Property<string>("ProfessionMme")
                         .HasMaxLength(100)
@@ -671,12 +744,26 @@ namespace CRM.API.Migrations
 
                     b.HasIndex("CampaignFileId");
 
+                    b.HasIndex("ClientId");
+
                     b.HasIndex("ConfirmedByUserId");
 
                     b.HasIndex("SourceFileContactId");
 
                     b.HasIndex("AssignedAgentId", "CallStatus")
                         .HasDatabaseName("idx_campaign_file_contacts_agent_queue");
+
+                    b.HasIndex("CallStatus", "AssignedAt")
+                        .HasDatabaseName("idx_campaign_file_contacts_assigned_timeout");
+
+                    b.HasIndex("AssignedAgentId", "CallStatus", "AssignedAt")
+                        .HasDatabaseName("idx_campaign_file_contacts_agent_assigned_timeout");
+
+                    b.HasIndex("CampaignId", "NextAction", "NextCallAt")
+                        .HasDatabaseName("idx_campaign_file_contacts_next_action");
+
+                    b.HasIndex("PreferredAgentId", "CallStatus", "NextCallAt")
+                        .HasDatabaseName("idx_campaign_file_contacts_preferred_agent");
 
                     b.HasIndex("CampaignId", "CallStatus", "NextCallAt", "Id")
                         .HasDatabaseName("idx_campaign_file_contacts_queue");
@@ -685,6 +772,147 @@ namespace CRM.API.Migrations
                         .HasDatabaseName("idx_campaign_file_contacts_assignable_queue");
 
                     b.ToTable("campaign_file_contacts");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Client", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Adresse")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("adresse");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("email");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Nom")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("nom");
+
+                    b.Property<string>("Telephone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("telephone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("idx_clients_code");
+
+                    b.ToTable("clients", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Entities.ContactNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AuthorUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("body");
+
+                    b.Property<int>("CampaignFileContactId")
+                        .HasColumnType("integer")
+                        .HasColumnName("campaign_file_contact_id");
+
+                    b.Property<int>("CampaignId")
+                        .HasColumnType("integer")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("NoteType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("general")
+                        .HasColumnName("note_type");
+
+                    b.Property<int?>("SourceFileContactId")
+                        .HasColumnType("integer")
+                        .HasColumnName("source_file_contact_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId")
+                        .HasDatabaseName("idx_contact_notes_author_user");
+
+                    b.HasIndex("DeletedByUserId");
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.HasIndex("CampaignFileContactId", "CreatedAt")
+                        .HasDatabaseName("idx_contact_notes_contact_created");
+
+                    b.HasIndex("CampaignId", "CreatedAt")
+                        .HasDatabaseName("idx_contact_notes_campaign_created");
+
+                    b.HasIndex("SourceFileContactId", "CreatedAt")
+                        .HasDatabaseName("idx_contact_notes_source_contact_created");
+
+                    b.HasIndex("IsDeleted", "CampaignFileContactId", "CreatedAt")
+                        .HasDatabaseName("idx_contact_notes_visible_contact_created");
+
+                    b.ToTable("contact_notes", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Entities.Country", b =>
@@ -1384,8 +1612,14 @@ namespace CRM.API.Migrations
                         .HasColumnName("is_deleted");
 
                     b.Property<bool>("IsOnline")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
+                        .HasDefaultValue(false)
                         .HasColumnName("is_online");
+
+                    b.Property<DateTime?>("LastHeartbeatAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_heartbeat_at");
 
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone")
@@ -1421,6 +1655,18 @@ namespace CRM.API.Migrations
                         .HasColumnType("text")
                         .HasColumnName("phone");
 
+                    b.Property<DateTime?>("PresenceChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("presence_changed_at");
+
+                    b.Property<string>("PresenceStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Offline")
+                        .HasColumnName("presence_status");
+
                     b.Property<string>("RefreshToken")
                         .HasColumnType("text")
                         .HasColumnName("refresh_token");
@@ -1445,6 +1691,9 @@ namespace CRM.API.Migrations
                     b.HasIndex("PasswordResetByUserId");
 
                     b.HasIndex("RoleId");
+
+                    b.HasIndex("IsOnline", "PresenceStatus", "LastHeartbeatAt")
+                        .HasDatabaseName("idx_users_presence_heartbeat");
 
                     b.ToTable("users", (string)null);
                 });
@@ -1507,6 +1756,24 @@ namespace CRM.API.Migrations
                         .HasForeignKey("Backend.Entities.AgentProfile", "UserId1");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Blacklist", b =>
+                {
+                    b.HasOne("Backend.Entities.User", "AddedByUser")
+                        .WithMany()
+                        .HasForeignKey("AddedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Entities.Campaign", "Campaign")
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AddedByUser");
+
+                    b.Navigation("Campaign");
                 });
 
             modelBuilder.Entity("Backend.Entities.CallAttempt", b =>
@@ -1619,6 +1886,10 @@ namespace CRM.API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Backend.Entities.Client", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId");
+
                     b.HasOne("Backend.Entities.User", "ConfirmedBy")
                         .WithMany()
                         .HasForeignKey("ConfirmedByUserId");
@@ -1635,9 +1906,59 @@ namespace CRM.API.Migrations
 
                     b.Navigation("CampaignFile");
 
+                    b.Navigation("Client");
+
                     b.Navigation("ConfirmedBy");
 
                     b.Navigation("SourceFileContact");
+                });
+
+            modelBuilder.Entity("Backend.Entities.ContactNote", b =>
+                {
+                    b.HasOne("Backend.Entities.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Entities.CampaignFileContact", "CampaignFileContact")
+                        .WithMany()
+                        .HasForeignKey("CampaignFileContactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Entities.Campaign", "Campaign")
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Entities.User", "DeletedBy")
+                        .WithMany()
+                        .HasForeignKey("DeletedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Backend.Entities.SourceFileContact", "SourceFileContact")
+                        .WithMany()
+                        .HasForeignKey("SourceFileContactId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Backend.Entities.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Campaign");
+
+                    b.Navigation("CampaignFileContact");
+
+                    b.Navigation("DeletedBy");
+
+                    b.Navigation("SourceFileContact");
+
+                    b.Navigation("UpdatedBy");
                 });
 
             modelBuilder.Entity("Backend.Entities.ImportJob", b =>

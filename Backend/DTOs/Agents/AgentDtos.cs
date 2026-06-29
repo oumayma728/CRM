@@ -1,3 +1,5 @@
+using Backend.Entities;
+
 namespace Backend.DTOs.Agents
 {
     public class AgentProfileDto
@@ -58,6 +60,9 @@ namespace Backend.DTOs.Agents
         public string? Avatar { get; set; }
         public bool IsActive { get; set; }
         public bool IsOnline { get; set; }
+        public AgentPresenceStatus PresenceStatus { get; set; }
+        public DateTime? PresenceChangedAt { get; set; }
+        public DateTime? LastHeartbeatAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public AgentProfileDto? Profile { get; set; }
@@ -105,5 +110,20 @@ namespace Backend.DTOs.Agents
         public decimal? NoteEvaluationMoyenne { get; set; }
         public DateTime? DerniereActivite { get; set; }
         public string? Notes { get; set; }
+    }
+
+    public class UpdatePresenceDto
+    {
+        public AgentPresenceStatus Status { get; set; }
+    }
+
+    public class AgentPresenceDto
+    {
+        public int UserId { get; set; }
+        public bool IsOnline { get; set; }
+        public AgentPresenceStatus Status { get; set; }
+        public DateTime? PresenceChangedAt { get; set; }
+        public DateTime? LastHeartbeatAt { get; set; }
+        public bool CanTakeContacts { get; set; }
     }
 }

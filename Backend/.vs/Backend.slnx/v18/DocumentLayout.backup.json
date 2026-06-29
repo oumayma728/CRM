@@ -1,0 +1,241 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\AgentProfile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Entities\\AgentProfile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\ContactNote.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Entities\\ContactNote.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Services\\ContactDistribution\\ContactDistributionService.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Services\\ContactDistribution\\ContactDistributionService.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Constants\\QualificationStatus.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Constants\\QualificationStatus.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Data\\ApplicationDbContext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Data\\ApplicationDbContext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\DTOs\\Campaign\\ContactNoteDto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DTOs\\Campaign\\ContactNoteDto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\CampaignFileContact.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Entities\\CampaignFileContact.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\CallAttempt.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Entities\\CallAttempt.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Services\\Agents\\AgentPresenceCleanupWorker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Services\\Agents\\AgentPresenceCleanupWorker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\User.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Entities\\User.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Services\\Auth\\AuthService.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Services\\Auth\\AuthService.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\DTOs\\Agents\\AgentDtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:DTOs\\Agents\\AgentDtos.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 1,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedHeight": 294,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AgentProfile.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\AgentProfile.cs",
+              "RelativeDocumentMoniker": "Entities\\AgentProfile.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\AgentProfile.cs*",
+              "RelativeToolTip": "Entities\\AgentProfile.cs*",
+              "ViewState": "AgIAABgAAAAAAAAAAAAAACoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-16T10:22:36.286Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "ContactNoteDto.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\DTOs\\Campaign\\ContactNoteDto.cs",
+              "RelativeDocumentMoniker": "DTOs\\Campaign\\ContactNoteDto.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\DTOs\\Campaign\\ContactNoteDto.cs",
+              "RelativeToolTip": "DTOs\\Campaign\\ContactNoteDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABoAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T14:02:41.777Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ContactNote.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\ContactNote.cs",
+              "RelativeDocumentMoniker": "Entities\\ContactNote.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\ContactNote.cs*",
+              "RelativeToolTip": "Entities\\ContactNote.cs*",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T12:47:33.759Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ApplicationDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Data\\ApplicationDbContext.cs",
+              "RelativeDocumentMoniker": "Data\\ApplicationDbContext.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Data\\ApplicationDbContext.cs",
+              "RelativeToolTip": "Data\\ApplicationDbContext.cs",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAAAB0AAAAzAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T11:41:49.907Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "QualificationStatus.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Constants\\QualificationStatus.cs",
+              "RelativeDocumentMoniker": "Constants\\QualificationStatus.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Constants\\QualificationStatus.cs",
+              "RelativeToolTip": "Constants\\QualificationStatus.cs",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAAABYAAAAeAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T11:37:45.764Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "CallAttempt.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\CallAttempt.cs",
+              "RelativeDocumentMoniker": "Entities\\CallAttempt.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\CallAttempt.cs",
+              "RelativeToolTip": "Entities\\CallAttempt.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T10:40:41.465Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "CampaignFileContact.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\CampaignFileContact.cs",
+              "RelativeDocumentMoniker": "Entities\\CampaignFileContact.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\CampaignFileContact.cs",
+              "RelativeToolTip": "Entities\\CampaignFileContact.cs",
+              "ViewState": "AgIAAA8AAAAAAAAAAIAwwDcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T10:38:22.611Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "AgentPresenceCleanupWorker.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Services\\Agents\\AgentPresenceCleanupWorker.cs",
+              "RelativeDocumentMoniker": "Services\\Agents\\AgentPresenceCleanupWorker.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Services\\Agents\\AgentPresenceCleanupWorker.cs",
+              "RelativeToolTip": "Services\\Agents\\AgentPresenceCleanupWorker.cs",
+              "ViewState": "AgIAACEAAAAAAAAAAAAAADIAAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T09:53:19.69Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ContactDistributionService.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Services\\ContactDistribution\\ContactDistributionService.cs",
+              "RelativeDocumentMoniker": "Services\\ContactDistribution\\ContactDistributionService.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Services\\ContactDistribution\\ContactDistributionService.cs",
+              "RelativeToolTip": "Services\\ContactDistribution\\ContactDistributionService.cs",
+              "ViewState": "AgIAAGUDAAAAAAAAAAAUwIYDAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T08:51:57.372Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "AuthService.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Services\\Auth\\AuthService.cs",
+              "RelativeDocumentMoniker": "Services\\Auth\\AuthService.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Services\\Auth\\AuthService.cs",
+              "RelativeToolTip": "Services\\Auth\\AuthService.cs",
+              "ViewState": "AgIAAHgAAAAAAAAAAAAAAIQAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T08:48:04.586Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "AgentDtos.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\DTOs\\Agents\\AgentDtos.cs",
+              "RelativeDocumentMoniker": "DTOs\\Agents\\AgentDtos.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\DTOs\\Agents\\AgentDtos.cs",
+              "RelativeToolTip": "DTOs\\Agents\\AgentDtos.cs",
+              "ViewState": "AgIAAFAAAAAAAAAAAAAAAH8AAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T08:47:25.568Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "User.cs",
+              "DocumentMoniker": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\User.cs",
+              "RelativeDocumentMoniker": "Entities\\User.cs",
+              "ToolTip": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\Entities\\User.cs",
+              "RelativeToolTip": "Entities\\User.cs",
+              "ViewState": "AgIAACsAAAAAAAAAAAAAADoAAAAwAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-10T08:44:39.866Z"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            }
+          ]
+        },
+        {
+          "DockedHeight": 135,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:2:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

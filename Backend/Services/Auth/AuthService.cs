@@ -64,11 +64,17 @@ public class AuthService: IAuthService
         var accessToken = await _jwtTokenGenerator.GenerateAccessToken(user);
         var refreshToken = _jwtTokenGenerator.GenerateRefreshToken();
 
+        var now = DateTime.UtcNow;
         user.RefreshToken = refreshToken;
-        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-        user.LastLoginAt = DateTime.UtcNow;
-        user.UpdatedAt = DateTime.UtcNow;
-
+        user.RefreshTokenExpiryTime = now.AddDays(7);
+        user.LastLoginAt = now;
+        user.UpdatedAt = now;
+        user.IsOnline = true;
+        user.PresenceStatus = user.Role?.Name == Roles.Agent
+            ? AgentPresenceStatus.Available
+            : AgentPresenceStatus.Offline;
+        user.PresenceChangedAt = now;
+        user.LastHeartbeatAt = now;
         await _dbContext.SaveChangesAsync();
 
         return new AuthResponse
@@ -220,10 +226,21 @@ public class AuthService: IAuthService
         if (user == null)
             throw new UnauthorizedAccessException();
 
+        using var transaction = await _dbContext.Database.BeginTransactionAsync();
+
+        var now = DateTime.UtcNow;
         user.RefreshToken = null;
         user.RefreshTokenExpiryTime = null;
+        user.IsOnline = false;
+        user.PresenceStatus = AgentPresenceStatus.Offline;
+        user.PresenceChangedAt = now;
+        user.LastHeartbeatAt = null;
+        user.UpdatedAt = now;
+
+        await ReleaseAssignedContactsAsync(userId, now);
 
         await _dbContext.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     // ---------------- FORGOT PASSWORD ----------------
@@ -356,6 +373,10 @@ public class AuthService: IAuthService
             RoleId = user.RoleId,
             RoleName = user.Role?.Name ?? "",
             Avatar = user.Avatar,
+            IsOnline = user.IsOnline,
+            PresenceStatus = user.PresenceStatus,
+            PresenceChangedAt = user.PresenceChangedAt,
+            LastHeartbeatAt = user.LastHeartbeatAt,
             Permissions = await _permissionService.GetUserPermissionsAsync(user.Id)
         };
     }
@@ -373,5 +394,25 @@ public class AuthService: IAuthService
             var j = RandomNumberGenerator.GetInt32(i + 1);
             (chars[i], chars[j]) = (chars[j], chars[i]);
         }
+    }
+
+    private async Task ReleaseAssignedContactsAsync(int agentId, DateTime now)
+    {
+        await _dbContext.CallAttempts
+            .Where(a => a.AgentId == agentId
+                     && a.Status == CallStatus.Assigned
+                     && a.EndedAt == null)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(a => a.Status, CallStatus.TimedOut)
+                .SetProperty(a => a.EndedAt, now)
+                .SetProperty(a => a.UpdatedAt, now));
+
+        await _dbContext.CampaignFileContacts
+            .Where(c => c.AssignedAgentId == agentId
+                     && c.CallStatus == CallStatus.Assigned)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(c => c.CallStatus, CallStatus.Pending)
+                .SetProperty(c => c.AssignedAgentId, (int?)null)
+                .SetProperty(c => c.AssignedAt, (DateTime?)null));
     }
 }

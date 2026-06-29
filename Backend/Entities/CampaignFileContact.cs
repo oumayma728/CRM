@@ -49,10 +49,15 @@ namespace Backend.Entities
         [ForeignKey("AssignedAgentId")]
         public User? AssignedAgent { get; set; }
 
+        [Column("client_id")]
+        public int? ClientId { get; set; }
+        [ForeignKey("ClientId")]
+        public Client? Client { get; set; }
+
         // Call status tracking
         [Column("call_status")]
         [MaxLength(50)]
-        public string CallStatus { get; set; } = "pending";  // pending, called, qualified, not_qualified, appointment, refused
+        public string CallStatus { get; set; } = Backend.Constants.CallStatus.Pending;
 
         [Column("qualification_status")]
         [MaxLength(50)]
@@ -99,7 +104,7 @@ namespace Backend.Entities
 
         // Tracking
         [Column("assigned_at")]
-        public DateTime? AssignedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? AssignedAt { get; set; } = null;
 
         [Column("qualified_at")]
         public DateTime? QualifiedAt { get; set; }
@@ -167,6 +172,10 @@ namespace Backend.Entities
 
         [Column("assignment_priority")]
         public int AssignmentPriority { get; set; } = 0;
+        [Column("preferred_agent_id")]
+        public int? PreferredAgentId { get; set; }
+        [Column("next_action")]
+        public string? NextAction { get; set; }
 
     }
 }

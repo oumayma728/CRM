@@ -1,6 +1,7 @@
 // contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
+import { agentPresenceService } from '../services/agentPresenceService';
 import { permissionService } from '../services/permissionService';
 import type { Permission } from '../types/permissions';
 import type { User } from '../services/authService';
@@ -34,6 +35,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (!user || !localStorage.getItem('accessToken')) return;
+
+    const sendHeartbeat = async () => {
+      try {
+        await agentPresenceService.heartbeat();
+      } catch (error) {
+        console.error('Presence heartbeat failed:', error);
+      }
+    };
+
+    void sendHeartbeat();
+    const intervalId = window.setInterval(() => {
+      void sendHeartbeat();
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, [user?.id]);
   
   const login = async (email: string, password: string): Promise<boolean> => {
     try {

@@ -478,6 +478,9 @@ namespace Backend.Services.Campaigns
                     Phone = u.Phone,
                     IsActive = u.IsActive,
                     IsOnline = u.IsOnline,
+                    PresenceStatus = u.PresenceStatus,
+                    PresenceChangedAt = u.PresenceChangedAt,
+                    LastHeartbeatAt = u.LastHeartbeatAt,
                 })
                 .ToListAsync();
         }

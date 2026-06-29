@@ -179,6 +179,9 @@ export interface AvailableAgentDto {
   phone?: string;
   isActive: boolean;
   isOnline: boolean;
+  presenceStatus?: number;
+  presenceChangedAt?: string;
+  lastHeartbeatAt?: string;
 }
 
 // ==================== INJECTION ====================

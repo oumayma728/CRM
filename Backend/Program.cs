@@ -13,6 +13,7 @@ using Backend.Services.Permissions;
 using Backend.Services.ContactDistribution;
 using Backend.Services.Campaigns;
 using Backend.Services.Agents;
+using Backend.Services.Clients;
 using Backend.Filters;
 using Backend.Helpers;
 using Microsoft.AspNetCore.Http.Features;
@@ -63,7 +64,10 @@ builder.Services.AddScoped<ILeadTypeService, LeadTypeService>();
 builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddScoped<IContactDistributionService, ContactDistributionService>();
 builder.Services.AddScoped<IAgentService, AgentService>();
+builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddHostedService<SourceFileImportWorker>();
+builder.Services.AddHostedService<AgentPresenceCleanupWorker>();
+builder.Services.AddHostedService<NearCampaignEndWorker>();
 
 // API Documentation
 builder.Services.AddEndpointsApiExplorer();

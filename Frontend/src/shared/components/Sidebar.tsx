@@ -9,6 +9,7 @@ import {
   Clock,
   Upload,
   Shield,
+  Handshake,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -47,13 +48,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     //{ icon: Shield, label: 'RGPD & Audit', path: '/admin/gdpr' },
     //{ icon: Download, label: 'Rapports', path: '/admin/reports' },
     { icon: Upload, label: 'Import Leads', path: '/admin/injection' },
-    {icon :Upload, label: 'Sources de leads', path: '/admin/leads' }
+    { icon: Upload, label: 'Sources de leads', path: '/admin/leads' },
+    { icon: Handshake, label: 'Clients partenaires', path: '/admin/clients' }
     //{ icon: Upload, label: 'Import File', path: '/admin/import-leads/importfile' }
   ];
 
   const menuItems = user?.roleId === 8 ? adminMenuItems : agentMenuItems;
-console.log('Sidebar rendering with user:', user);
-console.log('User role:', user?.roleId);
 
   return (
     <div

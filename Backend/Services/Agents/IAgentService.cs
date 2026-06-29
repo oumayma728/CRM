@@ -11,5 +11,8 @@ namespace Backend.Services.Agents
         Task<bool> DeleteAgentAsync(int id);
         Task<List<AgentCampaignSummaryDto>> GetAgentCampaignsAsync(int id);
         Task<List<AgentAppointmentDto>> GetAgentAppointmentsAsync(int id);
+        Task<AgentPresenceDto> GetPresenceAsync(int userId);
+        Task<AgentPresenceDto> UpdatePresenceAsync(int userId, UpdatePresenceDto dto);
+        Task HeartbeatAsync(int userId);
     }
 }

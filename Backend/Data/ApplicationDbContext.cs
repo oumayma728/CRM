@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Backend.Entities;
+using Backend.Constants;
 
 namespace Backend.Data
 {
@@ -24,11 +25,14 @@ namespace Backend.Data
         public DbSet<Campaign> Campaigns { get; set; }
         public DbSet<CampaignFile> CampaignFiles { get; set; }
         public DbSet<CampaignFileContact> CampaignFileContacts { get; set; }
+        public DbSet<ContactNote> ContactNotes { get; set; }
         public DbSet<CallAttempt> CallAttempts { get; set; }
         public DbSet<CampaignAgents> CampaignAgents { get; set; }
         public DbSet<AgentProfile> AgentProfiles { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<UserPermission> UserPermissions { get; set; }
+        public DbSet<Blacklist> Blacklist { get; set; }
+        public DbSet<Client> Clients { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -142,6 +146,18 @@ namespace Backend.Data
                 entity.Property(u => u.RoleId)
                     .HasColumnName("role_id")
                     .IsRequired();
+                entity.Property(u => u.IsOnline)
+                    .HasDefaultValue(false);
+                entity.Property(u => u.PresenceStatus)
+                    .HasConversion<string>()
+                    .HasMaxLength(20)
+                    .HasDefaultValue(AgentPresenceStatus.Offline);
+                entity.Property(u => u.PresenceChangedAt)
+                    .HasColumnName("presence_changed_at");
+                entity.Property(u => u.LastHeartbeatAt)
+                    .HasColumnName("last_heartbeat_at");
+                entity.HasIndex(u => new { u.IsOnline, u.PresenceStatus, u.LastHeartbeatAt })
+                    .HasDatabaseName("idx_users_presence_heartbeat");
 
                 entity.HasOne(u => u.Role)
                       .WithMany(r => r.Users)
@@ -311,6 +327,10 @@ namespace Backend.Data
                       .HasDefaultValue(75000);
                 entity.Property(e => e.LowPoolRatio)
                       .HasDefaultValue(0.30m);
+                entity.Property(e => e.MaxAttemptsPerContact)
+                      .HasDefaultValue(3);
+                entity.Property(e => e.CallTimeoutMinutes)
+                      .HasDefaultValue(10);
                 entity.HasOne(c => c.CreatedByUser)
                       .WithMany()
                       .HasForeignKey(c => c.CreatedByUserId)
@@ -389,6 +409,21 @@ namespace Backend.Data
                 // Index pour les contacts assignés à un agent
                 entity.HasIndex(e => new { e.AssignedAgentId, e.CallStatus })
                     .HasDatabaseName("idx_campaign_file_contacts_agent_queue");
+                entity.HasIndex(e => new { e.CallStatus, e.AssignedAt })
+                    .HasDatabaseName("idx_campaign_file_contacts_assigned_timeout");
+                entity.HasIndex(e => new { e.AssignedAgentId, e.CallStatus, e.AssignedAt })
+                    .HasDatabaseName("idx_campaign_file_contacts_agent_assigned_timeout");
+                entity.Property(e => e.NextAction)
+                    .HasMaxLength(50);
+                entity.HasIndex(e => new { e.CampaignId, e.NextAction, e.NextCallAt })
+                    .HasDatabaseName("idx_campaign_file_contacts_next_action");
+
+                entity.HasIndex(e => new {
+                    e.PreferredAgentId,
+                    e.CallStatus,
+                    e.NextCallAt
+                })
+                    .HasDatabaseName("idx_campaign_file_contacts_preferred_agent");
 
                 entity.Property(e => e.IsAssignable)
                     .HasDefaultValue(false);
@@ -409,6 +444,63 @@ namespace Backend.Data
                     })
                     .HasDatabaseName("idx_campaign_file_contacts_assignable_queue");
 
+            });
+
+            // =========================
+            // Contact Notes
+            // =========================
+            modelBuilder.Entity<ContactNote>(entity =>
+            {
+                entity.ToTable("contact_notes");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.NoteType)
+                    .HasMaxLength(50)
+                    .HasDefaultValue(ContactNoteTypes.General);
+                entity.Property(e => e.Body)
+                    .HasMaxLength(4000)
+                    .IsRequired();
+                entity.Property(e => e.CreatedAt)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.IsDeleted)
+                    .HasDefaultValue(false);
+
+                entity.HasIndex(e => new { e.CampaignFileContactId, e.CreatedAt })
+                    .HasDatabaseName("idx_contact_notes_contact_created");
+                entity.HasIndex(e => new { e.SourceFileContactId, e.CreatedAt })
+                    .HasDatabaseName("idx_contact_notes_source_contact_created");
+                entity.HasIndex(e => new { e.CampaignId, e.CreatedAt })
+                    .HasDatabaseName("idx_contact_notes_campaign_created");
+                entity.HasIndex(e => e.AuthorUserId)
+                    .HasDatabaseName("idx_contact_notes_author_user");
+                entity.HasIndex(e => new { e.IsDeleted, e.CampaignFileContactId, e.CreatedAt })
+                    .HasDatabaseName("idx_contact_notes_visible_contact_created");
+
+                entity.HasOne(e => e.Campaign)
+                    .WithMany()
+                    .HasForeignKey(e => e.CampaignId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.CampaignFileContact)
+                    .WithMany()
+                    .HasForeignKey(e => e.CampaignFileContactId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.SourceFileContact)
+                    .WithMany()
+                    .HasForeignKey(e => e.SourceFileContactId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Author)
+                    .WithMany()
+                    .HasForeignKey(e => e.AuthorUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.UpdatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.UpdatedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.DeletedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.DeletedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasQueryFilter(e => !e.IsDeleted);
             });
 
             // =========================
@@ -435,6 +527,8 @@ namespace Backend.Data
                     .HasDatabaseName("idx_call_attempts_campaign_status_started");
                 entity.HasIndex(e => new { e.AgentId, e.StartedAt })
                     .HasDatabaseName("idx_call_attempts_agent_started");
+                entity.HasIndex(e => new { e.Status, e.StartedAt })
+                    .HasDatabaseName("idx_call_attempts_status_started");
                 entity.HasIndex(e => new { e.Provider, e.ProviderCallId })
                     .HasDatabaseName("idx_call_attempts_provider_call_id");
 
@@ -460,5 +554,43 @@ namespace Backend.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
-        } }
+            // =========================
+            // CLIENTS
+            // =========================
+            modelBuilder.Entity<Client>(entity =>
+            {
+                entity.ToTable("clients");
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.Code)
+                    .IsUnique()
+                    .HasDatabaseName("idx_clients_code");
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Nom).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.Email).HasMaxLength(255);
+                entity.Property(e => e.Telephone).HasMaxLength(50);
+                entity.Property(e => e.Adresse).HasMaxLength(500);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+            });
+
+            // =========================
+            // BLACKLIST
+            // =========================
+            modelBuilder.Entity<Blacklist>(entity =>
+            {
+                entity.ToTable("blacklist");
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.PhoneNumber)
+                    .IsUnique()
+                    .HasDatabaseName("idx_blacklist_phone_number");
+                entity.HasOne(e => e.AddedByUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.AddedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Campaign)
+                    .WithMany()
+                    .HasForeignKey(e => e.CampaignId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+        }
     }
+}
