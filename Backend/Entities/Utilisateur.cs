@@ -14,6 +14,9 @@ public abstract class Utilisateur
     public DateTime DateCreation { get; set; } = DateTime.UtcNow;
     public string? IdentifiantMachine { get; set; }
 
+    // ── Champ commun Qualité/Technique ─────────────────────────
+    public string? Service { get; set; }
+
     // ── Auth features ──────────────────────────────────────────
     public string? RefreshToken { get; set; }
     public DateTime? RefreshTokenExpiryTime { get; set; }

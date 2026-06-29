@@ -3,7 +3,7 @@ import axios from 'axios';
 import type { Permission } from '../types/permissions';
 import { permissionService } from '../services/permissionService';
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5241/api';
+const API_URL = ((import.meta as any).env?.VITE_API_URL || 'http://localhost:5241') + '/api';
 
 interface User {
   id: number;

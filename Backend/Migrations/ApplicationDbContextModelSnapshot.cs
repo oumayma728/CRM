@@ -743,6 +743,27 @@ namespace CRM.API.Migrations
                     b.Property<long?>("AgentId")
                         .HasColumnType("bigint");
 
+                    b.Property<int?>("AgeChaudiere")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CodePostal")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommentaireBanque")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommentaireCommercial")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommentaireConfirmation")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Commentaire")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ConsommationChauffage")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("DateDernierAppel")
                         .HasColumnType("timestamp with time zone");
 
@@ -758,16 +779,61 @@ namespace CRM.API.Migrations
                     b.Property<string>("Email")
                         .HasColumnType("text");
 
+                    b.Property<bool?>("EquipePAC")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("EquipePV")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("EtatIsolation")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EtatToiture")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("EtudePV")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("Fichage")
+                        .HasColumnType("boolean");
+
                     b.Property<long?>("FichierImportId")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("ModeChauffage")
+                        .HasColumnType("text");
+
                     b.Property<string>("Nom")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("NombrePersonnes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NumGSM")
                         .HasColumnType("text");
 
                     b.Property<string>("Prenom")
                         .HasColumnType("text");
 
+                    b.Property<string>("ProfessionMme")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProfessionMr")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Projet")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ProprietaireDepuis")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("QualificationDetaillee")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Revenus")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Credits")
                         .HasColumnType("text");
 
                     b.Property<string>("Source")
@@ -778,8 +844,20 @@ namespace CRM.API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("StatutAgent")
+                        .HasColumnType("text");
+
+                    b.Property<double?>("Surface")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("Telephone")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TypeRendezVous")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Ville")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
@@ -1311,6 +1389,12 @@ namespace CRM.API.Migrations
                     b.Property<string>("CommentaireBanque")
                         .HasColumnType("text");
 
+                    b.Property<string>("CommentaireCommercial")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CommentaireConfirmation")
+                        .HasColumnType("text");
+
                     b.Property<long?>("CommercialId")
                         .HasColumnType("bigint");
 
@@ -1333,6 +1417,9 @@ namespace CRM.API.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("TypeProjet")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TypeRendezVous")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
@@ -1933,6 +2020,71 @@ namespace CRM.API.Migrations
                     b.UseTphMappingStrategy();
                 });
 
+            modelBuilder.Entity("Backend.Entities.Evaluation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AgentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("AppelId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Commentaire")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("DateEvaluation")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("EvaluateurId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("NbPose")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NbRdvAnnule")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NbRdvBrut")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NbRdvConfirme")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NbRdvSigne")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("NoteGlobale")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("NoteEcoute")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NotePitchCommercial")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NoteQualiteAppel")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NoteRespectScript")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NoteTraitementObjections")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId");
+
+                    b.HasIndex("AppelId");
+
+                    b.ToTable("Evaluations");
+                });
+
             modelBuilder.Entity("Backend.Entities.Admin", b =>
                 {
                     b.HasBaseType("Backend.Entities.Utilisateur");
@@ -1943,9 +2095,25 @@ namespace CRM.API.Migrations
                     b.HasDiscriminator().HasValue("ADMIN");
                 });
 
+            modelBuilder.Entity("Backend.Entities.Qualite", b =>
+                {
+                    b.HasBaseType("Backend.Entities.Utilisateur");
+
+                    b.Property<string>("Service")
+                        .HasColumnType("text");
+
+                    b.HasDiscriminator().HasValue("QUALITE");
+                });
+
             modelBuilder.Entity("Backend.Entities.Agent", b =>
                 {
                     b.HasBaseType("Backend.Entities.Utilisateur");
+
+                    b.Property<DateTime?>("DateEmbauche")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool?>("IsElite")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("ObjectifMensuel")
                         .HasColumnType("integer");
@@ -2013,6 +2181,23 @@ namespace CRM.API.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Evaluation", b =>
+                {
+                    b.HasOne("Backend.Entities.Agent", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Entities.Appel", "Appel")
+                        .WithMany()
+                        .HasForeignKey("AppelId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Agent");
+                    b.Navigation("Appel");
                 });
 
             modelBuilder.Entity("Backend.Entities.Appel", b =>

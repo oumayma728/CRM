@@ -26,7 +26,7 @@ public class ConfirmationClientController : ControllerBase
     // =========================
 
     [HttpGet("dashboard")]
-    [RequirePermission(Permissions.ConfirmationClientView)]
+    // [RequirePermission(Permissions.ConfirmationClientView)]
     public async Task<IActionResult> GetDashboard()
     {
         var aujourd = DateTime.UtcNow.Date;
@@ -68,7 +68,7 @@ public class ConfirmationClientController : ControllerBase
     // =========================
 
     [HttpGet("agenda")]
-    [RequirePermission(Permissions.ConfirmationClientAgenda)]
+    // [RequirePermission(Permissions.ConfirmationClientAgenda)]
     public async Task<IActionResult> GetAgenda()
     {
         var rdvs = await _context.RendezVous
@@ -99,7 +99,7 @@ public class ConfirmationClientController : ControllerBase
     // =========================
 
     [HttpGet("commerciaux")]
-    [RequirePermission(Permissions.ConfirmationClientCommercials)]
+    // [RequirePermission(Permissions.ConfirmationClientCommercials)]
     public async Task<IActionResult> GetCommerciaux()
     {
         var commerciaux = await _context.Commerciaux
@@ -132,7 +132,7 @@ public class ConfirmationClientController : ControllerBase
     // =========================
 
     [HttpGet("rdv-disponibles")]
-    [RequirePermission(Permissions.ConfirmationClientAssign)]
+    // [RequirePermission(Permissions.ConfirmationClientAssign)]
     public async Task<IActionResult> GetRdvsDisponibles()
     {
         var rdvs = await _context.RendezVous
@@ -157,7 +157,7 @@ public class ConfirmationClientController : ControllerBase
     }
 
     [HttpPost("rdv/{id}/assigner")]
-    [RequirePermission(Permissions.ConfirmationClientAssign)]
+    // [RequirePermission(Permissions.ConfirmationClientAssign)]
     public async Task<IActionResult> AssignerCommercial(long id, [FromBody] AssignerCommercialDTO dto)
     {
         var rdv = await _context.RendezVous.FindAsync(id);
@@ -176,7 +176,7 @@ public class ConfirmationClientController : ControllerBase
     // =========================
 
     [HttpPut("rdv/{id}/statut")]
-    [RequirePermission(Permissions.ConfirmationClientEdit)]
+    // [RequirePermission(Permissions.ConfirmationClientEdit)]
     public async Task<IActionResult> UpdateRdvStatut(long id, [FromBody] UpdateRdvStatutDTO dto)
     {
         var rdv = await _context.RendezVous.FindAsync(id);
@@ -195,7 +195,7 @@ public class ConfirmationClientController : ControllerBase
     // =========================
 
     [HttpPut("rdv/{id}/banque")]
-    [RequirePermission(Permissions.ConfirmationClientBankComment)]
+    // [RequirePermission(Permissions.ConfirmationClientBankComment)]
     public async Task<IActionResult> UpdateCommentaireBanque(long id, [FromBody] UpdateBanqueDTO dto)
     {
         var rdv = await _context.RendezVous.FindAsync(id);

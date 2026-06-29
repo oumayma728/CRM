@@ -51,6 +51,8 @@ export default function ChangePasswordPage() {
       else if (type === 'CONFCLIENT') navigate('/confirmation-client/dashboard');
       else navigate('/confirmation1/dashboard');
     } else if (role === 'agent') navigate('/agent/dashboard');
+    else if (role === 'qualite') navigate('/qualite/dashboard');
+    else if (role === 'commercial') navigate('/commercial/dashboard');
     else navigate('/login');
   };
 

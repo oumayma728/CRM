@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, Users, Phone, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5241/api';
+const API_URL = ((import.meta as any).env?.VITE_API_URL || 'http://localhost:5241') + '/api';
 
 interface Rdv {
   id: number;
@@ -24,6 +24,12 @@ interface DashboardData {
   rdvRecents: Rdv[];
 }
 
+// Conf2 has access to EBI (via /agenda) and CLIENT1 (via /agenda-client1)
+const AGENDA_TABS = [
+  { id: 'EBI',     label: 'Agenda EBI',     icon: '🏢', endpoint: 'agenda'         },
+  { id: 'CLIENT1', label: 'Agenda Client 1', icon: '👤', endpoint: 'agenda-client1' },
+];
+
 export default function Confirmation2Dashboard() {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -33,42 +39,67 @@ export default function Confirmation2Dashboard() {
   const [commentaire, setCommentaire] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const [myAgendas, setMyAgendas] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [agendaRdvs, setAgendaRdvs] = useState<Rdv[]>([]);
+  const [agendaLoading, setAgendaLoading] = useState(false);
+
   useEffect(() => {
     fetchDashboard();
+    fetchMyAgendas();
   }, []);
+
+  useEffect(() => {
+    if (activeTab) fetchAgendaRdvs(activeTab);
+  }, [activeTab]);
+
+  const token = () => localStorage.getItem('token');
+
+  const fetchMyAgendas = async () => {
+    try {
+      const res = await fetch(`${API_URL}/confirmatrice/my-agendas`, {
+        headers: { Authorization: `Bearer ${token()}` }
+      });
+      if (!res.ok) return;
+      const list: string[] = await res.json();
+      setMyAgendas(list);
+      const first = AGENDA_TABS.find(t => list.includes(t.id));
+      if (first) setActiveTab(first.id);
+    } catch {
+      setMyAgendas(AGENDA_TABS.map(t => t.id));
+      setActiveTab(AGENDA_TABS[0].id);
+    }
+  };
+
+  const fetchAgendaRdvs = async (tabId: string) => {
+    const tab = AGENDA_TABS.find(t => t.id === tabId);
+    if (!tab) return;
+    setAgendaLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/confirmation2/${tab.endpoint}`, {
+        headers: { Authorization: `Bearer ${token()}` }
+      });
+      if (res.ok) setAgendaRdvs(await res.json());
+    } catch {
+      setAgendaRdvs([]);
+    } finally {
+      setAgendaLoading(false);
+    }
+  };
 
   const fetchDashboard = async () => {
     try {
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        setError('Vous n\'êtes pas connecté. Veuillez vous identifier.');
-        setLoading(false);
-        return;
-      }
-      
+      const t = token();
+      if (!t) { setError('Vous n\'êtes pas connecté.'); setLoading(false); return; }
       const response = await fetch(`${API_URL}/confirmation2/dashboard`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { Authorization: `Bearer ${t}` }
       });
-      
-      if (response.status === 401) {
-        setError('Session expirée. Veuillez vous reconnecter.');
-        return;
-      }
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const result = await response.json();
-      setData(result);
+      if (response.status === 401) { setError('Session expirée.'); return; }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setData(await response.json());
       setError(null);
     } catch (error: any) {
-      console.error('Erreur:', error);
-      setError(error.message || 'Erreur de chargement des données');
+      setError(error.message || 'Erreur de chargement');
     } finally {
       setLoading(false);
     }
@@ -78,21 +109,18 @@ export default function Confirmation2Dashboard() {
     try {
       await fetch(`${API_URL}/confirmation2/rdv/${rdvId}/statut`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
         body: JSON.stringify({ statut: selectedStatut, commentaire })
       });
-      
-      setSelectedRdv(null);
-      setSelectedStatut('');
-      setCommentaire('');
+      setSelectedRdv(null); setSelectedStatut(''); setCommentaire('');
       fetchDashboard();
+      if (activeTab) fetchAgendaRdvs(activeTab);
     } catch (error) {
       console.error('Erreur:', error);
     }
   };
+
+  const visibleTabs = AGENDA_TABS.filter(t => myAgendas.length === 0 || myAgendas.includes(t.id));
 
   const getStatutBadge = (statut: string) => {
     switch (statut) {
@@ -153,33 +181,60 @@ export default function Confirmation2Dashboard() {
         </div>
       </div>
 
-      {/* Tableau des RDV */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-4 border-b font-semibold">Liste des rendez-vous à traiter</div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr><th className="p-3 text-left">Contact</th><th className="p-3 text-left">Téléphone</th><th className="p-3 text-left">Agent</th><th className="p-3 text-left">Date RDV</th><th className="p-3 text-left">Statut</th><th className="p-3 text-left">Action</th></tr>
-            </thead>
-            <tbody>
-              {data?.rdvRecents && data.rdvRecents.length > 0 ? (
-                data.rdvRecents.map((rdv) => (
-                  <tr key={rdv.id} className="border-t hover:bg-gray-50">
-                    <td className="p-3">{rdv.contactPrenom} {rdv.contactNom}</td>
-                    <td className="p-3">{rdv.telephone}</td>
-                    <td className="p-3">{rdv.agentNom}</td>
-                    <td className="p-3">{new Date(rdv.dateRendezVous).toLocaleString()}</td>
-                    <td className="p-3">{getStatutBadge(rdv.statut)}</td>
-                    <td className="p-3"><button onClick={() => setSelectedRdv(rdv)} className="bg-blue-500 text-white px-3 py-1 rounded text-sm">Qualifier</button></td>
+      {/* Agenda Tabs */}
+      {visibleTabs.length > 0 && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="flex border-b overflow-x-auto">
+            {visibleTabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-5 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <span>{tab.icon}</span>{tab.label}
+              </button>
+            ))}
+          </div>
+          {agendaLoading ? (
+            <div className="flex justify-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-3 text-left text-sm text-gray-500">Contact</th>
+                    <th className="p-3 text-left text-sm text-gray-500">Téléphone</th>
+                    <th className="p-3 text-left text-sm text-gray-500">Agent</th>
+                    <th className="p-3 text-left text-sm text-gray-500">Date RDV</th>
+                    <th className="p-3 text-left text-sm text-gray-500">Statut</th>
+                    <th className="p-3 text-left text-sm text-gray-500">Action</th>
                   </tr>
-                ))
-              ) : (
-                <tr><td colSpan={6} className="p-8 text-center text-gray-500">Aucun rendez-vous à afficher</td></tr>
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {agendaRdvs.length > 0 ? agendaRdvs.map(rdv => (
+                    <tr key={rdv.id} className="border-t hover:bg-gray-50">
+                      <td className="p-3">{rdv.contactPrenom} {rdv.contactNom}</td>
+                      <td className="p-3">{rdv.telephone}</td>
+                      <td className="p-3">{rdv.agentNom}</td>
+                      <td className="p-3">{new Date(rdv.dateRendezVous).toLocaleString()}</td>
+                      <td className="p-3">{getStatutBadge(rdv.statut)}</td>
+                      <td className="p-3"><button onClick={() => setSelectedRdv(rdv)} className="bg-blue-500 text-white px-3 py-1 rounded text-sm">Qualifier</button></td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan={6} className="p-8 text-center text-gray-500">Aucun rendez-vous</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Modal qualification */}
       {selectedRdv && (

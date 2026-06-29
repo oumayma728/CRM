@@ -169,30 +169,127 @@ public class ContactController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Récupère les contacts à appeler pour un agent</summary>
+    // ─────────────────────────────────────────────────────────────────────────
+    // CONTACTS D'UN AGENT (pour la liste de l'agent connecté)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Retourne les contacts à appeler pour un agent donné</summary>
     [HttpGet("agent/{agentId:long}/a-appeler")]
-    [ProducesResponseType(typeof(IEnumerable<ContactDTO>), 200)]
-    public async Task<IActionResult> GetContactsAApeler(long agentId)
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> GetContactsAgentAAppeler(long agentId)
     {
         var contacts = await _context.Contacts
-            .Where(c => c.AgentId == agentId && c.Statut == "A_APPELER")
-            .OrderBy(c => c.DateImport)
+            .Where(c => c.AgentId == agentId && c.Statut != "TRAITE")
+            .OrderByDescending(c => c.ScoreIA ?? 0)
+            .ThenByDescending(c => c.DateDernierAppel)
+            .Select(c => new
+            {
+                c.Id,
+                c.Nom,
+                c.Prenom,
+                c.Telephone,
+                c.NumGSM,
+                c.Email,
+                c.Adresse,
+                c.CodePostal,
+                c.Ville,
+                c.Source,
+                c.Statut,
+                c.StatutAgent,
+                c.NombreNRP,
+                c.ScoreIA,
+                c.CreneauOptimalIA,
+                c.TypeRendezVous,
+                c.ModeChauffage,
+                c.AgeChaudiere,
+                c.Surface,
+                c.Projet,
+                c.DateRappelPlanifie,
+                c.DateDernierAppel,
+                c.AgentId,
+            })
             .AsNoTracking()
             .ToListAsync();
 
-        var result = contacts.Select(c => new ContactDTO
-        {
-            Id = c.Id,
-            Nom = c.Nom,
-            Prenom = c.Prenom,
-            Telephone = c.Telephone,
-            Email = c.Email,
-            Adresse = c.Adresse,
-            Source = c.Source,
-            Statut = c.Statut,
-            AgentId = c.AgentId
-        });
+        return Ok(contacts);
+    }
 
-        return Ok(result);
+    // ─────────────────────────────────────────────────────────────────────────
+    // NRP COUNTER
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Incrémenter le compteur NRP d'un contact</summary>
+    [HttpPost("{id:long}/nrp")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> IncrementNRP(long id)
+    {
+        var contact = await _context.Contacts.FindAsync(id);
+        if (contact == null) return NotFound();
+        contact.NombreNRP++;
+        contact.DateDernierAppel = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        return Ok(new { contact.NombreNRP });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // EXPORT CSV
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Exporter tous les contacts en CSV</summary>
+    [HttpGet("export/csv")]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "ADMIN,TECH")]
+    public async Task<IActionResult> ExportCsv([FromQuery] long? fichierId)
+    {
+        var query = _context.Contacts.Include(c => c.Agent).AsQueryable();
+        if (fichierId.HasValue)
+            query = query.Where(c => c.FichierImportId == fichierId);
+
+        var contacts = await query.OrderBy(c => c.Id).AsNoTracking().ToListAsync();
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Id,Nom,Prenom,Telephone,NumGSM,Email,Adresse,CodePostal,Ville,Source," +
+                      "StatutAgent,Commentaire,Projet,ModeChauffage,AgeChaudiere,EquipePV,EquipePAC," +
+                      "Surface,NombrePersonnes,Revenus,Credits,Fichage,NombreNRP,ScoreIA,Agent");
+
+        foreach (var c in contacts)
+        {
+            var Esc = (string? s) => s == null ? "" : $"\"{s.Replace("\"", "\"\"")}\"";
+            sb.AppendLine(string.Join(",",
+                c.Id, Esc(c.Nom), Esc(c.Prenom), Esc(c.Telephone), Esc(c.NumGSM), Esc(c.Email),
+                Esc(c.Adresse), Esc(c.CodePostal), Esc(c.Ville), Esc(c.Source),
+                Esc(c.StatutAgent), Esc(c.Commentaire), Esc(c.Projet), Esc(c.ModeChauffage),
+                c.AgeChaudiere, c.EquipePV, c.EquipePAC,
+                c.Surface, c.NombrePersonnes, Esc(c.Revenus), Esc(c.Credits), c.Fichage,
+                c.NombreNRP, c.ScoreIA,
+                Esc(c.Agent != null ? $"{c.Agent.Prenom} {c.Agent.Nom}" : "")
+            ));
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetPreamble()
+            .Concat(System.Text.Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
+        return File(bytes, "text/csv", $"contacts_{DateTime.Now:yyyyMMdd_HHmm}.csv");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CONTACTS AVEC SCORE IA (pour la liste agent avec badges)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Liste des contacts avec score IA, filtrés par agent</summary>
+    [HttpGet("agent/{agentId:long}/scored")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> GetScoredByAgent(long agentId)
+    {
+        var contacts = await _context.Contacts
+            .Where(c => c.AgentId == agentId)
+            .OrderByDescending(c => c.ScoreIA ?? 0)
+            .Select(c => new {
+                c.Id, c.Nom, c.Prenom, c.Telephone, c.NumGSM,
+                c.CodePostal, c.Ville, c.StatutAgent, c.NombreNRP,
+                c.ScoreIA, c.CreneauOptimalIA, c.DateRappelPlanifie,
+                c.Commentaire, c.Projet,
+            })
+            .AsNoTracking()
+            .ToListAsync();
+        return Ok(contacts);
     }
 }

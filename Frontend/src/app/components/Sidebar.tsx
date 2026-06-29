@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router';
 import {
   LayoutDashboard,
@@ -29,9 +29,14 @@ import {
   Briefcase,
   Banknote,
   Database,
-  Shield
+  Shield,
+  // Qualité + Commercial
+  ShieldCheck,
+  BadgeCheck
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+
+const API_URL = ((import.meta as any).env?.VITE_API_URL || 'http://localhost:5241') + '/api';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -42,9 +47,24 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const location = useLocation();
   const { user } = useAuth();
   const confType = user?.typeConfirmatrice?.toUpperCase();
-  
+
   // État pour gérer l'ouverture/fermeture du sous-menu
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+
+  // Agendas accessibles pour les confirmatrices
+  const [myAgendas, setMyAgendas] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (user?.role?.toLowerCase() === 'confirmatrice') {
+      const token = localStorage.getItem('token');
+      fetch(`${API_URL}/confirmatrice/my-agendas`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(r => r.ok ? r.json() : [])
+        .then((list: string[]) => setMyAgendas(list))
+        .catch(() => setMyAgendas([]));
+    }
+  }, [user]);
 
   const toggleSubmenu = (menu: string) => {
     setOpenSubmenu(openSubmenu === menu ? null : menu);
@@ -79,23 +99,22 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Download, label: 'Rapports', path: '/admin/reports' },
     { icon: Upload, label: 'Import Leads', path: '/admin/import-leads' },
     { icon: Upload, label: 'Fichier à charger', path: '/admin/leads' },
-    { icon: UserCheck, label: 'Agendas Confirmatrices', path: '/admin/confirmatrices-agendas' }
   ];
 
   // ==================== MENU CONFIRMATRICE 1 (Call Client 1) ====================
   const confirmation1MenuItems = [
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/confirmation1/dashboard' },
-    { icon: Building2, label: 'Agenda EBI', path: '/confirmation1/agenda-ebi' },
-    { 
-      icon: Calendar, 
-      label: 'Agenda Client', 
+    { icon: Building2, label: 'Agenda EBI', path: '/confirmation1/agenda-ebi', agendaId: 'EBI' },
+    {
+      icon: Calendar,
+      label: 'Agenda Client',
       isSubmenu: true,
       children: [
-        { icon: UserCheck, label: 'Agenda Client 1', path: '/confirmation1/agenda-client1' },
-        { icon: Users, label: 'Agenda Client 2', path: '/confirmation1/agenda-client2' }
+        { icon: UserCheck, label: 'Agenda Client 1', path: '/confirmation1/agenda-client1', agendaId: 'CLIENT1' },
+        { icon: Users,     label: 'Agenda Client 2', path: '/confirmation1/agenda-client2', agendaId: 'CLIENT2' }
       ]
     },
-    { icon: XCircle, label: 'Agenda Refus', path: '/confirmation1/agenda-refus' },
+    { icon: XCircle, label: 'Agenda Refus', path: '/confirmation1/agenda-refus', agendaId: 'REFUS' },
     { icon: Star, label: 'Évaluation Agents', path: '/confirmation1/evaluation' },
     { icon: BarChart3, label: 'Statistiques Globales', path: '/confirmation1/statistiques' },
     { icon: FileText, label: 'Créer une fiche contact', path: '/create-contact' }
@@ -104,7 +123,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   // ==================== MENU CONFIRMATRICE 2 (Call Client 2) ====================
   const confirmation2MenuItems = [
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/confirmation2/dashboard' },
-    { icon: Building2, label: 'Agenda Client 1', path: '/confirmation2/agenda-client1' },
+    { icon: Building2, label: 'Agenda EBI',      path: '/confirmation2/dashboard', agendaId: 'EBI' },
+    { icon: UserCheck, label: 'Agenda Client 1', path: '/confirmation2/agenda-client1', agendaId: 'CLIENT1' },
     { icon: Star, label: 'Évaluation Agents', path: '/confirmation2/evaluation' },
     { icon: BarChart3, label: 'Statistiques Globales', path: '/confirmation2/statistiques' },
     { icon: FileText, label: 'Créer une fiche contact', path: '/create-contact' }
@@ -112,22 +132,72 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   // ==================== MENU CONFIRMATRICE CLIENT ====================
   const confirmationClientMenuItems = [
-    { icon: LayoutDashboard, label: 'Tableau de bord', path: '/confirmation-client/dashboard' },
-    { icon: Calendar, label: 'Agenda Client', path: '/confirmation-client/agenda' },
-    { icon: Briefcase, label: 'Suivi Commerciaux', path: '/confirmation-client/commerciaux' },
-    { icon: CheckSquare, label: 'Attribution RDV', path: '/confirmation-client/attribution' },
-    
+    { icon: LayoutDashboard, label: 'Tableau de bord',  path: '/confirmation-client/dashboard' },
+    { icon: Calendar,        label: 'Agenda Client 1',  path: '/confirmation-client/agenda',          agendaId: 'CLIENT1' },
+    { icon: Users,           label: 'Agenda Client 2',  path: '/confirmation-client/agenda-client2',  agendaId: 'CLIENT2' },
+    { icon: XCircle,         label: 'Agenda Refus',     path: '/confirmation-client/agenda-refus',    agendaId: 'REFUS' },
+    { icon: Building2,       label: 'Agenda EBI',       path: '/confirmation-client/agenda-ebi',      agendaId: 'EBI' },
+    { icon: Briefcase,       label: 'Suivi Commerciaux', path: '/confirmation-client/commerciaux' },
+    { icon: CheckSquare,     label: 'Attribution RDV',  path: '/confirmation-client/attribution' },
   ];
+
+  // ==================== MENU QUALITE ====================
+  const qualiteMenuItems = [
+    { icon: LayoutDashboard, label: 'Tableau de bord', path: '/qualite/dashboard' },
+    { icon: XCircle, label: 'Agenda Refus Équipe', path: '/qualite/agenda-refus' },
+    { icon: Star, label: 'Évaluation Agents', path: '/qualite/evaluation' },
+    { icon: BarChart3, label: 'Stats Appels', path: '/qualite/stats-appels' },
+  ];
+
+  // ==================== MENU COMMERCIAL ====================
+  const commercialMenuItems = [
+    { icon: LayoutDashboard, label: 'Tableau de bord', path: '/commercial/dashboard' },
+    { icon: Calendar, label: 'Mon Agenda', path: '/commercial/agenda' },
+  ];
+
+  // ==================== MENU SERVICE TECHNIQUE ====================
+  const techniqueMenuItems = [
+    { icon: Users,           label: 'Liste des Agents',   path: '/technique/agents' },
+    { icon: FileText,        label: 'Fichier des contacts', path: '/technique/fichiers' },
+    { icon: Clock,           label: 'Pointage',            path: '/technique/pointage' },
+    { icon: Shield,          label: 'Gérer accès',         path: '/technique/acces' },
+    { icon: Calendar,        label: 'Compte calendrier',   path: '/technique/calendrier' },
+    { icon: Star,            label: 'Évaluation',          path: '/technique/evaluation' },
+  ];
+
+  // Filtre les items selon les agendas accessibles (ne filtre pas si myAgendas est vide)
+  const filterByAgenda = (items: any[]): any[] => {
+    if (myAgendas.length === 0) return items;
+    return items
+      .map(item => {
+        if (item.isSubmenu) {
+          const filteredChildren = (item.children || []).filter(
+            (child: any) => !child.agendaId || myAgendas.includes(child.agendaId)
+          );
+          if (filteredChildren.length === 0) return null;
+          return { ...item, children: filteredChildren };
+        }
+        if (item.agendaId && !myAgendas.includes(item.agendaId)) return null;
+        return item;
+      })
+      .filter(Boolean);
+  };
 
   // ==================== SÉLECTION DES MENUS SELON LE RÔLE ====================
   let menuItems;
   if (userRole === 'admin') {
     menuItems = adminMenuItems;
   } else if (userRole === 'confirmatrice') {
-    if (confType === 'CONF1') menuItems = confirmation1MenuItems;
-    else if (confType === 'CONF2') menuItems = confirmation2MenuItems;
-    else if (confType === 'CONFCLIENT') menuItems = confirmationClientMenuItems;
-    else menuItems = confirmation1MenuItems; // fallback
+    if (confType === 'CONF1') menuItems = filterByAgenda(confirmation1MenuItems);
+    else if (confType === 'CONF2') menuItems = filterByAgenda(confirmation2MenuItems);
+    else if (confType === 'CONFCLIENT') menuItems = filterByAgenda(confirmationClientMenuItems);
+    else menuItems = filterByAgenda(confirmation1MenuItems); // fallback
+  } else if (userRole === 'qualite') {
+    menuItems = qualiteMenuItems;
+  } else if (userRole === 'commercial') {
+    menuItems = commercialMenuItems;
+  } else if (userRole === 'tech') {
+    menuItems = techniqueMenuItems;
   } else {
     menuItems = agentMenuItems;
   }
@@ -219,7 +289,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       if (confType === 'CONF2') return 'Call Client Niveau 2';
       if (confType === 'CONFCLIENT') return 'Confirmation Client';
     }
-    if (userRole === 'agent') return 'Commercial';
+    if (userRole === 'agent') return 'Téléprospection';
+    if (userRole === 'qualite') return 'Service Qualité';
+    if (userRole === 'commercial') return 'Commercial';
+    if (userRole === 'tech') return 'Service Technique';
     return '';
   };
 
@@ -263,9 +336,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto p-2">
         <ul className="space-y-1">
           {menuItems.map((item, index) => (
-            <li key={item.path || item.label || index}>
+            <React.Fragment key={item.agendaId || item.label || index}>
               {renderMenuItem(item)}
-            </li>
+            </React.Fragment>
           ))}
         </ul>
       </nav>

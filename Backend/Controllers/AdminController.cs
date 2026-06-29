@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using Backend.Data;
 using Backend.DTOs.Admin;
 using Backend.Services.Admin;
 
@@ -11,10 +14,12 @@ namespace Backend.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly IAdminService _adminService;
+    private readonly ApplicationDbContext _context;
 
-    public AdminController(IAdminService adminService)
+    public AdminController(IAdminService adminService, ApplicationDbContext context)
     {
         _adminService = adminService;
+        _context = context;
     }
 
     [HttpGet("dashboard")]
@@ -138,6 +143,33 @@ public class AdminController : ControllerBase
             new() { Id = "REFUS", Nom = "Agenda Refus", Description = "Gestion des rendez-vous refusés", Icon = "❌" },
             new() { Id = "EBI", Nom = "Agenda EBI", Description = "Gestion des rendez-vous de l'équipe EBI", Icon = "🏢" }
         };
+        return Ok(agendas);
+    }
+
+    /// <summary>
+    /// Retourne la liste des agendas accessibles pour la confirmatrice connectée
+    /// </summary>
+    [HttpGet("confirmatrices/my-agendas")]
+    [Authorize(Roles = "ADMIN,CONFIRMATRICE")]
+    public async Task<IActionResult> GetMyAgendas()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                       ?? User.FindFirst("sub")?.Value;
+
+        if (!long.TryParse(userIdClaim, out var userId))
+            return Unauthorized(new { message = "Token invalide." });
+
+        var confirmatrice = await _context.Confirmatrices.FindAsync(userId);
+        if (confirmatrice == null)
+            return Ok(new List<string>()); // Admin ou autre rôle → liste vide
+
+        var agendas = string.IsNullOrEmpty(confirmatrice.AgendasAccess)
+            ? new List<string>()
+            : confirmatrice.AgendasAccess
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(a => a.Trim())
+                .ToList();
+
         return Ok(agendas);
     }
 }

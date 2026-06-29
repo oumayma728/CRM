@@ -24,7 +24,7 @@ public class AgentService : IAgentService
         Prenom = a.Prenom,
         Email = a.Email,
         Role = a.Role,
-        TypeContrat = a.TypeContrat,
+        TypeContrat = a.TypeContrat ?? TypeContrat.PLEIN_TEMPS,
         ObjectifMensuel = a.ObjectifMensuel,
         SalaireBase = a.SalaireBase,
         PrimeAssiduite = a.PrimeAssiduite,

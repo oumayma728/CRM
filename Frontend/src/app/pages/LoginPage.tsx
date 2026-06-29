@@ -36,6 +36,10 @@ export default function LoginPage() {
         else navigate('/confirmation1/dashboard'); // CONF1 or fallback
       } else if (role === 'agent') {
         navigate('/agent/dashboard');
+      } else if (role === 'qualite') {
+        navigate('/qualite/dashboard');
+      } else if (role === 'commercial') {
+        navigate('/commercial/dashboard');
       } else {
         navigate('/admin/dashboard');
       }

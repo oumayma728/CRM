@@ -341,7 +341,7 @@ public class AdminService : IAdminService
             "confirmatriceclient" => "CONFIRMATRICE",
             "confclient" => "CONFIRMATRICE",
             "technique" => "TECH",
-            "qualite" => "QUAL",
+            "qualite" => "QUALITE",
             "agent" => "AGENT",
             "admin" => "ADMIN",
             _ => request.Role.ToUpper()
@@ -417,41 +417,35 @@ public class AdminService : IAdminService
                 break;
                 
             case "technique":
-                utilisateur = new AgentEntity
+                utilisateur = new Technique
                 {
                     Nom = request.Nom,
                     Prenom = request.Prenom,
                     Email = request.Email,
                     MotDePasse = BCrypt.Net.BCrypt.HashPassword(request.MotDePasse),
-                    Role = roleDb,
+                    Role = "TECH",
                     Actif = true,
-                    Statut = "EN_ATTENTE",  
+                    Statut = "EN_ATTENTE",
                     DateCreation = DateTime.UtcNow,
-                    TypeContrat = TypeContrat.PLEIN_TEMPS,
-                    ObjectifMensuel = 0,
-                    SalaireBase = 0,
-                    PrimeAssiduite = 0
+                    Service = "TECHNIQUE"
                 };
                 break;
                 
             case "qualite":
-                utilisateur = new AgentEntity
+                utilisateur = new Qualite
                 {
                     Nom = request.Nom,
                     Prenom = request.Prenom,
                     Email = request.Email,
                     MotDePasse = BCrypt.Net.BCrypt.HashPassword(request.MotDePasse),
-                    Role = roleDb,
+                    Role = "QUALITE",
                     Actif = true,
-                    Statut = "EN_ATTENTE",  
+                    Statut = "EN_ATTENTE",
                     DateCreation = DateTime.UtcNow,
-                    TypeContrat = TypeContrat.PLEIN_TEMPS,
-                    ObjectifMensuel = 0,
-                    SalaireBase = 0,
-                    PrimeAssiduite = 0
+                    Service = "QUALITE"
                 };
                 break;
-                
+
             case "admin":
                 utilisateur = new AdminEntity
                 {
@@ -461,12 +455,27 @@ public class AdminService : IAdminService
                     MotDePasse = BCrypt.Net.BCrypt.HashPassword(request.MotDePasse),
                     Role = roleDb,
                     Actif = true,
-                    Statut = "EN_ATTENTE",  
+                    Statut = "EN_ATTENTE",
                     DateCreation = DateTime.UtcNow,
                     Niveau = "SuperAdmin"
                 };
                 break;
-                
+
+            case "commercial":
+                utilisateur = new Commercial
+                {
+                    Nom          = request.Nom,
+                    Prenom       = request.Prenom,
+                    Email        = request.Email,
+                    MotDePasse   = BCrypt.Net.BCrypt.HashPassword(request.MotDePasse),
+                    Role         = "COMMERCIAL",
+                    Actif        = true,
+                    Statut       = "EN_ATTENTE",
+                    DateCreation = DateTime.UtcNow,
+                    TauxCommission = 5.0
+                };
+                break;
+
             default:
                 throw new ArgumentException($"Rôle '{request.Role}' non reconnu");
         }
@@ -474,13 +483,23 @@ public class AdminService : IAdminService
         _context.Set<Utilisateur>().Add(utilisateur);
         await _context.SaveChangesAsync();
 
-        // Send welcome email with credentials (fire-and-forget — errors are logged, not thrown)
-        await _emailService.SendWelcomeEmailAsync(
-            toEmail:       utilisateur.Email,
-            nom:           utilisateur.Nom,
-            prenom:        utilisateur.Prenom,
-            role:          utilisateur.Role,
-            plainPassword: plainPassword);
+        // Send welcome email — true fire-and-forget so SMTP never blocks the response
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _emailService.SendWelcomeEmailAsync(
+                    toEmail:       utilisateur.Email,
+                    nom:           utilisateur.Nom,
+                    prenom:        utilisateur.Prenom,
+                    role:          utilisateur.Role,
+                    plainPassword: plainPassword);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[WARN] Email de bienvenue non envoyé pour {utilisateur.Email}: {ex.Message}");
+            }
+        });
 
         return new UtilisateurDTO
         {

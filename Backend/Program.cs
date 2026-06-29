@@ -20,6 +20,7 @@ using Backend.Services.Files;
 using Backend.Services.UserService;
 using Backend.Services.Email;
 using Backend.Filters;
+using Backend.Hubs;
 using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -82,6 +83,12 @@ builder.Services.AddScoped<PasswordHasher>();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddHostedService<SourceFileImportWorker>();
 
+// ─── SIGNALR (Chat temps réel) ───────────────────────────────────────────
+builder.Services.AddSignalR();
+
+// ─── HTTP CLIENT (pour appels microservice IA Python) ────────────────────
+builder.Services.AddHttpClient();
+
 // API Documentation
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -128,7 +135,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5174")
               .AllowAnyHeader()
               .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowCredentials(); // Required for SignalR WebSocket
     });
 });
 
@@ -150,6 +157,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ClockSkew        = TimeSpan.Zero
         };
+
+        // ── SignalR WebSocket JWT (le browser ne peut pas envoyer d'en-tête Authorization) ──
+        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -165,10 +188,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
+app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// ─── SIGNALR HUB ─────────────────────────────────────────────────────────
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();

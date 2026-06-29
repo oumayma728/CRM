@@ -10,6 +10,8 @@ public class ApplicationDbContext : DbContext
     // ─── MY EXISTING DbSets (TPH CRM) ────────────────────────────────────────
     public DbSet<Agent> Agents => Set<Agent>();
     public DbSet<Commercial> Commerciaux => Set<Commercial>();
+    public DbSet<Qualite> ServiceQualite => Set<Qualite>();
+    public DbSet<Technique> ServiceTechnique => Set<Technique>();
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<Appel> Appels => Set<Appel>();
     public DbSet<RendezVous> RendezVous => Set<RendezVous>();
@@ -19,6 +21,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<FichierImport> FichiersImport => Set<FichierImport>();
     public DbSet<Conge> Conges => Set<Conge>();
     public DbSet<Confirmatrice> Confirmatrices => Set<Confirmatrice>();
+    public DbSet<Evaluation> Evaluations => Set<Evaluation>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     // ─── COLLEAGUE'S DbSets (Supplier/Campaign system) ───────────────────────
     public DbSet<User> Users { get; set; }
@@ -51,7 +55,9 @@ public class ApplicationDbContext : DbContext
             .HasValue<Agent>("AGENT")
             .HasValue<Commercial>("COMMERCIAL")
             .HasValue<Admin>("ADMIN")
-            .HasValue<Confirmatrice>("CONFIRMATRICE");
+            .HasValue<Confirmatrice>("CONFIRMATRICE")
+            .HasValue<Qualite>("QUALITE")
+            .HasValue<Technique>("TECH");
         
         modelBuilder.Entity<Confirmatrice>()
             .Property(c => c.Type)
@@ -59,7 +65,11 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Agent>(entity =>
         {
-            entity.Property(a => a.TypeContrat).HasConversion<string>();
+            entity.Property(a => a.TypeContrat)
+                .HasConversion(
+                    v => v.HasValue ? v.Value.ToString() : null,
+                    v => v != null ? (TypeContrat?)Enum.Parse<TypeContrat>(v) : null
+                );
             entity.HasOne(a => a.Agenda).WithOne(ag => ag.Agent)
                 .HasForeignKey<Agenda>(ag => ag.AgentId).OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(a => a.Contacts).WithOne(c => c.Agent)

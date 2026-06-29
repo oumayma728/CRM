@@ -196,19 +196,73 @@ public class Confirmation1Controller : ControllerBase
     [HttpGet("agents/evaluation")]
     public async Task<IActionResult> GetAgentsEvaluation()
     {
-        var agents = await _context.Agents
-            .Select(a => new AgentEvaluationDTO
+        var agents = await _context.Agents.ToListAsync();
+        var result = agents.Select(a =>
+        {
+            var brut        = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.BRUT);
+            var confirme    = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.CONFIRME);
+            var annule      = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.ANNULE);
+            var porte       = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.PORTE);
+            var pasSigne    = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.NON_SIGNE);
+            var signe       = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.SIGNE);
+            var r2          = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.R2);
+            var pasInteresse= _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.HORS_CIBLE);
+            var total       = brut + confirme + annule + porte + pasSigne + signe + r2 + pasInteresse;
+            var scoreGlobal = total > 0 ? (double)(confirme + signe) / total * 100 : 0;
+
+            return new
             {
-                AgentId = a.Id,
-                AgentNom = $"{a.Prenom} {a.Nom}",
-                TotalAppels = _context.Appels.Count(ap => ap.AgentId == a.Id),
-                RdvConfirmes = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.CONFIRME),
-                RdvAnnules = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.ANNULE),
-                RdvSignes = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.SIGNE)
-            })
+                agentId = a.Id,
+                agentNom = $"{a.Prenom} {a.Nom}",
+                brut, confirme, annule, porte, pasSigne, signe, r2, pasInteresse,
+                scoreGlobal = Math.Round(scoreGlobal, 1)
+            };
+        }).ToList();
+
+        return Ok(result);
+    }
+
+    [HttpGet("statistiques")]
+    public async Task<IActionResult> GetStatistiques([FromQuery] string periode = "mois")
+    {
+        var now = DateTime.UtcNow;
+        DateTime debut = periode switch
+        {
+            "semaine"   => now.AddDays(-7),
+            "trimestre" => now.AddMonths(-3),
+            _           => now.AddMonths(-1),
+        };
+
+        var rdvs = await _context.RendezVous
+            .Where(r => r.DateRendezVous >= debut)
             .ToListAsync();
 
-        return Ok(agents);
+        // Stats par jour (7 derniers jours)
+        var statsParJour = Enumerable.Range(-6, 7).Select(i =>
+        {
+            var date = now.Date.AddDays(i);
+            var dayRdvs = rdvs.Where(r => r.DateRendezVous.Date == date).ToList();
+            return new
+            {
+                date = date.ToString("yyyy-MM-dd"),
+                confirmes = dayRdvs.Count(r => r.Statut == StatutRendezVous.CONFIRME),
+                annules   = dayRdvs.Count(r => r.Statut == StatutRendezVous.ANNULE),
+            };
+        }).ToList();
+
+        return Ok(new
+        {
+            totalRdv       = rdvs.Count,
+            rdvConfirmes   = rdvs.Count(r => r.Statut == StatutRendezVous.CONFIRME),
+            rdvAnnules     = rdvs.Count(r => r.Statut == StatutRendezVous.ANNULE),
+            rdvNonSignes   = rdvs.Count(r => r.Statut == StatutRendezVous.NON_SIGNE),
+            rdvSignes      = rdvs.Count(r => r.Statut == StatutRendezVous.SIGNE),
+            r2             = rdvs.Count(r => r.Statut == StatutRendezVous.R2),
+            okFinancement  = rdvs.Count(r => r.Statut == StatutRendezVous.INSTALLE),
+            rdvAReporter   = rdvs.Count(r => r.Statut == StatutRendezVous.REPORTER),
+            pose           = rdvs.Count(r => r.Statut == StatutRendezVous.PORTE),
+            statistiquesParJour = statsParJour
+        });
     }
 
     // =========================

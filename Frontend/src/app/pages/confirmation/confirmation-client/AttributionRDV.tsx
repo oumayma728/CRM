@@ -71,27 +71,27 @@ export default function AttributionRDV() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Attribution des rendez-vous</h1>
-        <p className="text-gray-500">Assigner les rendez-vous aux commerciaux</p>
+        <h1 className="text-2xl font-bold dark:text-white">Attribution des rendez-vous</h1>
+        <p className="text-gray-500 dark:text-gray-400">Assigner les rendez-vous aux commerciaux</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden border border-gray-100 dark:border-gray-700">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="p-3 text-left">Contact</th>
-                <th className="p-3 text-left">Téléphone</th>
-                <th className="p-3 text-left">Date RDV</th>
-                <th className="p-3 text-left">Action</th>
+                <th className="p-3 text-left text-gray-700 dark:text-gray-300">Contact</th>
+                <th className="p-3 text-left text-gray-700 dark:text-gray-300">Téléphone</th>
+                <th className="p-3 text-left text-gray-700 dark:text-gray-300">Date RDV</th>
+                <th className="p-3 text-left text-gray-700 dark:text-gray-300">Action</th>
               </tr>
             </thead>
             <tbody>
               {rdvs.map((rdv) => (
-                <tr key={rdv.id} className="border-t hover:bg-gray-50">
-                  <td className="p-3 font-medium">{rdv.contactPrenom} {rdv.contactNom}</td>
-                  <td className="p-3">{rdv.telephone}</td>
-                  <td className="p-3">{new Date(rdv.dateRendezVous).toLocaleString()}</td>
+                <tr key={rdv.id} className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td className="p-3 font-medium dark:text-white">{rdv.contactPrenom} {rdv.contactNom}</td>
+                  <td className="p-3 dark:text-gray-300">{rdv.telephone}</td>
+                  <td className="p-3 dark:text-gray-300">{new Date(rdv.dateRendezVous).toLocaleString()}</td>
                   <td className="p-3">
                     <button
                       onClick={() => setSelectedRdv(rdv.id)}
@@ -104,7 +104,7 @@ export default function AttributionRDV() {
               ))}
               {rdvs.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-gray-500">
+                  <td colSpan={4} className="p-8 text-center text-gray-500 dark:text-gray-400">
                     Aucun rendez-vous à assigner
                   </td>
                 </tr>
@@ -117,12 +117,12 @@ export default function AttributionRDV() {
       {/* Modal */}
       {selectedRdv && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-bold mb-4">Assigner à un commercial</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 shadow-xl">
+            <h3 className="text-lg font-bold mb-4 dark:text-white">Assigner à un commercial</h3>
             <select
               value={selectedCommercial}
               onChange={(e) => setSelectedCommercial(e.target.value)}
-              className="w-full p-2 border rounded mb-4"
+              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded mb-4 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
               <option value="">Sélectionner...</option>
               {commerciaux.map((c) => (
@@ -130,8 +130,18 @@ export default function AttributionRDV() {
               ))}
             </select>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setSelectedRdv(null)} className="px-4 py-2 border rounded">Annuler</button>
-              <button onClick={assigner} className="px-4 py-2 bg-blue-500 text-white rounded">Assigner</button>
+              <button
+                onClick={() => setSelectedRdv(null)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={assigner}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Assigner
+              </button>
             </div>
           </div>
         </div>

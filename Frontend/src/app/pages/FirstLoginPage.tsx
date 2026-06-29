@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Mail, Lock, KeyRound } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5241/api';
+const API_URL = ((import.meta as any).env?.VITE_API_URL || 'http://localhost:5241') + '/api';
 
 export default function FirstLoginPage() {
   const params = new URLSearchParams(window.location.search);

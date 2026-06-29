@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Layout } from '../../components/Layout';
 import { adminService } from '../../../services/adminService';
-import { User, Plus, Edit, Trash2, Shield, Search, X, Users, UserCheck, UserCog, Headphones, Wrench, BadgeCheck, KeyRound } from 'lucide-react';
+import { User, Plus, Edit, Trash2, Shield, Search, X, Users, UserCheck, UserCog, Headphones, Wrench, BadgeCheck, KeyRound, CalendarDays } from 'lucide-react';
 import axios from 'axios';
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:5241/api';
+const API_URL = ((import.meta as any).env?.VITE_API_URL || 'http://localhost:5241') + '/api';
 
 interface Utilisateur {
   id: number;
@@ -58,6 +58,20 @@ const getRoleColor = (user: Utilisateur): string => {
   return colors[role] || 'bg-gray-100 text-gray-700';
 };
 
+interface AgendaDisponible {
+  id: string;
+  nom: string;
+  description: string;
+  icon: string;
+}
+
+const AGENDAS_DISPONIBLES: AgendaDisponible[] = [
+  { id: 'CLIENT1', nom: 'Agenda Client 1', description: 'RDV client type 1', icon: '👤' },
+  { id: 'CLIENT2', nom: 'Agenda Client 2', description: 'RDV client type 2', icon: '👥' },
+  { id: 'REFUS',   nom: 'Agenda Refus',    description: 'RDV refusés',        icon: '❌' },
+  { id: 'EBI',     nom: 'Agenda EBI',      description: 'RDV équipe EBI',     icon: '🏢' },
+];
+
 export default function UsersPage() {
   const [users, setUsers] = useState<Utilisateur[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +86,44 @@ export default function UsersPage() {
     role: 'agent',
     equipe: ''
   });
+
+  // --- Gestion agendas confirmatrices ---
+  const [agendaTarget, setAgendaTarget] = useState<Utilisateur | null>(null);
+  const [agendaAccess, setAgendaAccess] = useState<string[]>([]);
+  const [agendaLoading, setAgendaLoading] = useState(false);
+
+  const openAgendaModal = async (user: Utilisateur) => {
+    setAgendaTarget(user);
+    setAgendaLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/admin/confirmatrices/agendas`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const found = (res.data as any[]).find((c: any) => c.id === user.id);
+      setAgendaAccess(found?.agendasAccess ?? []);
+    } catch {
+      setAgendaAccess([]);
+    } finally {
+      setAgendaLoading(false);
+    }
+  };
+
+  const toggleAgenda = async (agendaId: string) => {
+    if (!agendaTarget) return;
+    const assigned = !agendaAccess.includes(agendaId);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.put(
+        `${API_URL}/admin/confirmatrices/${agendaTarget.id}/assign-agenda`,
+        { agendaId, assigned },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setAgendaAccess(res.data.agendasAccess ?? []);
+    } catch (err) {
+      console.error('Erreur assignation agenda:', err);
+    }
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -268,6 +320,15 @@ export default function UsersPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
+                        {user.role?.toUpperCase() === 'CONFIRMATRICE' && (
+                          <button
+                            onClick={() => openAgendaModal(user)}
+                            className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
+                            title="Gérer les agendas"
+                          >
+                            <CalendarDays className="w-4 h-4 text-purple-600" />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleAdminResetPassword(user.id, user.nom, user.prenom)}
                           className="p-2 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded-lg transition-colors"
@@ -291,6 +352,71 @@ export default function UsersPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal Agendas Confirmatrice */}
+      {agendaTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Agendas accessibles</h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {agendaTarget.prenom} {agendaTarget.nom} — {getRoleLabel(agendaTarget)}
+                </p>
+              </div>
+              <button onClick={() => setAgendaTarget(null)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {agendaLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {AGENDAS_DISPONIBLES.map((agenda) => {
+                  const isChecked = agendaAccess.includes(agenda.id);
+                  return (
+                    <label
+                      key={agenda.id}
+                      className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        isChecked
+                          ? 'border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/20'
+                          : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleAgenda(agenda.id)}
+                        className="w-4 h-4 accent-purple-600"
+                      />
+                      <span className="text-xl">{agenda.icon}</span>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 dark:text-white text-sm">{agenda.nom}</p>
+                        <p className="text-xs text-gray-500">{agenda.description}</p>
+                      </div>
+                      {isChecked && (
+                        <span className="text-xs text-purple-600 font-medium">Actif</span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setAgendaTarget(null)}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Ajout Utilisateur */}
       {showModal && (

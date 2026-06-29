@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using Backend.DTOs.Agent;
 using Backend.Services.Agent;
+using Backend.Data;
 
 namespace Backend.Controllers;
 
@@ -10,10 +14,12 @@ namespace Backend.Controllers;
 public class AgentController : ControllerBase
 {
     private readonly IAgentService _service;
+    private readonly ApplicationDbContext _context;
 
-    public AgentController(IAgentService service)
+    public AgentController(IAgentService service, ApplicationDbContext context)
     {
-        _service = service;
+        _service  = service;
+        _context  = context;
     }
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
@@ -201,5 +207,106 @@ public class AgentController : ControllerBase
             });
 
         return Ok(new { autorise = true, message = "Connexion autorisée." });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // AGENT ELITE — Contacts refus/NRP des collègues (IsElite = true)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Contacts de l'agenda EBI des collègues auxquels l'agent élite a accès.
+    /// Filtre sur statuts : NRP, PORTE, PAS_INTERESSE, non signés.
+    /// </summary>
+    [HttpGet("elite/contacts-equipe")]
+    [Authorize(Roles = "AGENT")]
+    public async Task<IActionResult> GetEliteContacts()
+    {
+        var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? User.FindFirst("sub")?.Value ?? "0");
+
+        var agent = await _context.Agents.FindAsync(userId);
+        if (agent == null || !agent.IsElite)
+            return Forbid(); // Seul l'agent élite a cet accès
+
+        var statuts = new[] { "NRP", "PORTE", "REFUS_PAS_INTERESSE" };
+        var contacts = await _context.Contacts
+            .Include(c => c.Agent)
+            .Where(c => c.AgentId != userId
+                     && (c.StatutAgent == null
+                         || statuts.Any(s => c.StatutAgent!.StartsWith(s))))
+            .OrderByDescending(c => c.ScoreIA ?? 0)
+            .Take(200)
+            .Select(c => new {
+                c.Id, c.Nom, c.Prenom, c.Telephone, c.NumGSM,
+                c.CodePostal, c.Ville, c.StatutAgent, c.NombreNRP,
+                c.ScoreIA, c.CreneauOptimalIA, c.Projet,
+                AgentNom = c.Agent != null ? c.Agent.Prenom + " " + c.Agent.Nom : null,
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Ok(contacts);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HISTORIQUE POINTAGE (propre à l'agent connecté)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Historique de pointage de l'agent connecté</summary>
+    [HttpGet("me/pointage")]
+    [Authorize(Roles = "AGENT")]
+    public async Task<IActionResult> GetMyPointage([FromQuery] int mois = 0, [FromQuery] int annee = 0)
+    {
+        var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? User.FindFirst("sub")?.Value ?? "0");
+
+        if (mois == 0) mois = DateTime.UtcNow.Month;
+        if (annee == 0) annee = DateTime.UtcNow.Year;
+
+        var pointages = await _context.Pointages
+            .Where(p => p.AgentId == userId
+                     && p.Date.Month == mois
+                     && p.Date.Year  == annee)
+            .OrderBy(p => p.Date)
+            .Select(p => new {
+                p.Id,
+                DatePointage  = p.Date,
+                PremierAppel  = p.PremierAppel,
+                DernierAppel  = p.DernierAppel,
+                TotalHeures   = p.TotalSecondesTravaillees.HasValue
+                                ? Math.Round(p.TotalSecondesTravaillees.Value / 3600.0, 2)
+                                : (double?)null,
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Ok(new { mois, annee, pointages });
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HISTORIQUE ÉVALUATION (propre à l'agent connecté)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Historique d'évaluation de l'agent connecté</summary>
+    [HttpGet("me/evaluations")]
+    [Authorize(Roles = "AGENT")]
+    public async Task<IActionResult> GetMyEvaluations()
+    {
+        var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? User.FindFirst("sub")?.Value ?? "0");
+
+        var evals = await _context.Evaluations
+            .Where(e => e.AgentId == userId)
+            .OrderByDescending(e => e.DateEvaluation)
+            .Select(e => new {
+                e.Id, e.DateEvaluation, e.NoteGlobale,
+                e.NotePitchCommercial, e.NoteTraitementObjections,
+                e.NoteQualiteAppel, e.NoteRespectScript, e.NoteEcoute,
+                e.Commentaire, e.NbRdvBrut, e.NbRdvConfirme, e.NbRdvSigne,
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Ok(evals);
     }
 }

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
+import Chat from './Chat';
+
 interface LayoutProps {
   children: React.ReactNode;
 }
@@ -17,6 +19,8 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+      {/* Chat temps réel — disponible sur toutes les pages */}
+      <Chat />
     </div>
   );
 }

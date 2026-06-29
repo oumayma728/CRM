@@ -141,19 +141,30 @@ public class Confirmation2Controller : ControllerBase
     [HttpGet("evaluation")]
     public async Task<IActionResult> GetEvaluation()
     {
-        var agents = await _context.Agents
-            .Select(a => new AgentEvaluationDTO
-            {
-                AgentId = a.Id,
-                AgentNom = $"{a.Prenom} {a.Nom}",
-                TotalAppels = _context.Appels.Count(ap => ap.AgentId == a.Id),
-                RdvConfirmes = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.CONFIRME),
-                RdvAnnules = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.ANNULE),
-                RdvSignes = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.SIGNE)
-            })
-            .ToListAsync();
+        var agents = await _context.Agents.ToListAsync();
+        var result = agents.Select(a =>
+        {
+            var brut        = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.BRUT);
+            var confirme    = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.CONFIRME);
+            var annule      = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.ANNULE);
+            var porte       = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.PORTE);
+            var pasSigne    = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.NON_SIGNE);
+            var signe       = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.SIGNE);
+            var r2          = _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.R2);
+            var pasInteresse= _context.RendezVous.Count(r => r.AgentId == a.Id && r.Statut == StatutRendezVous.HORS_CIBLE);
+            var total       = brut + confirme + annule + porte + pasSigne + signe + r2 + pasInteresse;
+            var scoreGlobal = total > 0 ? (double)(confirme + signe) / total * 100 : 0;
 
-        return Ok(agents);
+            return new
+            {
+                agentId = a.Id,
+                agentNom = $"{a.Prenom} {a.Nom}",
+                brut, confirme, annule, porte, pasSigne, signe, r2, pasInteresse,
+                scoreGlobal = Math.Round(scoreGlobal, 1)
+            };
+        }).ToList();
+
+        return Ok(result);
     }
 
     // =========================
