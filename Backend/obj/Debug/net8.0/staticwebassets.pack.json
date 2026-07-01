@@ -1,0 +1,53 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\wwwroot\\uploads\\supplier_12\\20260424_114531_ahmed 16 10 nabil - ahmed 16 10 nabil.csv",
+      "PackagePath": "staticwebassets\\uploads\\supplier_12\\20260424_114531_ahmed 16 10 nabil - ahmed 16 10 nabil.csv"
+    },
+    {
+      "Id": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\wwwroot\\uploads\\supplier_12\\20260424_115249_ahmed 16 10 nabil - ahmed 16 10 nabil.csv",
+      "PackagePath": "staticwebassets\\uploads\\supplier_12\\20260424_115249_ahmed 16 10 nabil - ahmed 16 10 nabil.csv"
+    },
+    {
+      "Id": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\wwwroot\\uploads\\supplier_13\\20260424_120049_ahmed 16 10 nabil - ahmed 16 10 nabil.csv",
+      "PackagePath": "staticwebassets\\uploads\\supplier_13\\20260424_120049_ahmed 16 10 nabil - ahmed 16 10 nabil.csv"
+    },
+    {
+      "Id": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\wwwroot\\uploads\\supplier_13\\20260424_120431_ahmed 16 10 nabil - ahmed 16 10 nabil.csv",
+      "PackagePath": "staticwebassets\\uploads\\supplier_13\\20260424_120431_ahmed 16 10 nabil - ahmed 16 10 nabil.csv"
+    },
+    {
+      "Id": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\wwwroot\\uploads\\supplier_13\\20260424_120510_ahmed 16 10 nabil - ahmed 16 10 nabil.csv",
+      "PackagePath": "staticwebassets\\uploads\\supplier_13\\20260424_120510_ahmed 16 10 nabil - ahmed 16 10 nabil.csv"
+    },
+    {
+      "Id": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\wwwroot\\uploads\\supplier_14\\20260424_124255_ahmed 16 10 nabil - ahmed 16 10 nabil.csv",
+      "PackagePath": "staticwebassets\\uploads\\supplier_14\\20260424_124255_ahmed 16 10 nabil - ahmed 16 10 nabil.csv"
+    },
+    {
+      "Id": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\wwwroot\\uploads\\supplier_15\\20260424_133554_ahmed 16 10 nabil - ahmed 16 10 nabil.csv",
+      "PackagePath": "staticwebassets\\uploads\\supplier_15\\20260424_133554_ahmed 16 10 nabil - ahmed 16 10 nabil.csv"
+    },
+    {
+      "Id": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\wwwroot\\uploads\\supplier_1\\20260427_102815_ahmed 16 10 nabil - ahmed 16 10 nabil.csv",
+      "PackagePath": "staticwebassets\\uploads\\supplier_1\\20260427_102815_ahmed 16 10 nabil - ahmed 16 10 nabil.csv"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.CRM.API.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.CRM.API.props",
+      "PackagePath": "build\\CRM.API.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.CRM.API.props",
+      "PackagePath": "buildMultiTargeting\\CRM.API.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildTransitive.CRM.API.props",
+      "PackagePath": "buildTransitive\\CRM.API.props"
+    }
+  ],
+  "ElementsToRemove": []
+}
