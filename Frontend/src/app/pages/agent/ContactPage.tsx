@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Layout } from '../../components/Layout';
-import { agentService, Contact, CreateAppelDTO } from '../../../services/agentService';
+import { agentService, type Contact, type CreateAppelDTO } from '../../../services/agentService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { toast } from 'react-toastify';
 

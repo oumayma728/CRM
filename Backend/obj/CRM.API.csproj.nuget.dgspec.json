@@ -1,24 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\CRM.API.csproj": {}
+    "C:\\Users\\Lenovo\\OneDrive\\Bureau\\PFE\\CRM-PFE-2026\\Backend\\CRM.API.csproj": {}
   },
   "projects": {
-    "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\CRM.API.csproj": {
+    "C:\\Users\\Lenovo\\OneDrive\\Bureau\\PFE\\CRM-PFE-2026\\Backend\\CRM.API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\CRM.API.csproj",
+        "projectUniqueName": "C:\\Users\\Lenovo\\OneDrive\\Bureau\\PFE\\CRM-PFE-2026\\Backend\\CRM.API.csproj",
         "projectName": "CRM.API",
-        "projectPath": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\CRM.API.csproj",
-        "packagesPath": "C:\\Users\\21699\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\21699\\Desktop\\CRM_ebi\\Backend\\obj\\",
+        "projectPath": "C:\\Users\\Lenovo\\OneDrive\\Bureau\\PFE\\CRM-PFE-2026\\Backend\\CRM.API.csproj",
+        "packagesPath": "C:\\Users\\Lenovo\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Lenovo\\OneDrive\\Bureau\\PFE\\CRM-PFE-2026\\Backend\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\21699\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Users\\Lenovo\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -26,7 +22,6 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -78,6 +73,10 @@
               "target": "Package",
               "version": "[8.0.0, )"
             },
+            "Microsoft.AspNetCore.SignalR": {
+              "target": "Package",
+              "version": "[1.1.0, )"
+            },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
               "version": "[8.0.0, )"
@@ -100,7 +99,7 @@
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
-              "version": "[10.1.7, )"
+              "version": "[6.9.0, )"
             }
           },
           "imports": [
@@ -122,7 +121,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.420/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.404/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

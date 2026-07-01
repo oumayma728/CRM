@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Layout } from '../../components/Layout';
-import { agentService, Contact } from '../../../services/agentService';
+import { agentService, type Contact } from '../../../services/agentService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Phone, Search, Building2, User, MapPin, Mail } from 'lucide-react';
 

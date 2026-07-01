@@ -44,6 +44,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<CallAttempt> CallAttempts { get; set; }
     public DbSet<AgentProfile> AgentProfiles { get; set; }
     public DbSet<DistributedContact> DistributedContacts { get; set; }
+    public DbSet<Client> Clients { get; set; }
+    public DbSet<ContactNote> ContactNotes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -55,8 +55,17 @@ namespace Backend.Entities
         [Column("updated_at")]  
         public DateTime? UpdatedAt { get; set; }
 
-        [Column("last_login_at")]  
+        [Column("last_login_at")]
         public DateTime? LastLoginAt { get; set; }
+
+        [Column("last_heartbeat_at")]
+        public DateTime? LastHeartbeatAt { get; set; }
+
+        [Column("presence_status")]
+        public string? PresenceStatus { get; set; }
+
+        [Column("presence_changed_at")]
+        public DateTime? PresenceChangedAt { get; set; }
 
         [ForeignKey("RoleId")]
         public Role Role { get; set; } = null!;

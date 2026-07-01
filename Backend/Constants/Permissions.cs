@@ -151,6 +151,15 @@ namespace Backend.Constants
             public const string Restore = "System.Restore";
         }
 
+        // ========== CLIENT PERMISSIONS ==========
+        public static class Clients
+        {
+            public const string View = "Clients.View";
+            public const string Create = "Clients.Create";
+            public const string Edit = "Clients.Edit";
+            public const string Delete = "Clients.Delete";
+        }
+
         // ========== LEGACY FLAT CONSTANTS (backward compat) ==========
         public const string AdminDashboard = "Admin.Dashboard";
         public const string AdminUsersView = "Admin.Users.View";

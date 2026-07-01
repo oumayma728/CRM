@@ -168,5 +168,9 @@ namespace Backend.Entities
         [Column("assignment_priority")]
         public int AssignmentPriority { get; set; } = 0;
 
+        [Column("next_action")]
+        [MaxLength(50)]
+        public string? NextAction { get; set; }
+
     }
 }
