@@ -3,14 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Backend.Entities
 {
-    public enum AgentPresenceStatus
-    {
-        Offline = 0,
-        Available = 1,
-        Break = 2,
-        OnCall = 3,
-        WrapUp = 4
-    }
     [Table("users")]
     public class User
     {
@@ -43,7 +35,7 @@ namespace Backend.Entities
         [Column("is_active")]  
         public bool IsActive { get; set; } = true;
         [Column("is_online")]  
-        public bool IsOnline { get; set; } = false;
+        public bool IsOnline { get; set; } = true;
         [Column("is_deleted")]  
         public bool IsDeleted { get; set; } = false;
 
@@ -70,14 +62,7 @@ namespace Backend.Entities
         public Role Role { get; set; } = null!;
         [Column("must_change_password")]
         public bool MustChangePassword { get; set; } = false;
-        [Column("presence_status")]
-        public AgentPresenceStatus PresenceStatus { get; set; } = AgentPresenceStatus.Offline;
 
-        [Column("presence_changed_at")]
-        public DateTime? PresenceChangedAt { get; set; }
-
-        [Column("last_heartbeat_at")]
-        public DateTime? LastHeartbeatAt { get; set; }
         [Column("password_reset_by_user_id")]
         public int? PasswordResetByUserId { get; set; }
         [ForeignKey("PasswordResetByUserId")]

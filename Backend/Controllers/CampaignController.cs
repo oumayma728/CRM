@@ -8,7 +8,7 @@ using Backend.Entities;
 using Backend.Constants;
 using Backend.Attributes;
 using System.Security.Claims;  
-using Backend.Services.Permissions;
+using Backend.Services.Permission;
 using Backend.Data;
 using Backend.Filters;
 
@@ -22,23 +22,12 @@ namespace Backend.Controllers
         private readonly ICampaignService _campaignService;
         private readonly IContactDistributionService _distributionService;   
         private readonly ILogger<CampaignController> _logger;
-        private readonly ApplicationDbContext _db;
-        private static readonly HashSet<string> AllowedContactNoteTypes = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ContactNoteTypes.General,
-            ContactNoteTypes.Appel,
-            ContactNoteTypes.Qualification,
-            ContactNoteTypes.Confirmation,
-            ContactNoteTypes.Commercial,
-            ContactNoteTypes.Systeme
-        };
 
-        public CampaignController(ICampaignService campaignService, IContactDistributionService distributionService, ILogger<CampaignController> logger, ApplicationDbContext db)
+        public CampaignController(ICampaignService campaignService, IContactDistributionService distributionService, ILogger<CampaignController> logger)
         {
             _campaignService = campaignService;
             _distributionService = distributionService;
             _logger = logger;
-            _db = db;
         }
 
         // ==================== CAMPAIGN CRUD ====================
@@ -486,236 +475,6 @@ namespace Backend.Controllers
                 _logger.LogError(ex, "Error qualifying contact {ContactId}", campaignFileContactId);
                 return StatusCode(500, new { success = false, message = "An error occurred." });
             }
-        }
-
-        [HttpGet("{campaignId}/contacts/{campaignFileContactId}/notes")]
-        [RequirePermission(Permissions.Contacts.ViewHistory)]
-        public async Task<IActionResult> GetContactNotes(int campaignId, int campaignFileContactId)
-        {
-            try
-            {
-                var contactExists = await _db.CampaignFileContacts
-                    .AnyAsync(c => c.Id == campaignFileContactId && c.CampaignId == campaignId);
-
-                if (!contactExists)
-                    return NotFound(new { success = false, message = "Contact not found." });
-
-                var notes = await _db.ContactNotes
-                    .AsNoTracking()
-                    .Where(n => n.CampaignId == campaignId && n.CampaignFileContactId == campaignFileContactId)
-                    .OrderByDescending(n => n.CreatedAt)
-                    .Select(n => new ContactNoteDto
-                    {
-                        Id = n.Id,
-                        CampaignId = n.CampaignId,
-                        CampaignFileContactId = n.CampaignFileContactId,
-                        SourceFileContactId = n.SourceFileContactId,
-                        AuthorUserId = n.AuthorUserId,
-                        AuthorName = n.Author != null ? n.Author.FirstName + " " + n.Author.LastName : "",
-                        AuthorRole = n.Author != null && n.Author.Role != null ? n.Author.Role.Name : null,
-                        NoteType = n.NoteType,
-                        Body = n.Body,
-                        CreatedAt = n.CreatedAt,
-                        UpdatedByUserId = n.UpdatedByUserId,
-                        UpdatedByName = n.UpdatedBy != null ? n.UpdatedBy.FirstName + " " + n.UpdatedBy.LastName : null,
-                        UpdatedAt = n.UpdatedAt,
-                        IsDeleted = n.IsDeleted,
-                        DeletedByUserId = n.DeletedByUserId,
-                        DeletedAt = n.DeletedAt
-                    })
-                    .ToListAsync();
-
-                return Ok(new { success = true, data = notes });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting notes for contact {ContactId}", campaignFileContactId);
-                return StatusCode(500, new { success = false, message = "An error occurred while retrieving contact notes.", error = ex.Message });
-            }
-        }
-
-        [HttpPost("{campaignId}/contacts/{campaignFileContactId}/notes")]
-        [RequirePermission(Permissions.Contacts.AddNote)]
-        public async Task<IActionResult> CreateContactNote(int campaignId, int campaignFileContactId, [FromBody] CreateContactNoteDto dto)
-        {
-            try
-            {
-                var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!int.TryParse(userIdString, out var userId))
-                    return Unauthorized(new { success = false, message = "User not authenticated" });
-
-                if (string.IsNullOrWhiteSpace(dto.Body))
-                    return BadRequest(new { success = false, message = "Note body is required." });
-
-                var noteType = NormalizeContactNoteType(dto.NoteType);
-                if (noteType == null)
-                    return BadRequest(new { success = false, message = "Invalid note type." });
-
-                var contact = await _db.CampaignFileContacts
-                    .Where(c => c.Id == campaignFileContactId && c.CampaignId == campaignId)
-                    .Select(c => new { c.Id, c.SourceFileContactId })
-                    .FirstOrDefaultAsync();
-
-                if (contact == null)
-                    return NotFound(new { success = false, message = "Contact not found." });
-
-                var now = DateTime.UtcNow;
-                var note = new ContactNote
-                {
-                    CampaignId = campaignId,
-                    CampaignFileContactId = campaignFileContactId,
-                    SourceFileContactId = contact.SourceFileContactId,
-                    AuthorUserId = userId,
-                    NoteType = noteType,
-                    Body = dto.Body.Trim(),
-                    CreatedAt = now
-                };
-
-                _db.ContactNotes.Add(note);
-                await _db.SaveChangesAsync();
-
-                var created = await _db.ContactNotes
-                    .AsNoTracking()
-                    .Where(n => n.Id == note.Id)
-                    .Select(n => new ContactNoteDto
-                    {
-                        Id = n.Id,
-                        CampaignId = n.CampaignId,
-                        CampaignFileContactId = n.CampaignFileContactId,
-                        SourceFileContactId = n.SourceFileContactId,
-                        AuthorUserId = n.AuthorUserId,
-                        AuthorName = n.Author != null ? n.Author.FirstName + " " + n.Author.LastName : "",
-                        AuthorRole = n.Author != null && n.Author.Role != null ? n.Author.Role.Name : null,
-                        NoteType = n.NoteType,
-                        Body = n.Body,
-                        CreatedAt = n.CreatedAt,
-                        UpdatedByUserId = n.UpdatedByUserId,
-                        UpdatedByName = n.UpdatedBy != null ? n.UpdatedBy.FirstName + " " + n.UpdatedBy.LastName : null,
-                        UpdatedAt = n.UpdatedAt,
-                        IsDeleted = n.IsDeleted,
-                        DeletedByUserId = n.DeletedByUserId,
-                        DeletedAt = n.DeletedAt
-                    })
-                    .FirstAsync();
-
-                return Ok(new { success = true, data = created });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating note for contact {ContactId}", campaignFileContactId);
-                return StatusCode(500, new { success = false, message = "An error occurred while creating contact note.", error = ex.Message });
-            }
-        }
-
-        [HttpPut("{campaignId}/contacts/{campaignFileContactId}/notes/{noteId}")]
-        [RequirePermission(Permissions.Contacts.EditNote)]
-        public async Task<IActionResult> UpdateContactNote(int campaignId, int campaignFileContactId, int noteId, [FromBody] UpdateContactNoteDto dto)
-        {
-            try
-            {
-                var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!int.TryParse(userIdString, out var userId))
-                    return Unauthorized(new { success = false, message = "User not authenticated" });
-
-                if (string.IsNullOrWhiteSpace(dto.Body))
-                    return BadRequest(new { success = false, message = "Note body is required." });
-
-                var noteType = NormalizeContactNoteType(dto.NoteType);
-                if (noteType == null)
-                    return BadRequest(new { success = false, message = "Invalid note type." });
-
-                var note = await _db.ContactNotes
-                    .FirstOrDefaultAsync(n => n.Id == noteId
-                                           && n.CampaignId == campaignId
-                                           && n.CampaignFileContactId == campaignFileContactId);
-
-                if (note == null)
-                    return NotFound(new { success = false, message = "Note not found." });
-
-                var now = DateTime.UtcNow;
-                note.NoteType = noteType;
-                note.Body = dto.Body.Trim();
-                note.UpdatedByUserId = userId;
-                note.UpdatedAt = now;
-
-                await _db.SaveChangesAsync();
-
-                var updated = await _db.ContactNotes
-                    .AsNoTracking()
-                    .Where(n => n.Id == note.Id)
-                    .Select(n => new ContactNoteDto
-                    {
-                        Id = n.Id,
-                        CampaignId = n.CampaignId,
-                        CampaignFileContactId = n.CampaignFileContactId,
-                        SourceFileContactId = n.SourceFileContactId,
-                        AuthorUserId = n.AuthorUserId,
-                        AuthorName = n.Author != null ? n.Author.FirstName + " " + n.Author.LastName : "",
-                        AuthorRole = n.Author != null && n.Author.Role != null ? n.Author.Role.Name : null,
-                        NoteType = n.NoteType,
-                        Body = n.Body,
-                        CreatedAt = n.CreatedAt,
-                        UpdatedByUserId = n.UpdatedByUserId,
-                        UpdatedByName = n.UpdatedBy != null ? n.UpdatedBy.FirstName + " " + n.UpdatedBy.LastName : null,
-                        UpdatedAt = n.UpdatedAt,
-                        IsDeleted = n.IsDeleted,
-                        DeletedByUserId = n.DeletedByUserId,
-                        DeletedAt = n.DeletedAt
-                    })
-                    .FirstAsync();
-
-                return Ok(new { success = true, data = updated });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating note {NoteId} for contact {ContactId}", noteId, campaignFileContactId);
-                return StatusCode(500, new { success = false, message = "An error occurred while updating contact note.", error = ex.Message });
-            }
-        }
-
-        [HttpDelete("{campaignId}/contacts/{campaignFileContactId}/notes/{noteId}")]
-        [RequirePermission(Permissions.Contacts.DeleteNote)]
-        public async Task<IActionResult> DeleteContactNote(int campaignId, int campaignFileContactId, int noteId)
-        {
-            try
-            {
-                var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!int.TryParse(userIdString, out var userId))
-                    return Unauthorized(new { success = false, message = "User not authenticated" });
-
-                var note = await _db.ContactNotes
-                    .FirstOrDefaultAsync(n => n.Id == noteId
-                                           && n.CampaignId == campaignId
-                                           && n.CampaignFileContactId == campaignFileContactId);
-
-                if (note == null)
-                    return NotFound(new { success = false, message = "Note not found." });
-
-                var now = DateTime.UtcNow;
-                note.IsDeleted = true;
-                note.DeletedByUserId = userId;
-                note.DeletedAt = now;
-                note.UpdatedByUserId = userId;
-                note.UpdatedAt = now;
-
-                await _db.SaveChangesAsync();
-
-                return Ok(new { success = true, message = "Note deleted successfully." });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting note {NoteId} for contact {ContactId}", noteId, campaignFileContactId);
-                return StatusCode(500, new { success = false, message = "An error occurred while deleting contact note.", error = ex.Message });
-            }
-        }
-
-        private static string? NormalizeContactNoteType(string? noteType)
-        {
-            var normalized = string.IsNullOrWhiteSpace(noteType)
-                ? ContactNoteTypes.General
-                : noteType.Trim().ToLowerInvariant();
-
-            return AllowedContactNoteTypes.Contains(normalized) ? normalized : null;
         }
         /*
         [HttpPatch("{campaignId}/agents/{agentId}/status")]

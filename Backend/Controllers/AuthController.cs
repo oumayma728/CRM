@@ -1,189 +1,176 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using Backend.DTOs.Auth;    
+using System.Security.Claims;
+using Backend.DTOs.Agent;
 using Backend.Services.Auth;
-using System.Security.Claims;   
-using Backend.DTOs;
-using Backend.Services.SourceFiles;
-using Backend.Entities;
-using Backend.Constants;
-using Backend.Attributes;
-using Backend.Services;
-using Backend.Services.Permissions;
-namespace Backend.Controllers
+
+namespace Backend.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Produces("application/json")]
+public class AuthController : ControllerBase
 {
-    [ApiController]
-    [Route("api/auth")]
-    public class AuthController : ControllerBase
+    private readonly IAuthService _authService;
+
+    public AuthController(IAuthService authService)
     {
-        private readonly IAuthService _authService;
-        private readonly IPermissionService _permissionService;
-        private readonly ILogger<AuthController> _logger;
+        _authService = authService;
+    }
 
-        public AuthController(IAuthService authService, ILogger<AuthController> logger, IPermissionService permissionService)
+    /// <summary>Connexion — retourne un JWT + refresh token</summary>
+    [HttpPost("login")]
+    [ProducesResponseType(typeof(LoginResponseDTO), 200)]
+    [ProducesResponseType(401)]
+    public async Task<IActionResult> Login([FromBody] LoginDTO dto)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        try
         {
-            _permissionService = permissionService;
-            _authService = authService;
-            _logger = logger;
+            var response = await _authService.LoginAsync(dto);
+            return Ok(response);
         }
-        //to avoid duplicating userId
-        private int? GetCurrentUserId()
+        catch (UnauthorizedAccessException ex)
         {
-            var value = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return int.TryParse(value, out var id) ? id : null;
-        }
-
-        [HttpPost("login")]
-        public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)
-        {
-            try
-            {
-                var result = await _authService.LoginAsync(request);
-                return Ok(result);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Unauthorized(new { message = "Invalid email or password" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Login failed for email: {Email}", request.Email);
-                return StatusCode(500, new { message = "Login failed. Please try again." });
-            }
-        }
-
-        [HttpPost("register")]
-        [Authorize(Roles = "SuperAdmin")]
-        public async Task<ActionResult<UserDto>> Register(RegisterRequest request)
-        {
-            try
-            {
-                var user = await _authService.RegisterAsync(request);
-                return Ok(user);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [HttpGet("me")]
-        [Authorize]
-        public async Task<ActionResult<UserDto>> GetCurrentUser()
-        {
-            var userId = GetCurrentUserId();
-            if (userId == null)
-                return Unauthorized();
-            var user = await _authService.GetUserByIdAsync(userId.Value);
-            return Ok(user);
-        }
-
-        [HttpPost("refresh")]
-        public async Task<ActionResult<AuthResponse>> RefreshToken(RefreshTokenRequest request)
-        {
-            if (string.IsNullOrEmpty(request?.RefreshToken))
-                return BadRequest(new { message = "Refresh token is required" });
-
-            try
-            {
-                var result = await _authService.RefreshTokenAsync(request.RefreshToken);
-                return Ok(result);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Unauthorized();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Refresh token failed");
-                return StatusCode(500, new { message = "Token refresh failed. Please try again." });
-            }
-        }
-
-
-        [HttpPost("logout")]
-        [Authorize]
-        public async Task<ActionResult> Logout()
-        {
-            var userId = GetCurrentUserId();
-            if (userId == null)
-                return Unauthorized();
-
-            await _authService.LogoutAsync(userId.Value);
-            return Ok(new { message = "Logged out successfully" });
-        }
-        [HttpGet("me/permissions")]
-        [RequirePermission(Permissions.Users.View)]
-        public async Task<ActionResult<List<string>>> GetMyPermissions()
-        {
-            var userId = GetCurrentUserId();
-            if (userId == null)
-                return Unauthorized();
-            var permissions = await _permissionService.GetUserPermissionsAsync(userId.Value);
-            return Ok(permissions);
-
-        }
-
-        [HttpPost("change-password")]
-        [Authorize]
-        public async Task<ActionResult> ChangePassword(ChangePasswordRequest request)
-        {
-            try
-            {
-                var userId = GetCurrentUserId();
-                if (userId == null)
-                    return Unauthorized();
-                await _authService.ChangePasswordAsync(userId.Value, request.OldPassword, request.NewPassword);
-                return Ok(new { message = "Password changed successfully" });
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return BadRequest(new { message = "Current password is incorrect" });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
-        [HttpPost("forgot-password")]
-        [AllowAnonymous]
-        public async Task<ActionResult> ForgetPassword([FromBody] ForgotPasswordRequest request)
-        {
-            try
-            {
-                if (request == null || string.IsNullOrWhiteSpace(request.Email))
-                    return BadRequest(new { message = "Email is required" });
-
-                await _authService.ForgetPasswordAsync(request.Email);
-                return Ok(new { message = "If an account with that email exists, a password reset link has been sent." });
-
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error in forgot password for email: {Email}", request.Email);
-                return StatusCode(500, new { message = "An error occurred while processing your request. Please try again later." });
-            }
-
-        }
-
-        [HttpPost("reset-password")]
-        [Authorize]
-        [RequirePermission(Permissions.Users.ResetPassword)]
-        public async Task<ActionResult> AdminResetPassword(int userId)
-        {
-            try
-            {
-                var adminId = GetCurrentUserId();
-                if (adminId == null)
-                    return Unauthorized();
-                var tempPassword = await _authService.AdminResetPasswordAsync(userId , adminId.Value);  
-                return Ok(new { message = "Password reset successfully", tempPassword });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { success = false, message = ex.Message });
-            }
+            return Unauthorized(new { message = ex.Message });
         }
     }
+
+    /// <summary>Première connexion — activation du compte</summary>
+    [HttpPost("first-login")]
+    [ProducesResponseType(typeof(LoginResponseDTO), 200)]
+    public async Task<IActionResult> FirstLogin([FromBody] FirstLoginDTO dto)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        try
+        {
+            var response = await _authService.FirstLoginAsync(dto);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Demande de réinitialisation du mot de passe (envoie un email)</summary>
+    [HttpPost("forgot-password")]
+    [ProducesResponseType(200)]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        // Always return 200 to not reveal whether email exists
+        await _authService.ForgotPasswordAsync(request.Email);
+        return Ok(new { message = "Si cet email existe, un lien de réinitialisation a été envoyé." });
+    }
+
+    /// <summary>Réinitialisation du mot de passe via token reçu par email</summary>
+    [HttpPost("reset-password")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        try
+        {
+            await _authService.ResetPasswordAsync(request.Token, request.NewPassword);
+            return Ok(new { message = "Mot de passe réinitialisé avec succès." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Reset du mot de passe par l'admin (génère un mot de passe temporaire)</summary>
+    [HttpPost("admin-reset-password")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
+    public async Task<IActionResult> AdminResetPassword([FromBody] AdminResetPasswordRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        try
+        {
+            var tempPassword = await _authService.AdminResetPasswordAsync(request.UserId);
+            return Ok(new { message = "Mot de passe réinitialisé.", tempPassword });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Changement de mot de passe (utilisateur connecté)</summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(401)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                       ?? User.FindFirst("sub")?.Value;
+
+        if (!long.TryParse(userIdClaim, out var userId))
+            return Unauthorized(new { message = "Token invalide." });
+
+        try
+        {
+            await _authService.ChangePasswordAsync(userId, request.OldPassword, request.NewPassword);
+            return Ok(new { message = "Mot de passe changé avec succès." });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Rafraîchir le JWT via refresh token</summary>
+    [HttpPost("refresh")]
+    [ProducesResponseType(typeof(LoginResponseDTO), 200)]
+    [ProducesResponseType(401)]
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+        try
+        {
+            var response = await _authService.RefreshTokenAsync(request.RefreshToken);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>Déconnexion — invalide le refresh token</summary>
+    [HttpPost("logout")]
+    [Authorize]
+    [ProducesResponseType(200)]
+    public async Task<IActionResult> Logout()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                       ?? User.FindFirst("sub")?.Value;
+
+        if (long.TryParse(userIdClaim, out var userId))
+            await _authService.LogoutAsync(userId);
+
+        return Ok(new { message = "Déconnecté avec succès." });
+    }
+
 }

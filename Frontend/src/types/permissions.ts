@@ -57,15 +57,6 @@ export type Permission =
   | "Campaigns.Stop"
   | "Campaigns.ViewResults"
   | "Campaigns.ExportResults"
-  // Contact Permissions
-  | "Contacts.View"
-  | "Contacts.Create"
-  | "Contacts.Qualify"
-  | "Contacts.Update"
-  | "Contacts.ViewHistory"
-  | "Contacts.AddNote"
-  | "Contacts.EditNote"
-  | "Contacts.DeleteNote"
   // Dashboard Permissions
   | "Dashboard.View"
   | "Dashboard.ViewAnalytics"

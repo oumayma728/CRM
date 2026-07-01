@@ -1,4 +1,5 @@
 using Backend.Entities;
+using Backend.Entities;
 
 namespace Backend.DTOs.Campaign
 {
@@ -38,10 +39,7 @@ namespace Backend.DTOs.Campaign
             public string? Phone { get; set; }
             public bool IsActive { get; set; }
             //public double PerformanceScore { get; set; }
-            public bool IsOnline { get; set; }
-            public AgentPresenceStatus PresenceStatus { get; set; }
-            public DateTime? PresenceChangedAt { get; set; }
-            public DateTime? LastHeartbeatAt { get; set; }
+            public bool IsOnline{ get; set; }
         }
     public class GetNextContactResponseDto
     {

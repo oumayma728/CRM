@@ -1,5 +1,5 @@
 // ==================== ENUMS ====================
-import type { User } from "../services/authService";
+type User = { id: number; firstName: string; lastName: string; email: string };
 
 export const CampaignStatus = {
   Draft: 0,
@@ -179,9 +179,6 @@ export interface AvailableAgentDto {
   phone?: string;
   isActive: boolean;
   isOnline: boolean;
-  presenceStatus?: number;
-  presenceChangedAt?: string;
-  lastHeartbeatAt?: string;
 }
 
 // ==================== INJECTION ====================

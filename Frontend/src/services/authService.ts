@@ -25,10 +25,6 @@ export interface User {
   roleName?: string;
   permissions: Permission[];
   avatar?: string;
-  isOnline?: boolean;
-  presenceStatus?: number;
-  presenceChangedAt?: string | null;
-  lastHeartbeatAt?: string | null;
 }
 
 export interface AuthResponse {
@@ -55,10 +51,6 @@ const normalizeUser = (rawUser: any): User => ({
   role: rawUser.role ?? rawUser.Role ?? rawUser.roleId ?? rawUser.RoleId,
   roleName: rawUser.roleName ?? rawUser.RoleName,
   avatar: rawUser.avatar ?? rawUser.Avatar,
-  isOnline: rawUser.isOnline ?? rawUser.IsOnline,
-  presenceStatus: rawUser.presenceStatus ?? rawUser.PresenceStatus,
-  presenceChangedAt: rawUser.presenceChangedAt ?? rawUser.PresenceChangedAt,
-  lastHeartbeatAt: rawUser.lastHeartbeatAt ?? rawUser.LastHeartbeatAt,
   permissions: rawUser.permissions ?? rawUser.Permissions ?? []
 });
 

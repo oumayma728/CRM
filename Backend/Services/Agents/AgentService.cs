@@ -145,18 +145,7 @@ namespace Backend.Services.Agents
                 agent.IsActive = dto.IsActive.Value;
 
             if (dto.IsOnline.HasValue)
-            {
-                var presenceChangedAt = DateTime.UtcNow;
                 agent.IsOnline = dto.IsOnline.Value;
-                agent.PresenceStatus = dto.IsOnline.Value
-                    ? AgentPresenceStatus.Available
-                    : AgentPresenceStatus.Offline;
-                agent.PresenceChangedAt = presenceChangedAt;
-                agent.LastHeartbeatAt = dto.IsOnline.Value ? presenceChangedAt : null;
-
-                if (!dto.IsOnline.Value)
-                    await ReleaseAssignedContactsAsync(id, presenceChangedAt);
-            }
 
             agent.UpdatedAt = DateTime.UtcNow;
 
@@ -200,7 +189,12 @@ namespace Backend.Services.Agents
                     .ExecuteUpdateAsync(s => s
                         .SetProperty(ca => ca.IsActive, false));
 
-                await ReleaseAssignedContactsAsync(id, now);
+                await _db.CampaignFileContacts
+                    .Where(c => c.AssignedAgentId == id && c.CallStatus == CallStatus.Assigned)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(c => c.AssignedAgentId, (int?)null)
+                        .SetProperty(c => c.AssignedAt, (DateTime?)null)
+                        .SetProperty(c => c.CallStatus, CallStatus.Pending));
 
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -270,79 +264,6 @@ namespace Backend.Services.Agents
                 .ToListAsync();
         }
 
-        public async Task<AgentPresenceDto> GetPresenceAsync(int userId)
-        {
-            var user = await _db.Users
-                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted && u.IsActive);
-
-            if (user == null)
-                throw new ArgumentException("User not found.");
-
-            return MapPresence(user);
-        }
-
-        public async Task<AgentPresenceDto> UpdatePresenceAsync(int userId, UpdatePresenceDto dto)
-        {
-            if (dto.Status == AgentPresenceStatus.OnCall || dto.Status == AgentPresenceStatus.WrapUp)
-                throw new InvalidOperationException("OnCall and WrapUp are controlled by the calling workflow.");
-
-            using var transaction = await _db.Database.BeginTransactionAsync();
-
-            try
-            {
-                var user = await _db.Users
-                    .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted && u.IsActive);
-
-                if (user == null)
-                    throw new ArgumentException("User not found.");
-
-                var now = DateTime.UtcNow;
-                user.PresenceStatus = dto.Status;
-                user.PresenceChangedAt = now;
-                user.UpdatedAt = now;
-
-                if (dto.Status == AgentPresenceStatus.Offline)
-                {
-                    user.IsOnline = false;
-                    user.LastHeartbeatAt = null;
-                }
-                else
-                {
-                    user.IsOnline = true;
-                    user.LastHeartbeatAt = now;
-                }
-
-                if (dto.Status == AgentPresenceStatus.Break || dto.Status == AgentPresenceStatus.Offline)
-                    await ReleaseAssignedContactsAsync(userId, now);
-
-                await _db.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return MapPresence(user);
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        }
-
-        public async Task HeartbeatAsync(int userId)
-        {
-            var user = await _db.Users
-                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted && u.IsActive);
-
-            if (user == null)
-                throw new ArgumentException("User not found.");
-
-            var now = DateTime.UtcNow;
-            user.IsOnline = true;
-            user.LastHeartbeatAt = now;
-            user.UpdatedAt = now;
-
-            await _db.SaveChangesAsync();
-        }
-
         private IQueryable<User> GetAgentUserQuery()
         {
             return _db.Users
@@ -406,9 +327,6 @@ namespace Backend.Services.Agents
                     Avatar = agent.Avatar,
                     IsActive = agent.IsActive,
                     IsOnline = agent.IsOnline,
-                    PresenceStatus = agent.PresenceStatus,
-                    PresenceChangedAt = agent.PresenceChangedAt,
-                    LastHeartbeatAt = agent.LastHeartbeatAt,
                     CreatedAt = agent.CreatedAt,
                     UpdatedAt = agent.UpdatedAt,
                     Profile = profile == null ? null : MapProfile(profile),
@@ -416,41 +334,6 @@ namespace Backend.Services.Agents
                     Campaigns = agentCampaigns
                 };
             }).ToList();
-        }
-
-        private static AgentPresenceDto MapPresence(User user)
-        {
-            return new AgentPresenceDto
-            {
-                UserId = user.Id,
-                IsOnline = user.IsOnline,
-                Status = user.PresenceStatus,
-                PresenceChangedAt = user.PresenceChangedAt,
-                LastHeartbeatAt = user.LastHeartbeatAt,
-                CanTakeContacts = user.IsActive
-                    && user.IsOnline
-                    && user.PresenceStatus == AgentPresenceStatus.Available
-            };
-        }
-
-        private async Task ReleaseAssignedContactsAsync(int agentId, DateTime now)
-        {
-            await _db.CallAttempts
-                .Where(a => a.AgentId == agentId
-                         && a.Status == CallStatus.Assigned
-                         && a.EndedAt == null)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(a => a.Status, CallStatus.TimedOut)
-                    .SetProperty(a => a.EndedAt, now)
-                    .SetProperty(a => a.UpdatedAt, now));
-
-            await _db.CampaignFileContacts
-                .Where(c => c.AssignedAgentId == agentId
-                         && c.CallStatus == CallStatus.Assigned)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(c => c.CallStatus, CallStatus.Pending)
-                    .SetProperty(c => c.AssignedAgentId, (int?)null)
-                    .SetProperty(c => c.AssignedAt, (DateTime?)null));
         }
 
         private static AgentProfileDto MapProfile(AgentProfile profile)

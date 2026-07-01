@@ -1,17 +1,15 @@
-using Backend.DTOs.Auth;
+using Backend.DTOs.Agent;
 
-namespace Backend.Services.Auth
+namespace Backend.Services.Auth;
+
+public interface IAuthService
 {
-    public interface IAuthService
-    {
-        Task<AuthResponse> LoginAsync(LoginRequest request);
-        Task<UserDto> RegisterAsync(RegisterRequest request);
-        Task<UserDto> GetCurrentUserAsync(int userId);
-        Task<AuthResponse> RefreshTokenAsync(string refreshToken);
-        Task LogoutAsync(int userId);
-        Task ChangePasswordAsync(int userId, string oldPassword, string newPassword);
-        Task<UserDto> GetUserByIdAsync(int id);
-        Task ForgetPasswordAsync(string email);
-        Task<string> AdminResetPasswordAsync(int userId, int adminId);
-    }
+    Task<LoginResponseDTO> LoginAsync(LoginDTO dto);
+    Task<LoginResponseDTO> FirstLoginAsync(FirstLoginDTO dto);
+    Task ForgotPasswordAsync(string email);
+    Task ResetPasswordAsync(string token, string newPassword);
+    Task<string> AdminResetPasswordAsync(long userId);
+    Task ChangePasswordAsync(long userId, string oldPassword, string newPassword);
+    Task<LoginResponseDTO> RefreshTokenAsync(string refreshToken);
+    Task LogoutAsync(long userId);
 }

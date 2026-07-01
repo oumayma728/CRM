@@ -69,11 +69,7 @@ namespace Backend.Entities
         [Column("low_pool_ratio")]
         public decimal LowPoolRatio { get; set; } = 0.30m;
 
-        [Column("max_attempts_per_contact")]
-        public int MaxAttemptsPerContact { get; set; } = 3;
 
-        [Column("call_timeout_minutes")]
-        public int CallTimeoutMinutes { get; set; } = 10;
 
         // Navigation properties
         public List<CampaignFile> CampaignFiles { get; set; } = new();

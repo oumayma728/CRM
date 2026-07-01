@@ -7,6 +7,8 @@ using Backend.Entities;
 using System.Threading.Tasks;
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
+namespace Backend.Services.Auth;
+
 public class JwtTokenGenerator
 {
     private readonly IConfiguration _configuration;

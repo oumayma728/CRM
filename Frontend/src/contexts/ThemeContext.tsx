@@ -1,20 +1,15 @@
-// contexts/ThemeContext.tsx
-import { createContext, useContext, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
-// ==================== TYPES ====================
-export type Theme = 'light' | 'dark';
+type Theme = 'light' | 'dark';
 
-export interface ThemeContextType {
+interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
 }
 
-// ==================== CONTEXTE ====================
-export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// ==================== PROVIDER ====================
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
 
   useEffect(() => {
@@ -42,7 +37,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ==================== HOOK ====================
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (!context) {

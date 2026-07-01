@@ -105,9 +105,9 @@ namespace Backend.Services.SourceFiles
                     SELECT id
                     FROM import_jobs
                     WHERE (
-                            status = 'Queued'
+                            status = 0
                             OR (
-                                status = 'Processing'
+                                status = 1
                                 AND (
                                     (last_heartbeat_at IS NOT NULL AND last_heartbeat_at < @staleBefore)
                                     OR (last_heartbeat_at IS NULL AND started_at IS NOT NULL AND started_at < @staleBefore)
@@ -120,7 +120,7 @@ namespace Backend.Services.SourceFiles
                     LIMIT 1
                 )
                 UPDATE import_jobs AS j
-                SET status = 'Processing',
+                SET status = 1,
                     started_at = @now,
                     last_heartbeat_at = @now,
                     worker_id = @workerId,

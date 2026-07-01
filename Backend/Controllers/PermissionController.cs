@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Backend.Attributes;
 using Backend.Constants;
 using Backend.DTOs.Permissions;
-using Backend.Services.Permissions;
+using Backend.Services.Permission;
 namespace Backend.Controllers
 {
     [ApiController]

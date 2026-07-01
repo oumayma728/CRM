@@ -1,12 +1,17 @@
+// Attributes/RequirePermissionAttribute.cs
+using Microsoft.AspNetCore.Authorization;
+
 namespace Backend.Attributes
 {
-    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
-    public class RequirePermissionAttribute : Attribute
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
+    public class RequirePermissionAttribute : AuthorizeAttribute
     {
-        public string Permission { get; }
         public RequirePermissionAttribute(string permission)
         {
+            Policy = $"Permission_{permission}";
             Permission = permission;
         }
+
+        public string Permission { get; }
     }
 }

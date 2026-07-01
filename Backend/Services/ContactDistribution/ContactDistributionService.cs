@@ -171,17 +171,6 @@ namespace Backend.Services.ContactDistribution
             if (validContactCount == 0)
                 throw new InvalidOperationException("No valid contacts found in source file.");
 
-            var maxAttempts = await _db.Campaigns
-                .Where(c => c.Id == campaignId)
-                .Select(c => c.MaxAttemptsPerContact)
-                .FirstOrDefaultAsync();
-            if (maxAttempts <= 0) maxAttempts = 3;
-
-            var blacklistedNumbers = (await _db.Blacklist
-                .Select(b => b.PhoneNumber)
-                .ToListAsync())
-                .ToHashSet();
-
             const int batchSize = 2000;
             var lastSourceContactId = 0;
             var insertedContacts = 0;
@@ -194,31 +183,29 @@ namespace Backend.Services.ContactDistribution
                              && s.IsValid
                              && s.Id > lastSourceContactId)
                     .OrderBy(s => s.Id)
-                    .Select(s => new { s.Id, s.PhoneNumber })
+                    .Select(s => new { s.Id })
                     .Take(batchSize)
                     .ToListAsync();
 
                 if (sourceBatch.Count == 0)
                     break;
 
-                var batch = sourceBatch
-                    .Where(source => !blacklistedNumbers.Contains(source.PhoneNumber))
-                    .Select(source => new CampaignFileContact
-                    {
-                        CampaignId = campaignId,
-                        CampaignFileId = campaignFileId,
-                        SourceFileContactId = source.Id,
-                        AssignedAgentId = null,
-                        CallStatus = CallStatus.Pending,
-                        QualificationStatus = null,
-                        AttemptCount = 0,
-                        MaxAttempts = maxAttempts,
-                        AssignedAt = null,
-                        IsAssignable = false,
-                        ActivatedAt = null,
-                        RandomOrder = Random.Shared.NextDouble(),
-                        AssignmentPriority = campaignFile.Priority
-                    }).ToList();
+                var batch = sourceBatch.Select(source => new CampaignFileContact
+                {
+                    CampaignId = campaignId,
+                    CampaignFileId = campaignFileId,
+                    SourceFileContactId = source.Id,
+                    AssignedAgentId = null,
+                    CallStatus = CallStatus.Pending,
+                    QualificationStatus = null,
+                    AttemptCount = 0,
+                    MaxAttempts = 3,
+                    AssignedAt = null,
+                    IsAssignable = false,
+                    ActivatedAt = null,
+                    RandomOrder = Random.Shared.NextDouble(),
+                    AssignmentPriority = campaignFile.Priority
+                }).ToList();
 
                 await _db.CampaignFileContacts.AddRangeAsync(batch);
                 await _db.SaveChangesAsync();
@@ -261,204 +248,137 @@ namespace Backend.Services.ContactDistribution
 
             try
             {
-                // 1. Safety & Eligibility Check
-                var eligibility = await GetAgentEligibilityAsync(campaignId, agentId);
-                if (eligibility == null)
-                    throw new InvalidOperationException("Agent not found in campaign.");
+                var agentEligibility = await _db.CampaignAgents
+                    .Where(ca => ca.CampaignId == campaignId && ca.UserId == agentId)
+                    .Select(ca => new
+                    {
+                        CampaignStatus = ca.Campaign!.Status,
+                        AgentIsActive = ca.IsActive,
+                        UserIsActive = ca.User != null && ca.User.IsActive,
+                        UserIsOnline = ca.User != null && ca.User.IsOnline
+                    })
+                    .FirstOrDefaultAsync();
 
-                if (!eligibility.CampaignIsActive)
-                    throw new InvalidOperationException("Campaign is not active.");
-
-                if (!eligibility.AgentIsActive)
+                if (agentEligibility == null || !agentEligibility.AgentIsActive)
                     throw new InvalidOperationException("Agent is not active in this campaign.");
 
-                if (!eligibility.UserIsOnline)
-                    throw new InvalidOperationException("Agent must be online.");
+                if (agentEligibility.CampaignStatus != CampaignStatus.Active)
+                    throw new InvalidOperationException("Campaign must be active to distribute contacts.");
+
+                if (!agentEligibility.UserIsActive || !agentEligibility.UserIsOnline)
+                    throw new InvalidOperationException("Agent must be active and online to take contacts.");
 
                 await ReleaseTimedOutContacts(campaignId);
 
-                // 2. Return existing assigned contact
-                var currentContact = await GetCurrentAssignedContactAsync(campaignId, agentId);
+                var currentContact = await _db.CampaignFileContacts
+                    .Include(c => c.SourceFileContact)
+                    .FirstOrDefaultAsync(c => c.CampaignId == campaignId
+                                           && c.AssignedAgentId == agentId
+                                           && c.CallStatus == CallStatus.Assigned);
+
                 if (currentContact != null)
                 {
-                    await EnsureAgentInCallStatusAsync(agentId);
                     await transaction.CommitAsync();
                     return MapToNextContactDto(currentContact);
                 }
-
-                // 3. Preferred Agent Callbacks (highest priority)
-                var preferredCallback = await TryClaimDueCallbackAsync(campaignId, agentId, preferredOnly: true);
-                if (preferredCallback != null)
-                {
-                    await transaction.CommitAsync();
-                    return MapToNextContactDto(preferredCallback);
-                }
-
-                // 4. General Due Callbacks
-                var generalCallback = await TryClaimDueCallbackAsync(campaignId, agentId, preferredOnly: false);
-                if (generalCallback != null)
-                {
-                    await transaction.CommitAsync();
-                    return MapToNextContactDto(generalCallback);
-                }
-
-                // 5. Normal Pending Contacts
-                if (eligibility.PresenceStatus != AgentPresenceStatus.Available)
-                    throw new InvalidOperationException("Agent must be Available to receive new contacts.");
-
                 await RefillAssignablePoolIfNeededAsync(campaignId);
-
-                var nextContact = await TryClaimNormalContactAsync(campaignId, agentId);
-                if (nextContact != null)
+                var forcedRefill = false;
+                for (var attempt = 0; attempt < 3; attempt++)
                 {
+                    var now = DateTime.UtcNow;
+                    var nextContactId = await _db.CampaignFileContacts
+                        .Where(c => c.CampaignId == campaignId
+                                 && c.IsAssignable
+                                 && c.CallStatus == CallStatus.Pending
+                                 && c.AssignedAgentId == null
+                                 && c.AttemptCount < c.MaxAttempts
+                                 && (c.NextCallAt == null || c.NextCallAt <= now)
+                                 && c.CampaignFile != null
+                                 && c.CampaignFile.IsActive
+                                 && c.CampaignFile.IsInjected
+                                 && !c.CampaignFile.IsRemoved
+                                 && !c.CampaignFile.IsRecycled)
+                        .OrderBy(c => c.NextCallAt.HasValue && c.NextCallAt <= now ? 0 : 1)
+                        .ThenBy(c => c.NextCallAt ?? DateTime.MaxValue)
+                        .ThenByDescending(c => c.AssignmentPriority)
+                        .ThenBy(c => c.RandomOrder)
+                        .ThenBy(c => c.Id)
+                        .Select(c => c.Id)
+                        .FirstOrDefaultAsync();
+
+                    if (nextContactId == 0)
+                    {
+                        if (!forcedRefill)
+                        {
+                            forcedRefill = true;
+                            await RefillAssignablePoolIfNeededAsync(campaignId, force: true);
+                            continue;
+                        }
+
+                        await transaction.CommitAsync();
+                        return null;
+                    }
+
+                    var claimed = await _db.CampaignFileContacts
+                        .Where(c => c.Id == nextContactId
+                                 && c.CampaignId == campaignId
+                                 && c.IsAssignable
+                                 && c.CallStatus == CallStatus.Pending
+                                 && c.AssignedAgentId == null
+                                 && c.AttemptCount < c.MaxAttempts
+                                 && (c.NextCallAt == null || c.NextCallAt <= now))
+                        .ExecuteUpdateAsync(s => s
+                            .SetProperty(c => c.AssignedAgentId, agentId)
+                            .SetProperty(c => c.AssignedAt, now)
+                            .SetProperty(c => c.CallStatus, CallStatus.Assigned)
+                            .SetProperty(c => c.AttemptCount, c => c.AttemptCount + 1));
+
+                    if (claimed == 0)
+                        continue;
+
+                    var nextContact = await _db.CampaignFileContacts
+                        .Include(c => c.SourceFileContact)
+                        .FirstAsync(c => c.Id == nextContactId);
+
+                    _db.CallAttempts.Add(new CallAttempt
+                    {
+                        CampaignId = campaignId,
+                        CampaignFileId = nextContact.CampaignFileId,
+                        CampaignFileContactId = nextContact.Id,
+                        SourceFileContactId = nextContact.SourceFileContactId,
+                        AgentId = agentId,
+                        AttemptNumber = nextContact.AttemptCount,
+                        Status = CallStatus.Assigned,
+                        StartedAt = now,
+                        CreatedAt = now
+                    });
+                    await _db.SaveChangesAsync();
+
                     await transaction.CommitAsync();
                     return MapToNextContactDto(nextContact);
                 }
 
                 await transaction.CommitAsync();
-                return null; // No contacts available
+                return null;
             }
-            catch (Exception ex)
+            catch
             {
                 await transaction.RollbackAsync();
-                _logger.LogError(ex, "GetNextContact failed for campaign {CampaignId}, agent {AgentId}", campaignId, agentId);
                 throw;
             }
-        }
-
-        private async Task<CampaignFileContact?> TryClaimDueCallbackAsync(int campaignId, int agentId, bool preferredOnly)
-        {
-            for (var attempt = 0; attempt < 3; attempt++)
-            {
-                var now = DateTime.UtcNow;
-                var nextContactId = await _db.CampaignFileContacts
-                    .Where(c => c.CampaignId == campaignId
-                             && c.CallStatus == CallStatus.Deferred
-                             && c.NextAction == NextActions.Callback
-                             && c.AssignedAgentId == null
-                             && c.AttemptCount < c.MaxAttempts
-                             && c.NextCallAt != null
-                             && c.NextCallAt <= now
-                             && (preferredOnly ? c.PreferredAgentId == agentId : c.PreferredAgentId == null)
-                             && c.CampaignFile != null
-                             && c.CampaignFile.IsActive
-                             && c.CampaignFile.IsInjected
-                             && !c.CampaignFile.IsRemoved
-                             && !c.CampaignFile.IsRecycled)
-                    .OrderBy(c => c.NextCallAt)
-                    .ThenByDescending(c => c.AssignmentPriority)
-                    .ThenBy(c => c.RandomOrder)
-                    .ThenBy(c => c.Id)
-                    .Select(c => c.Id)
-                    .FirstOrDefaultAsync();
-
-                if (nextContactId == 0)
-                    return null;
-
-                var claimedContact = await TryClaimContactAsync(
-                    campaignId,
-                    agentId,
-                    nextContactId,
-                    CallStatus.Deferred,
-                    now,
-                    requireAssignable: false,
-                    expectedNextAction: NextActions.Callback,
-                    preferredToAgent: preferredOnly);
-
-                if (claimedContact != null)
-                    return claimedContact;
-            }
-
-            return null;
-        }
-
-        private async Task<CampaignFileContact?> TryClaimContactAsync(
-            int campaignId,
-            int agentId,
-            int contactId,
-            string expectedCallStatus,
-            DateTime now,
-            bool requireAssignable,
-            string? expectedNextAction = null,
-            bool? preferredToAgent = null)
-        {
-            var claimed = await _db.CampaignFileContacts
-                .Where(c => c.Id == contactId
-                         && c.CampaignId == campaignId
-                         && (!requireAssignable || c.IsAssignable)
-                         && c.CallStatus == expectedCallStatus
-                         && (expectedNextAction == null || c.NextAction == expectedNextAction)
-                         && (preferredToAgent == null
-                             || (preferredToAgent.Value ? c.PreferredAgentId == agentId : c.PreferredAgentId == null))
-                         && c.AssignedAgentId == null
-                         && c.AttemptCount < c.MaxAttempts
-                         && (expectedCallStatus == CallStatus.Deferred
-                             ? c.NextCallAt != null && c.NextCallAt <= now
-                             : c.NextCallAt == null || c.NextCallAt <= now))
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(c => c.AssignedAgentId, agentId)
-                    .SetProperty(c => c.AssignedAt, now)
-                    .SetProperty(c => c.CallStatus, CallStatus.Assigned)
-                    .SetProperty(c => c.IsAssignable, true)
-                    .SetProperty(c => c.ActivatedAt, c => c.ActivatedAt ?? now)
-                    .SetProperty(c => c.AttemptCount, c => c.AttemptCount + 1));
-
-            if (claimed == 0)
-                return null;
-
-            var nextContact = await _db.CampaignFileContacts
-                .Include(c => c.SourceFileContact)
-                .FirstAsync(c => c.Id == contactId);
-
-            _db.CallAttempts.Add(new CallAttempt
-            {
-                CampaignId = campaignId,
-                CampaignFileId = nextContact.CampaignFileId,
-                CampaignFileContactId = nextContact.Id,
-                SourceFileContactId = nextContact.SourceFileContactId,
-                AgentId = agentId,
-                AttemptNumber = nextContact.AttemptCount,
-                Status = CallStatus.Assigned,
-                StartedAt = now,
-                CreatedAt = now
-            });
-
-            await _db.Users
-                .Where(u => u.Id == agentId)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(u => u.PresenceStatus, AgentPresenceStatus.OnCall)
-                    .SetProperty(u => u.PresenceChangedAt, now)
-                    .SetProperty(u => u.UpdatedAt, now));
-
-            await _db.SaveChangesAsync();
-
-            return nextContact;
         }
 
         private async Task ReleaseTimedOutContacts(int campaignId)
         {
             var now = DateTime.UtcNow;
-            var timeoutMinutes = await _db.Campaigns
-                .Where(c => c.Id == campaignId)
-                .Select(c => c.CallTimeoutMinutes)
-                .FirstOrDefaultAsync();
+            var timeoutThreshold = now.AddMinutes(-10);
 
-            if (timeoutMinutes <= 0) timeoutMinutes = 10;
-            var timeoutThreshold = now.AddMinutes(-timeoutMinutes);
-
-            var timedOutAssignments = await _db.CampaignFileContacts
+            var timedOutContactIds = await _db.CampaignFileContacts
                 .Where(c => c.CampaignId == campaignId
                          && c.CallStatus == CallStatus.Assigned
                          && c.AssignedAt < timeoutThreshold)
-                .Select(c => new { c.Id, c.AssignedAgentId })
+                .Select(c => c.Id)
                 .ToListAsync();
-
-            var timedOutContactIds = timedOutAssignments.Select(c => c.Id).ToList();
-            var timedOutAgentIds = timedOutAssignments
-                .Where(c => c.AssignedAgentId.HasValue)
-                .Select(c => c.AssignedAgentId!.Value)
-                .Distinct()
-                .ToList();
 
             foreach (var chunk in timedOutContactIds.Chunk(5000))
             {
@@ -480,18 +400,6 @@ namespace Backend.Services.ContactDistribution
                     .SetProperty(c => c.CallStatus, CallStatus.Pending)
                     .SetProperty(c => c.AssignedAgentId, (int?)null)
                     .SetProperty(c => c.AssignedAt, (DateTime?)null));
-
-            if (timedOutAgentIds.Count > 0)
-            {
-                await _db.Users
-                    .Where(u => timedOutAgentIds.Contains(u.Id)
-                             && u.IsOnline
-                             && u.PresenceStatus == AgentPresenceStatus.OnCall)
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(u => u.PresenceStatus, AgentPresenceStatus.Available)
-                        .SetProperty(u => u.PresenceChangedAt, now)
-                        .SetProperty(u => u.UpdatedAt, now));
-            }
         }
 
         //checks if we need to need more contacts in the active pool 
@@ -676,15 +584,6 @@ namespace Backend.Services.ContactDistribution
                 }
 
                 var now = DateTime.UtcNow;
-                var isFarCallback = dto.QualificationStatus == QualificationStatuses.ARappeler
-                    && dto.NextCallAt.HasValue
-                    && dto.NextCallAt.Value > now.AddMonths(1);
-
-                if (dto.QualificationStatus == QualificationStatuses.ARappeler && !dto.NextCallAt.HasValue)
-                    throw new InvalidOperationException("Callback date is required.");
-
-                if (isFarCallback && string.IsNullOrWhiteSpace(dto.AgentComment))
-                    throw new InvalidOperationException("A note is required when the callback can be handled by another agent.");
 
                 contact.QualificationStatus = dto.QualificationStatus;
                 contact.AgentComment = dto.AgentComment;
@@ -709,76 +608,19 @@ namespace Backend.Services.ContactDistribution
                 contact.QualifiedAt = now;
                 contact.QualifiedByUserId = agentId;
                 contact.LastCallAt = now;
-                contact.AssignedAgentId = null;
-                contact.AssignedAt = null;
-                contact.NextCallAt = null;
-                contact.PreferredAgentId = null;
-                contact.NextAction = NextActions.None;
-                if (dto.QualificationStatus == QualificationStatuses.NRP)
+
+                if (dto.QualificationStatus == QualificationStatuses.ARappeler)
                 {
-                    contact.CallStatus = CallStatus.Deferred;
-                    contact.NextAction = NextActions.NearCampaignEnd;
-                }
-                else if (dto.QualificationStatus == QualificationStatuses.Occupe)
-                {
-                    contact.CallStatus = CallStatus.Deferred;
-                    contact.NextAction = NextActions.Callback;
-                    contact.NextCallAt = now.AddDays(1);
-                    contact.PreferredAgentId = agentId;
-                }
-                else if (dto.QualificationStatus == QualificationStatuses.ARappeler)
-                {
-                    contact.CallStatus = CallStatus.Deferred;
-                    contact.NextAction = NextActions.Callback;
+                    contact.CallStatus = CallStatus.Pending;
+                    contact.AssignedAgentId = null;
+                    contact.AssignedAt = null;
                     contact.NextCallAt = dto.NextCallAt;
-
-                    if (dto.NextCallAt.HasValue && dto.NextCallAt.Value <= now.AddMonths(1))
-                    {
-                        contact.PreferredAgentId = agentId;
-                    }
-                    else
-                    {
-                        contact.PreferredAgentId = null;
-                    }
-                }
-                else if (dto.QualificationStatus == QualificationStatuses.PasInteresse)
-                {
-                    contact.CallStatus = CallStatus.ManualRecycleOnly;
-                    contact.NextAction = NextActions.ManualRecycleOnly;
-
-                    if (contact.CampaignFile != null && contact.CampaignFile.ContactsRemaining > 0)
-                        contact.CampaignFile.ContactsRemaining--;
-                }
-                else if (dto.QualificationStatus == QualificationStatuses.NePlusRappeler)
-                {
-                    contact.CallStatus = CallStatus.Blacklisted;
-                    contact.NextAction = NextActions.Blacklist;
-
-                    if (contact.CampaignFile != null && contact.CampaignFile.ContactsRemaining > 0)
-                        contact.CampaignFile.ContactsRemaining--;
-
-                    var phone = contact.SourceFileContact?.PhoneNumber;
-                    if (!string.IsNullOrWhiteSpace(phone))
-                    {
-                        var alreadyBlacklisted = await _db.Blacklist
-                            .AnyAsync(b => b.PhoneNumber == phone);
-
-                        if (!alreadyBlacklisted)
-                        {
-                            _db.Blacklist.Add(new Blacklist
-                            {
-                                PhoneNumber = phone,
-                                AddedByUserId = agentId,
-                                AddedAt = now,
-                                CampaignId = campaignId,
-                                Reason = "NePlusRappeler"
-                            });
-                        }
-                    }
                 }
                 else
                 {
                     contact.CallStatus = CallStatus.Completed;
+                    contact.AssignedAgentId = null;
+                    contact.AssignedAt = null;
                     contact.CompletedAt = now;
 
                     if (contact.CampaignFile != null)
@@ -807,27 +649,6 @@ namespace Backend.Services.ContactDistribution
                     latestAttempt.UpdatedAt = now;
                 }
 
-                if (!string.IsNullOrWhiteSpace(dto.AgentComment))
-                {
-                    _db.ContactNotes.Add(new ContactNote
-                    {
-                        CampaignId = campaignId,
-                        CampaignFileContactId = contact.Id,
-                        SourceFileContactId = contact.SourceFileContactId,
-                        AuthorUserId = agentId,
-                        NoteType = ContactNoteTypes.Qualification,
-                        Body = dto.AgentComment.Trim(),
-                        CreatedAt = now
-                    });
-                }
-
-                await _db.Users
-                    .Where(u => u.Id == agentId)
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(u => u.PresenceStatus, AgentPresenceStatus.WrapUp)
-                        .SetProperty(u => u.PresenceChangedAt, now)
-                        .SetProperty(u => u.UpdatedAt, now));
-
                 await _db.SaveChangesAsync();
                 await transaction.CommitAsync();
 
@@ -854,95 +675,8 @@ namespace Backend.Services.ContactDistribution
                 Address = source?.Address,
                 PostalCode = source?.PostalCode,
                 City = source?.City,
-                PreviousQualification = contact.QualificationStatus,
-                PreviousComment = contact.AgentComment,
                 AttemptCount = contact.AttemptCount
             };
-        }
-        // ====================== HELPER METHODS ======================
-
-        private async Task<AgentEligibility?> GetAgentEligibilityAsync(int campaignId, int agentId)
-        {
-            return await _db.CampaignAgents
-                .Where(ca => ca.CampaignId == campaignId && ca.UserId == agentId)
-                .Select(ca => new AgentEligibility
-                {
-                    CampaignIsActive = ca.Campaign != null && ca.Campaign.Status == CampaignStatus.Active,
-                    AgentIsActive = ca.IsActive,
-                    UserIsActive = ca.User != null && ca.User.IsActive,
-                    UserIsOnline = ca.User != null && ca.User.IsOnline,
-                    PresenceStatus = ca.User != null ? ca.User.PresenceStatus : AgentPresenceStatus.Offline
-                })
-                .FirstOrDefaultAsync();
-        }
-
-        private async Task<CampaignFileContact?> GetCurrentAssignedContactAsync(int campaignId, int agentId)
-        {
-            return await _db.CampaignFileContacts
-                .Include(c => c.SourceFileContact)
-                .FirstOrDefaultAsync(c => c.CampaignId == campaignId
-                                       && c.AssignedAgentId == agentId
-                                       && c.CallStatus == CallStatus.Assigned);
-        }
-
-        private async Task EnsureAgentInCallStatusAsync(int agentId)
-        {
-            await _db.Users
-                .Where(u => u.Id == agentId)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(u => u.PresenceStatus, AgentPresenceStatus.OnCall)
-                    .SetProperty(u => u.PresenceChangedAt, DateTime.UtcNow)
-                    .SetProperty(u => u.UpdatedAt, DateTime.UtcNow));
-        }
-
-        private async Task<CampaignFileContact?> TryClaimNormalContactAsync(int campaignId, int agentId)
-        {
-            for (var attempt = 0; attempt < 3; attempt++)
-            {
-                var now = DateTime.UtcNow;
-                var contactId = await _db.CampaignFileContacts
-                    .Where(c => c.CampaignId == campaignId
-                             && c.IsAssignable
-                             && c.CallStatus == CallStatus.Pending
-                             && c.AssignedAgentId == null
-                             && c.AttemptCount < c.MaxAttempts
-                             && (c.NextCallAt == null || c.NextCallAt <= now)
-                             && c.CampaignFile != null
-                             && c.CampaignFile.IsActive
-                             && c.CampaignFile.IsInjected
-                             && !c.CampaignFile.IsRemoved
-                             && !c.CampaignFile.IsRecycled)
-                    .OrderByDescending(c => c.AssignmentPriority)
-                    .ThenBy(c => c.RandomOrder)
-                    .ThenBy(c => c.Id)
-                    .Select(c => c.Id)
-                    .FirstOrDefaultAsync();
-
-                if (contactId == 0)
-                    return null;
-
-                var claimedContact = await TryClaimContactAsync(
-                    campaignId,
-                    agentId,
-                    contactId,
-                    CallStatus.Pending,
-                    now,
-                    requireAssignable: true);
-
-                if (claimedContact != null)
-                    return claimedContact;
-            }
-
-            return null;
-        }
-
-        private sealed class AgentEligibility
-        {
-            public bool CampaignIsActive { get; init; }
-            public bool AgentIsActive { get; init; }
-            public bool UserIsActive { get; init; }
-            public bool UserIsOnline { get; init; }
-            public AgentPresenceStatus PresenceStatus { get; init; } = AgentPresenceStatus.Offline;
         }
     }
 }

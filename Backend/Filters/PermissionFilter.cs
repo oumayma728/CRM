@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Backend.Attributes;
-using Backend.Services.Permissions;
+using Backend.Services.Permission;
 using System.Security.Claims;
 
 namespace Backend.Filters

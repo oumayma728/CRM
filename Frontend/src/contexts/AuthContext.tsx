@@ -1,18 +1,31 @@
-// contexts/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/authService';
-import { agentPresenceService } from '../services/agentPresenceService';
-import { permissionService } from '../services/permissionService';
+import axios from 'axios';
 import type { Permission } from '../types/permissions';
-import type { User } from '../services/authService';
-import api from '../services/api';
+import { permissionService } from '../services/permissionService';
+
+const API_URL = ((import.meta as any).env?.VITE_API_URL || 'http://localhost:5241') + '/api';
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  typeConfirmatrice?: string; // 'CONF1' | 'CONF2' | 'CONFCLIENT' | undefined
+  permissions?: Permission[];
+}
+
+export type LoginResult = 'success' | 'pending_first_login' | 'must_change_password' | 'error';
+
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => Promise<void>;
-  isAuthenticated: () => boolean;
-  // Permission checking methods
+  login: (email: string, password: string) => Promise<LoginResult>;
+  logout: () => void;
+  isAuthenticated: boolean;
+  loading: boolean;
+  switchTestRole: (role: 'conf1' | 'conf2' | 'admin' | 'agent') => void;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   hasPermission: (permission: Permission) => boolean;
   hasAnyPermission: (permissions: Permission[]) => boolean;
   hasAllPermissions: (permissions: Permission[]) => boolean;
@@ -22,114 +35,155 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const TEST_TOKENS = {
+  conf1: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5OTkiLCJlbWFpbCI6ImNvbmYxQGViaS5jb20iLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJDT05GMSIsIm5vbSI6IlRlc3QiLCJwcmVub20iOiJDb25maXJtYXRyaWNlIiwianRpIjoiMjU0OTQ2ODAtYzA4NC00Zjc0LWIyMDQtZmU5YzI1ZGFhYzE3IiwiZXhwIjoyNTI0NjA4MDAwfQ.test',
+  conf2: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAwIiwiZW1haWwiOiJjb25mMkBlYmkuY29tIn0.test',
+  admin: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwicm9sZSI6IkFETUlOIn0.test',
+  agent: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwicm9sZSI6IkFHRU5UIn0.test'
+};
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const storedUser = authService.getStoredUser();
-    const token = localStorage.getItem('accessToken');
-    
-    if (storedUser && token) {
-      setUser(storedUser);
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    if (storedToken && storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {}
     }
-    setIsLoading(false);
+    setLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (!user || !localStorage.getItem('accessToken')) return;
-
-    const sendHeartbeat = async () => {
-      try {
-        await agentPresenceService.heartbeat();
-      } catch (error) {
-        console.error('Presence heartbeat failed:', error);
+  const login = async (email: string, password: string): Promise<LoginResult> => {
+    try {
+      const res = await axios.post(`${API_URL}/auth/login`, {
+        email,
+        motDePasse: password,
+        identifiantMachine: null,
+      });
+      const data = res.data;
+      const token = data.token || data.accessToken;
+      const userData: User = {
+        id: data.userId || data.id || 0,
+        name: `${data.prenom || ''} ${data.nom || ''}`.trim() || email,
+        email: data.email || email,
+        role: (data.role || 'agent').toLowerCase(),
+        typeConfirmatrice: data.typeConfirmatrice || undefined,
+        permissions: data.permissions || [],
+      };
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      return 'success';
+    } catch (err: any) {
+      const message: string = err.response?.data?.message || err.response?.data || err.message || '';
+      if (message.includes('COMPTE_EN_ATTENTE')) {
+        return 'pending_first_login';
       }
+      if (message.includes('MUST_CHANGE_PASSWORD')) {
+        return 'must_change_password';
+      }
+      console.error('Login error:', message);
+      return 'error';
+    }
+  };
+
+  const forgotPassword = async (email: string): Promise<void> => {
+    await axios.post(`${API_URL}/auth/forgot-password`, { email });
+  };
+
+  const resetPassword = async (token: string, newPassword: string): Promise<void> => {
+    await axios.post(`${API_URL}/auth/reset-password`, { token, newPassword });
+  };
+
+  const changePassword = async (oldPassword: string, newPassword: string): Promise<void> => {
+    const token = localStorage.getItem('token');
+    await axios.post(
+      `${API_URL}/auth/change-password`,
+      { oldPassword, newPassword },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    window.location.href = '/login';
+  };
+
+  const switchTestRole = (role: 'conf1' | 'conf2' | 'admin' | 'agent') => {
+    const testUsers = {
+      conf1: { id: 999, name: 'Confirmatrice 1', email: 'conf1@ebi.com', role: 'conf1' },
+      conf2: { id: 1000, name: 'Confirmatrice 2', email: 'conf2@ebi.com', role: 'conf2' },
+      admin: { id: 1, name: 'Admin Principal', email: 'admin@ebi.com', role: 'admin' },
+      agent: { id: 2, name: 'Agent Commercial', email: 'agent@ebi.com', role: 'agent' }
     };
-
-    void sendHeartbeat();
-    const intervalId = window.setInterval(() => {
-      void sendHeartbeat();
-    }, 30000);
-
-    return () => window.clearInterval(intervalId);
-  }, [user?.id]);
-  
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      const response = await authService.login({ Email: email, Password: password });
-      setUser(response.user);
-      return true;
-    } catch (error) {
-      console.error('Login failed:', error);
-      return false;
-    }
+    const newUser = testUsers[role];
+    setUser(newUser);
+    localStorage.setItem('user', JSON.stringify(newUser));
+    localStorage.setItem('token', TEST_TOKENS[role]);
+    const paths = { conf1: '/confirmation1/dashboard', conf2: '/confirmation2/dashboard', admin: '/admin/dashboard', agent: '/agent/dashboard' };
+    window.location.href = paths[role];
   };
-  
-  const logout = async (): Promise<void> => {
-    try {
-      await authService.logout();
-    } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      setUser(null);
-    }
-  };
-  
-  const refreshPermissions = async ():Promise<void> => {
-    try {
-      const response = await api.get<string[]>('/auth/me/permissions');
-      const permissions = response.data as Permission[];
 
-      const updatedUser = { ...user!, permissions };
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-    } catch (error) {
-      console.error('Failed to refresh permissions:', error);
+  // ── Permission methods ─────────────────────────────────────
+  const hasPermission = (permission: Permission): boolean =>
+    permissionService.hasPermission(user?.permissions, permission);
+
+  const hasAnyPermission = (permissions: Permission[]): boolean =>
+    permissionService.hasAnyPermission(user?.permissions, permissions);
+
+  const hasAllPermissions = (permissions: Permission[]): boolean =>
+    permissionService.hasAllPermissions(user?.permissions, permissions);
+
+  const getUserPermissions = (): Permission[] => user?.permissions || [];
+
+  const refreshPermissions = async (): Promise<void> => {
+    if (!user) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`${API_URL}/auth/me/permissions`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const perms = res.data as Permission[];
+      const updated = { ...user, permissions: perms };
+      setUser(updated);
+      localStorage.setItem('user', JSON.stringify(updated));
+    } catch (e) {
+      console.error('refreshPermissions failed:', e);
     }
   };
 
-  const isAuthenticated = (): boolean => {
-    return !!localStorage.getItem('accessToken') && user !== null;
-  };
-  
-  const getUserPermissions = (): Permission[] => {
-    return user?.permissions || [];
-  };
-  
-  const hasPermission = (permission: Permission): boolean => {
-    return permissionService.hasPermission(user?.permissions, permission);
-  };
-  
-  const hasAnyPermission = (permissions: Permission[]): boolean => {
-    return permissionService.hasAnyPermission(user?.permissions, permissions);
-  };
-  
-  const hasAllPermissions = (permissions: Permission[]): boolean => {
-    return permissionService.hasAllPermissions(user?.permissions, permissions);
-  };
-  
   return (
     <AuthContext.Provider value={{
       user,
-      isLoading,
       login,
       logout,
-      isAuthenticated,
+      isAuthenticated: !!user,
+      loading,
+      switchTestRole,
+      forgotPassword,
+      resetPassword,
+      changePassword,
       hasPermission,
       hasAnyPermission,
       hasAllPermissions,
       getUserPermissions,
-      refreshPermissions
+      refreshPermissions,
     }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
-};
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+}
+
+export default AuthContext;

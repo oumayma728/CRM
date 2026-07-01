@@ -12,38 +12,15 @@ namespace Backend.Constants
         public const string HCLangue = "hc_langue";
         public const string HCConsommation = "hc_consommation";
         public const string ARappeler = "a_rappeler";
-        public const string Occupe = "occupe";
-        public const string NePlusRappeler = "ne_plus_rappeler";
         public const string Porte = "porte";
-        public const string PasSigne = "pas_signe";
+        public const string PasSigné = "pas_signe";
     }
 
     public static class CallStatus
     {
         public const string Pending = "Pending";
         public const string Assigned = "Assigned";
-        public const string Deferred = "Deferred";
         public const string Completed = "Completed";
-        public const string ManualRecycleOnly = "ManualRecycleOnly";
-        public const string Blacklisted = "Blacklisted";
         public const string TimedOut = "TimedOut";
-    }
-    public static class NextActions
-    {
-        public const string None = "None";
-        public const string Callback = "Callback";
-        public const string NearCampaignEnd = "NearCampaignEnd";
-        public const string ManualRecycleOnly = "ManualRecycleOnly";
-        public const string Blacklist = "Blacklist";
-    }
-
-    public static class ContactNoteTypes
-    {
-        public const string General = "general";
-        public const string Appel = "appel";
-        public const string Qualification = "qualification";
-        public const string Confirmation = "confirmation";
-        public const string Commercial = "commercial";
-        public const string Systeme = "systeme";
     }
 }

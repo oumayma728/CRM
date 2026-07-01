@@ -12,10 +12,6 @@ namespace Backend.DTOs.Auth
         public string? Avatar { get; set; }
         public string RoleName { get; set; } = string.Empty;
         public int RoleId { get; set; }
-        public bool IsOnline { get; set; }
-        public AgentPresenceStatus PresenceStatus { get; set; }
-        public DateTime? PresenceChangedAt { get; set; }
-        public DateTime? LastHeartbeatAt { get; set; }
         public List<string> Permissions { get; set; } = new();
     }
 }

@@ -1,4 +1,4 @@
-import type { User } from "../services/authService";
+type User = { id: number; firstName: string; lastName: string; email: string };
 import type { Campaign } from "./leads";
 import type { Country } from "./country";
 import type { LeadType } from "./leadType";
