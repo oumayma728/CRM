@@ -21,6 +21,46 @@ public class Confirmation1Controller : ControllerBase
         _environment = environment;
     }
 
+    private static RdvConfirmationDTO MapRdv(RendezVous r) => new()
+    {
+        Id                    = r.Id,
+        ContactId             = r.Contact?.Id ?? 0,
+        ContactNom            = r.Contact?.Nom ?? "",
+        ContactPrenom         = r.Contact?.Prenom ?? "",
+        Telephone             = r.Contact?.Telephone ?? "",
+        NumGSM                = r.Contact?.NumGSM,
+        Email                 = r.Contact?.Email,
+        Adresse               = r.Contact?.Adresse,
+        CodePostal            = r.Contact?.CodePostal,
+        Ville                 = r.Contact?.Ville,
+        Source                = r.Contact?.Source ?? "",
+        AgentId               = r.AgentId,
+        AgentNom              = r.Agent != null ? $"{r.Agent.Prenom} {r.Agent.Nom}" : "",
+        DateCreation          = r.DateCreation,
+        DateRendezVous        = r.DateRendezVous,
+        Statut                = r.Statut.ToString(),
+        CommentaireAgent      = r.Commentaire,
+        CommentaireConfirmation = r.CommentaireConfirmation,
+        CommentaireBanque     = r.CommentaireBanque,
+        Projet                = r.Contact?.Projet,
+        ProprietaireDepuis    = r.Contact?.ProprietaireDepuis,
+        ModeChauffage         = r.Contact?.ModeChauffage,
+        ConsommationChauffage = r.Contact?.ConsommationChauffage,
+        AgeChaudiere          = r.Contact?.AgeChaudiere,
+        EtudePV               = r.Contact?.EtudePV,
+        EquipePV              = r.Contact?.EquipePV,
+        EquipePAC             = r.Contact?.EquipePAC,
+        EtatToiture           = r.Contact?.EtatToiture,
+        EtatIsolation         = r.Contact?.EtatIsolation,
+        Surface               = r.Contact?.Surface,
+        NombrePersonnes       = r.Contact?.NombrePersonnes,
+        ProfessionMr          = r.Contact?.ProfessionMr,
+        ProfessionMme         = r.Contact?.ProfessionMme,
+        Credits               = r.Contact?.Credits,
+        Revenus               = r.Contact?.Revenus,
+        Fichage               = r.Contact?.Fichage,
+    };
+
     public class UploadContactsDto
     {
         public IFormFile File { get; set; } = null!;
@@ -99,19 +139,7 @@ public class Confirmation1Controller : ControllerBase
             .OrderBy(r => r.DateRendezVous)
             .ToListAsync();
 
-        return Ok(rdvs.Select(r => new RdvConfirmationDTO
-        {
-            Id = r.Id,
-            ContactNom = r.Contact?.Nom ?? "",
-            ContactPrenom = r.Contact?.Prenom ?? "",
-            Telephone = r.Contact?.Telephone ?? "",
-            Source = r.Contact?.Source ?? "",
-            AgentNom = r.Agent != null ? $"{r.Agent.Prenom} {r.Agent.Nom}" : "",
-            DateCreation = r.DateCreation,
-            DateRendezVous = r.DateRendezVous,
-            Statut = r.Statut.ToString(),
-            Commentaire = r.Commentaire
-        }));
+        return Ok(rdvs.Select(MapRdv));
     }
 
     [HttpGet("agenda-client1")]
@@ -124,19 +152,7 @@ public class Confirmation1Controller : ControllerBase
             .OrderBy(r => r.DateRendezVous)
             .ToListAsync();
 
-        return Ok(rdvs.Select(r => new RdvConfirmationDTO
-        {
-            Id = r.Id,
-            ContactNom = r.Contact?.Nom ?? "",
-            ContactPrenom = r.Contact?.Prenom ?? "",
-            Telephone = r.Contact?.Telephone ?? "",
-            Source = r.Contact?.Source ?? "",
-            AgentNom = r.Agent != null ? $"{r.Agent.Prenom} {r.Agent.Nom}" : "",
-            DateCreation = r.DateCreation,
-            DateRendezVous = r.DateRendezVous,
-            Statut = r.Statut.ToString(),
-            Commentaire = r.Commentaire
-        }));
+        return Ok(rdvs.Select(MapRdv));
     }
 
     [HttpGet("agenda-client2")]
@@ -149,19 +165,7 @@ public class Confirmation1Controller : ControllerBase
             .OrderBy(r => r.DateRendezVous)
             .ToListAsync();
 
-        return Ok(rdvs.Select(r => new RdvConfirmationDTO
-        {
-            Id = r.Id,
-            ContactNom = r.Contact?.Nom ?? "",
-            ContactPrenom = r.Contact?.Prenom ?? "",
-            Telephone = r.Contact?.Telephone ?? "",
-            Source = r.Contact?.Source ?? "",
-            AgentNom = r.Agent != null ? $"{r.Agent.Prenom} {r.Agent.Nom}" : "",
-            DateCreation = r.DateCreation,
-            DateRendezVous = r.DateRendezVous,
-            Statut = r.Statut.ToString(),
-            Commentaire = r.Commentaire
-        }));
+        return Ok(rdvs.Select(MapRdv));
     }
 
     [HttpGet("agenda-refus")]
@@ -174,19 +178,7 @@ public class Confirmation1Controller : ControllerBase
             .OrderByDescending(r => r.DateCreation)
             .ToListAsync();
 
-        return Ok(rdvs.Select(r => new RdvConfirmationDTO
-        {
-            Id = r.Id,
-            ContactNom = r.Contact?.Nom ?? "",
-            ContactPrenom = r.Contact?.Prenom ?? "",
-            Telephone = r.Contact?.Telephone ?? "",
-            Source = r.Contact?.Source ?? "",
-            AgentNom = r.Agent != null ? $"{r.Agent.Prenom} {r.Agent.Nom}" : "",
-            DateCreation = r.DateCreation,
-            DateRendezVous = r.DateRendezVous,
-            Statut = r.Statut.ToString(),
-            Commentaire = r.Commentaire
-        }));
+        return Ok(rdvs.Select(MapRdv));
     }
 
     // =========================
@@ -277,8 +269,15 @@ public class Confirmation1Controller : ControllerBase
             return NotFound(new { message = "Rendez-vous non trouvé" });
 
         rdv.Statut = Enum.Parse<StatutRendezVous>(dto.Statut);
-        rdv.Commentaire = dto.Commentaire;
-        
+        rdv.CommentaireConfirmation = dto.Commentaire;
+
+        // Sauvegarder Projet sur le contact si fourni
+        if (!string.IsNullOrEmpty(dto.Projet) && rdv.ContactId != 0)
+        {
+            var contact = await _context.Contacts.FindAsync(rdv.ContactId);
+            if (contact != null) { contact.Projet = dto.Projet; }
+        }
+
         await _context.SaveChangesAsync();
         return Ok(new { message = "Statut mis à jour" });
     }
@@ -429,6 +428,7 @@ public class UpdateRdvStatutDTO
 {
     public string Statut { get; set; } = string.Empty;
     public string? Commentaire { get; set; }
+    public string? Projet { get; set; }
 }
 
 public class CreateRdvDTO

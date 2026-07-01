@@ -214,15 +214,19 @@ public class ConfirmationService : IConfirmationService
         return new RdvConfirmationDTO
         {
             Id = rdv.Id,
+            ContactId = rdv.Contact?.Id ?? 0,
             ContactNom = rdv.Contact?.Nom ?? "",
             ContactPrenom = rdv.Contact?.Prenom ?? "",
             Telephone = rdv.Contact?.Telephone ?? "",
+            NumGSM = rdv.Contact?.NumGSM,
             Source = rdv.Contact?.Source ?? "",
+            AgentId = rdv.AgentId,
             AgentNom = rdv.Agent != null ? $"{rdv.Agent.Prenom} {rdv.Agent.Nom}" : "",
             DateCreation = rdv.DateCreation,
             DateRendezVous = rdv.DateRendezVous,
             Statut = rdv.Statut.ToString(),
-            Commentaire = rdv.Commentaire
+            CommentaireAgent = rdv.Commentaire,
+            CommentaireConfirmation = rdv.CommentaireConfirmation,
         };
     }
 }

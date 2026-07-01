@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router';
 import { Layout } from '../../components/Layout';
 import { agentService, Contact, CreateAppelDTO } from '../../../services/agentService';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -6,9 +7,14 @@ import { toast } from 'react-toastify';
 
 export default function ContactPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
   const [contactId, setContactId] = useState<string | null>(null);
+  // Paramètres de retour (depuis agenda confirmatrice)
+  const [returnTo, setReturnTo] = useState<string | null>(null);
+  const [rdvId, setRdvId] = useState<string | null>(null);
+  const [appelDone, setAppelDone] = useState(false);
   
   // État de l'appel
   const [enAppel, setEnAppel] = useState(false);
@@ -30,18 +36,22 @@ export default function ContactPage() {
     { role: 'client', text: 'Ah oui, je suis intéressé. Quels sont vos tarifs ?', sentiment: 'Positif' },
   ]);
 
-  // Récupérer l'ID du contact depuis l'URL
+  // Récupérer l'ID du contact + paramètres de retour depuis l'URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
+    const rt = params.get('returnTo');
+    const rid = params.get('rdvId');
     console.log('ID récupéré:', id);
     setContactId(id);
-    
+    setReturnTo(rt);
+    setRdvId(rid);
+
     if (!id) {
       setLoading(false);
       return;
     }
-    
+
     const fetchContact = async () => {
       try {
         const data = await agentService.getContactById(parseInt(id));
@@ -53,7 +63,7 @@ export default function ContactPage() {
         setLoading(false);
       }
     };
-    
+
     fetchContact();
   }, []);
 
@@ -123,15 +133,27 @@ export default function ContactPage() {
     
     try {
       await agentService.enregistrerAppel(appelData);
-      // Redirection vers la liste des contacts
-      setTimeout(() => {
-        window.location.href = '/agent/contacts';
-      }, 1500);
+      setAppelDone(true);
+      if (returnTo && rdvId) {
+        // Depuis l'agenda confirmatrice : marquer l'appel et proposer le retour
+        toast.success('✅ Appel enregistré — retournez à l\'agenda pour qualifier le RDV');
+      } else {
+        // Depuis l'agent : redirection classique
+        setTimeout(() => {
+          window.location.href = '/agent/contacts';
+        }, 1500);
+      }
     } catch (error) {
       console.error('Erreur:', error);
       toast.error('Erreur lors de l\'enregistrement');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRetourAgenda = () => {
+    if (returnTo && rdvId) {
+      navigate(`${returnTo}?calledRdvId=${rdvId}`);
     }
   };
 
@@ -177,6 +199,29 @@ export default function ContactPage() {
 
   return (
     <Layout>
+      {/* Bannière de retour agenda confirmatrice */}
+      {returnTo && rdvId && (
+        <div className={`mb-4 flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium ${
+          appelDone
+            ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+            : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800'
+        }`}>
+          <span>
+            {appelDone
+              ? '✅ Appel enregistré — retournez à l\'agenda pour qualifier ce RDV'
+              : '📋 Appel depuis l\'agenda confirmatrice — enregistrez l\'appel avant de qualifier le RDV'}
+          </span>
+          {appelDone && (
+            <button
+              onClick={handleRetourAgenda}
+              className="ml-4 px-4 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-xs"
+            >
+              Retourner à l'agenda →
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="space-y-6">
         <div>
           <h2>Appel en direct</h2>
