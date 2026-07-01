@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { agentService } from '../services/agentService';
-import { DashboardAgent } from '../types/agent';
+import type { DashboardAgent } from '../types/agent';
 
 export function useAgentDashboard(agentId: number) {
   const [dashboard, setDashboard] = useState<DashboardAgent | null>(null);

@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Loader2, Users, RefreshCw } from 'lucide-rea
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, addMonths, subMonths, isSameMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { api } from '../../../../services/api';
-import FicheContactPanel, { RdvDetail } from '../../../components/FicheContactPanel';
+import FicheContactPanel, { type RdvDetail } from '../../../components/FicheContactPanel';
 
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 

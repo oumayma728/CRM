@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { api } from '../../../services/api';
-import { adminService, ConfirmatriceAgenda, AgendaDisponible, AssignAgendaDTO } from '../../../services/adminService';
+import { adminService, type ConfirmatriceAgenda, type AgendaDisponible, type AssignAgendaDTO } from '../../../services/adminService';
 import { Calendar, UserCheck, CheckCircle, XCircle, Loader2, Building2, Users, XCircle as XCircleIcon, ArrowLeft } from 'lucide-react';
 
 export default function ConfirmatricesAgendasPage() {

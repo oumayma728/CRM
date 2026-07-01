@@ -23,4 +23,29 @@ namespace Backend.Constants
         public const string Completed = "Completed";
         public const string TimedOut = "TimedOut";
     }
+
+    public static class AgentPresenceStatus
+    {
+        public const string Offline  = "Offline";
+        public const string Online   = "Online";
+        public const string OnCall   = "OnCall";
+        public const string WrapUp   = "WrapUp";
+        public const string Break    = "Break";
+    }
+
+    public static class NextActions
+    {
+        public const string None              = "None";
+        public const string NearCampaignEnd   = "NearCampaignEnd";
+        public const string Recycle           = "Recycle";
+    }
+
+    public static class ContactNoteTypes
+    {
+        public const string General      = "General";
+        public const string CallResult   = "CallResult";
+        public const string Appointment  = "Appointment";
+        public const string Qualification = "Qualification";
+        public const string Internal     = "Internal";
+    }
 }

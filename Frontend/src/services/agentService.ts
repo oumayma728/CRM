@@ -1,5 +1,5 @@
 import { api } from './api';
-import { DashboardAgent } from '../types/agent';
+import type { DashboardAgent } from '../types/agent';
 
 // Types pour les contacts
 export interface Contact {

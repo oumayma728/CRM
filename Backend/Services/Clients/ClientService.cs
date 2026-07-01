@@ -82,13 +82,6 @@ namespace Backend.Services.Clients
             var client = await _db.Clients.FindAsync(id);
             if (client == null) return false;
 
-            var hasRdvs = await _db.CampaignFileContacts
-                .AnyAsync(c => c.ClientId == id);
-
-            if (hasRdvs)
-                throw new InvalidOperationException(
-                    "Cannot delete this client — they have existing RDVs. Deactivate them instead.");
-
             _db.Clients.Remove(client);
             await _db.SaveChangesAsync();
             return true;
