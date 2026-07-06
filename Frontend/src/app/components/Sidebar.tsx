@@ -123,7 +123,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   // ==================== MENU CONFIRMATRICE 2 (Call Client 2) ====================
   const confirmation2MenuItems = [
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/confirmation2/dashboard' },
-    { icon: Building2, label: 'Agenda EBI',      path: '/confirmation2/dashboard', agendaId: 'EBI' },
+    { icon: Building2, label: 'Agenda EBI',      path: '/confirmation2/agenda-ebi', agendaId: 'EBI' },
     { icon: UserCheck, label: 'Agenda Client 1', path: '/confirmation2/agenda-client1', agendaId: 'CLIENT1' },
     { icon: Star, label: 'Évaluation Agents', path: '/confirmation2/evaluation' },
     { icon: BarChart3, label: 'Statistiques Globales', path: '/confirmation2/statistiques' },

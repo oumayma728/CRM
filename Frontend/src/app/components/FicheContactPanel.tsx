@@ -99,6 +99,12 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // RDV passé = lecture seule (pas d'appel ni qualification)
+  const rdvDate = new Date(rdv.dateRendezVous);
+  rdvDate.setHours(0, 0, 0, 0);
+  const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+  const isPastRdv = rdvDate < todayMidnight;
+
   const statuts = agendaType === 'CLIENT2' ? STATUTS_CLIENT2 : STATUTS_EBI;
   const phoneMain = rdv.numGSM || rdv.telephone;
   const phoneSec  = rdv.numGSM ? rdv.telephone : undefined;
@@ -178,14 +184,21 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
               </div>
             )}
           </div>
-          <button
-            onClick={handleCall}
-            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-white rounded-lg hover:opacity-90 transition font-medium"
-          >
-            <PhoneCall size={16} />
-            Appeler ce contact
-          </button>
-          {hasCalled && (
+          {isPastRdv ? (
+            <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400 text-xs">
+              <Lock size={14} />
+              RDV passé — appel non disponible
+            </div>
+          ) : (
+            <button
+              onClick={handleCall}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-white rounded-lg hover:opacity-90 transition font-medium"
+            >
+              <PhoneCall size={16} />
+              Appeler ce contact
+            </button>
+          )}
+          {hasCalled && !isPastRdv && (
             <div className="mt-2 flex items-center gap-1.5 text-green-600 dark:text-green-400 text-xs">
               <CheckCircle size={13} />
               Appel effectué — qualification déverrouillée
@@ -260,13 +273,18 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
         </div>
 
         {/* Qualification confirmatrice */}
-        <div className={`rounded-lg border p-3 space-y-3 ${hasCalled ? 'border-primary/30 bg-primary/5 dark:bg-primary/10' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30'}`}>
+        <div className={`rounded-lg border p-3 space-y-3 ${isPastRdv ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 opacity-60' : hasCalled ? 'border-primary/30 bg-primary/5 dark:bg-primary/10' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30'}`}>
           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1">
-            {hasCalled ? <CheckCircle size={12} className="text-primary" /> : <Lock size={12} />}
+            {isPastRdv ? <Lock size={12} /> : hasCalled ? <CheckCircle size={12} className="text-primary" /> : <Lock size={12} />}
             Qualification confirmatrice
           </p>
 
-          {!hasCalled ? (
+          {isPastRdv ? (
+            <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs py-2">
+              <Lock size={14} />
+              <span>RDV passé — qualification disponible uniquement le jour J</span>
+            </div>
+          ) : !hasCalled ? (
             <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs py-2">
               <Lock size={14} />
               <span>Appelez d'abord le contact pour déverrouiller la qualification</span>

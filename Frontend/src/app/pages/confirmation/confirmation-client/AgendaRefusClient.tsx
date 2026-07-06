@@ -5,8 +5,9 @@ export default function AgendaRefusClient() {
     <AgendaCalendarPage
       title="Agenda Refus"
       icon="❌"
-      fetchEndpoint="confirmation1/agenda-refus"
-      updateEndpoint="confirmation1/rdv"
+      fetchEndpoint="confirmation-client/agenda-refus"
+      updateEndpoint="confirmation-client/rdv"
+      agendaType="REFUS"
     />
   );
 }

@@ -1,12 +1,13 @@
 import AgendaCalendarPage from './AgendaCalendarPage';
 
-export default function AgendaClient2() {
+export default function AgendaClientDeux() {
   return (
     <AgendaCalendarPage
       title="Agenda Client 2"
       icon="👥"
-      fetchEndpoint="confirmation2/agenda"
-      updateEndpoint="confirmation2/rdv"
+      fetchEndpoint="confirmation-client/agenda-client2"
+      updateEndpoint="confirmation-client/rdv"
+      agendaType="CLIENT2"
     />
   );
 }
