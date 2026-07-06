@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, Users, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { Calendar, Lock, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 
 const API_URL = ((import.meta as any).env?.VITE_API_URL || 'http://localhost:5241') + '/api';
@@ -34,6 +35,7 @@ const AGENDA_TABS = [
 
 export default function Confirmation1Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,11 +45,6 @@ export default function Confirmation1Dashboard() {
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [agendaRdvs, setAgendaRdvs] = useState<Rdv[]>([]);
   const [agendaLoading, setAgendaLoading] = useState(false);
-
-  // Statut update modal
-  const [selectedRdv, setSelectedRdv] = useState<Rdv | null>(null);
-  const [selectedStatut, setSelectedStatut] = useState('');
-  const [commentaire, setCommentaire] = useState('');
 
   useEffect(() => {
     fetchDashboard();
@@ -110,17 +107,15 @@ export default function Confirmation1Dashboard() {
     }
   };
 
-  const updateStatut = async (rdvId: number) => {
-    await fetch(`${API_URL}/confirmation1/rdv/${rdvId}/statut`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
-      body: JSON.stringify({ statut: selectedStatut, commentaire })
-    });
-    setSelectedRdv(null);
-    setSelectedStatut('');
-    setCommentaire('');
-    fetchDashboard();
-    if (activeTab) fetchAgendaRdvs(activeTab);
+  const handleQualifier = (rdv: Rdv) => {
+    const AGENDA_PATHS: Record<string, string> = {
+      EBI:     '/confirmation1/agenda-ebi',
+      CLIENT1: '/confirmation1/agenda-client1',
+      CLIENT2: '/confirmation1/agenda-client2',
+      REFUS:   '/confirmation1/agenda-refus',
+    };
+    const path = activeTab ? (AGENDA_PATHS[activeTab] || '/confirmation1/agenda-ebi') : '/confirmation1/agenda-ebi';
+    navigate(path);
   };
 
   const getStatutBadge = (statut: string) => {
@@ -224,10 +219,10 @@ export default function Confirmation1Dashboard() {
                         <td className="p-3">{getStatutBadge(rdv.statut)}</td>
                         <td className="p-3">
                           <button
-                            onClick={() => setSelectedRdv(rdv)}
-                            className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+                            onClick={() => handleQualifier(rdv)}
+                            className="flex items-center gap-1 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
                           >
-                            Qualifier
+                            <Lock size={12} /> Qualifier
                           </button>
                         </td>
                       </tr>
@@ -244,54 +239,11 @@ export default function Confirmation1Dashboard() {
         </div>
       )}
 
-      {/* Modal qualification */}
-      {selectedRdv && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md p-6">
-            <h3 className="text-lg font-bold mb-4">Qualifier le rendez-vous</h3>
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-4 space-y-1">
-              <p className="text-sm"><span className="text-gray-500">Contact: </span>{selectedRdv.contactPrenom} {selectedRdv.contactNom}</p>
-              <p className="text-sm"><span className="text-gray-500">Tél: </span>{selectedRdv.telephone}</p>
-              <p className="text-sm"><span className="text-gray-500">Date RDV: </span>{new Date(selectedRdv.dateRendezVous).toLocaleString()}</p>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Statut</label>
-                <select
-                  value={selectedStatut}
-                  onChange={e => setSelectedStatut(e.target.value)}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                >
-                  <option value="">Sélectionner...</option>
-                  <option value="CONFIRME">✅ Confirmé</option>
-                  <option value="ANNULE">❌ Annulé</option>
-                  <option value="REPORTER">⏰ Reporter</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Commentaire</label>
-                <textarea
-                  value={commentaire}
-                  onChange={e => setCommentaire(e.target.value)}
-                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"
-                  rows={3}
-                  placeholder="Motif ou information complémentaire..."
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setSelectedRdv(null)} className="px-4 py-2 border rounded hover:bg-gray-50 dark:hover:bg-gray-700">Annuler</button>
-                <button
-                  onClick={() => updateStatut(selectedRdv.id)}
-                  disabled={!selectedStatut}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-                >
-                  Enregistrer
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Bandeau info qualification */}
+      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2.5">
+        <Lock size={13} />
+        La qualification est disponible uniquement après avoir appelé le contact depuis la fiche de l'agenda.
+      </div>
     </div>
   );
 }

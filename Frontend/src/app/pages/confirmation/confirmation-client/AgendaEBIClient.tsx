@@ -5,8 +5,9 @@ export default function AgendaEBIClient() {
     <AgendaCalendarPage
       title="Agenda EBI"
       icon="🏢"
-      fetchEndpoint="confirmation1/agenda-ebi"
-      updateEndpoint="confirmation1/rdv"
+      fetchEndpoint="confirmation-client/agenda-ebi"
+      updateEndpoint="confirmation-client/rdv"
+      agendaType="EBI"
     />
   );
 }

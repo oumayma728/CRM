@@ -62,6 +62,7 @@ import StatistiquesGlobales from './pages/confirmation/confirmation1/Statistique
 import FichiersContacts from './pages/confirmation/confirmation1/FichiersContacts';
 
 import Confirmation2Dashboard from './pages/confirmation/Confirmation2Dashboard';
+import AgendaEBI2 from './pages/confirmation/confirmation2/AgendaEBI2';
 import AgendaClient1_2 from './pages/confirmation/confirmation2/AgendaClient1';
 import EvaluationAgents2 from './pages/confirmation/confirmation2/EvaluationAgents2';
 import StatistiquesGlobales2 from './pages/confirmation/confirmation2/StatistiquesGlobales2';
@@ -117,6 +118,7 @@ function AppRoutes() {
       {/* ==================== CONFIRMATRICE 2 ==================== */}
       <Route path="/confirmation2" element={<Layout><Outlet /></Layout>}>
         <Route path="dashboard" element={<Confirmation2Dashboard />} />
+        <Route path="agenda-ebi" element={<AgendaEBI2 />} />
         <Route path="agenda-client1" element={<AgendaClient1_2 />} />
         <Route path="evaluation" element={<EvaluationAgents2 />} />
         <Route path="statistiques" element={<StatistiquesGlobales2 />} />

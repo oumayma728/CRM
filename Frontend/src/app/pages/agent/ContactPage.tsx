@@ -101,47 +101,49 @@ export default function ContactPage() {
 
   const handleQualification = async (action: 'converti' | 'rappel' | 'refuse') => {
     if (!contact) return;
-    
     setSubmitting(true);
-    
-    let qualification = '';
-    let dateRappelPlanifie = undefined;
-    
-    switch (action) {
-      case 'converti':
-        qualification = 'RENDEZ_VOUS';
-        toast.success('✅ RDV enregistré avec succès !');
-        break;
-      case 'rappel':
-        qualification = 'RAPPEL';
-        dateRappelPlanifie = dateRappel || new Date().toISOString();
-        toast.success('📅 Rappel planifié !');
-        break;
-      case 'refuse':
-        qualification = 'REFUS_PAS_INTERESSE';
-        toast.info('❌ Refus enregistré');
-        break;
-    }
-    
-    const appelData: CreateAppelDTO = {
-      agentId: user?.id || 1,
-      contactId: contact.id,
-      dureeSecondes: duree,
-      qualification: qualification,
-      dateRappelPlanifie: dateRappelPlanifie,
-    };
-    
+
+    // Détecter si on est dans le flow confirmatrice (returnTo + rdvId présents)
+    const isConfirmatriceFlow = !!(returnTo && rdvId);
+
     try {
-      await agentService.enregistrerAppel(appelData);
-      setAppelDone(true);
-      if (returnTo && rdvId) {
-        // Depuis l'agenda confirmatrice : marquer l'appel et proposer le retour
-        toast.success('✅ Appel enregistré — retournez à l\'agenda pour qualifier le RDV');
+      if (isConfirmatriceFlow) {
+        // Flow confirmatrice : mettre à jour le statut du RDV directement
+        // Dériver le préfixe du contrôleur depuis returnTo
+        // ex: /confirmation2/agenda-client1 → confirmation2
+        const prefix = returnTo!.split('/').filter(Boolean)[0]; // "confirmation2", "confirmation1", "confirmation-client"
+        const rdvStatut = action === 'converti' ? 'CONFIRME' : action === 'rappel' ? 'REPORTER' : 'ANNULE';
+        const token = localStorage.getItem('token');
+        const apiBase = ((import.meta as any).env?.VITE_API_URL || 'http://localhost:5241') + '/api';
+        await fetch(`${apiBase}/${prefix}/rdv/${rdvId}/statut`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ statut: rdvStatut, commentaire: notes }),
+        });
+        const labels: Record<string, string> = { converti: '✅ RDV confirmé !', rappel: '📅 RDV reporté !', refuse: '❌ RDV annulé' };
+        if (action === 'converti') toast.success(labels[action]);
+        else if (action === 'rappel') toast.success(labels[action]);
+        else toast.info(labels[action]);
+        setAppelDone(true);
       } else {
-        // Depuis l'agent : redirection classique
-        setTimeout(() => {
-          window.location.href = '/agent/contacts';
-        }, 1500);
+        // Flow agent classique : enregistrer l'appel
+        let qualification = '';
+        let dateRappelPlanifie = undefined;
+        switch (action) {
+          case 'converti': qualification = 'RENDEZ_VOUS'; toast.success('✅ RDV enregistré !'); break;
+          case 'rappel': qualification = 'RAPPEL'; dateRappelPlanifie = dateRappel || new Date().toISOString(); toast.success('📅 Rappel planifié !'); break;
+          case 'refuse': qualification = 'REFUS_PAS_INTERESSE'; toast.info('❌ Refus enregistré'); break;
+        }
+        const appelData: CreateAppelDTO = {
+          agentId: user?.id || 1,
+          contactId: contact.id,
+          dureeSecondes: duree,
+          qualification,
+          dateRappelPlanifie,
+        };
+        await agentService.enregistrerAppel(appelData);
+        setAppelDone(true);
+        setTimeout(() => { window.location.href = '/agent/contacts'; }, 1500);
       }
     } catch (error) {
       console.error('Erreur:', error);
