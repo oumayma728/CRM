@@ -1,40 +1,78 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import { Link } from 'react-router';
 import { Star, Users, TrendingUp, AlertCircle } from 'lucide-react';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5241';
+import api from '../../../services/api';
 
 interface Agent {
   id: number;
   nom: string;
   prenom: string;
   email: string;
-  typeContrat?: string;
-  isElite?: boolean;
-  derniereNote?: number;
+}
+
+interface ManualEval {
+  id: number;
+  agentId: number;
+  agentName: string | null;
+  globalScore: number;
+  decision: string | null;
+  evaluationDate: string;
+}
+
+interface AgentWithScore extends Agent {
+  derniereNote: number | null;
+  derniereDecision: string | null;
 }
 
 export default function QualiteDashboard() {
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agents, setAgents] = useState<AgentWithScore[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    axios.get(`${API}/api/qualite/agents`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => setAgents(res.data))
-      .catch(() => setError('Erreur de chargement'))
-      .finally(() => setLoading(false));
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  const evalues = agents.filter(a => a.derniereNote !== undefined && a.derniereNote !== null);
+  const fetchData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [agentsRes, evalsRes] = await Promise.all([
+        api.get('/qualite/agents'),
+        api.get('/quality/evaluations'),
+      ]);
+
+      const rawAgents: Agent[] = agentsRes.data || [];
+      const evals: ManualEval[] = evalsRes.data || [];
+
+      // Build map: agentId → latest ManualEvaluation
+      const latestByAgent = new Map<number, ManualEval>();
+      for (const e of evals) {
+        const existing = latestByAgent.get(e.agentId);
+        if (!existing || new Date(e.evaluationDate) > new Date(existing.evaluationDate)) {
+          latestByAgent.set(e.agentId, e);
+        }
+      }
+
+      const enriched: AgentWithScore[] = rawAgents.map(a => ({
+        ...a,
+        derniereNote: latestByAgent.get(a.id)?.globalScore ?? null,
+        derniereDecision: latestByAgent.get(a.id)?.decision ?? null,
+      }));
+
+      setAgents(enriched);
+    } catch {
+      setError('Erreur de chargement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const evalues = agents.filter(a => a.derniereNote !== null);
   const avgNote = evalues.length > 0
     ? (evalues.reduce((s, a) => s + (a.derniereNote ?? 0), 0) / evalues.length).toFixed(1)
     : '—';
 
   const noteColor = (n: number) =>
-    n >= 8 ? 'bg-green-100 text-green-700' : n >= 6 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
+    n >= 70 ? 'bg-green-100 text-green-700' : n >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700';
 
   return (
     <div className="space-y-6">
@@ -55,8 +93,8 @@ export default function QualiteDashboard() {
         <div className="bg-card border border-border rounded-lg p-5 flex items-center gap-4">
           <div className="p-3 bg-yellow-500/10 rounded-lg"><Star className="w-6 h-6 text-yellow-500" /></div>
           <div>
-            <p className="text-sm text-muted-foreground">Note moyenne équipe</p>
-            <p className="text-2xl font-bold">{avgNote}/10</p>
+            <p className="text-sm text-muted-foreground">Score moyen équipe</p>
+            <p className="text-2xl font-bold">{avgNote}{evalues.length > 0 ? '/100' : ''}</p>
           </div>
         </div>
         <div className="bg-card border border-border rounded-lg p-5 flex items-center gap-4">
@@ -92,9 +130,9 @@ export default function QualiteDashboard() {
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nom</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Prénom</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Contrat</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Élite</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Dernière note</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Email</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Dernière évaluation</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Décision</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
@@ -103,27 +141,22 @@ export default function QualiteDashboard() {
                 <tr key={agent.id} className="border-t border-border hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3 font-medium">{agent.nom}</td>
                   <td className="px-4 py-3">{agent.prenom}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{agent.typeContrat || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{agent.email}</td>
                   <td className="px-4 py-3">
-                    {agent.isElite && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">
-                        <Star className="w-3 h-3" /> Élite
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {agent.derniereNote !== undefined && agent.derniereNote !== null ? (
+                    {agent.derniereNote !== null ? (
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${noteColor(agent.derniereNote)}`}>
-                        <Star className="w-3 h-3" /> {agent.derniereNote}/10
+                        <Star className="w-3 h-3" /> {agent.derniereNote}/100
                       </span>
                     ) : (
                       <span className="text-muted-foreground text-xs">Non évalué</span>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {agent.derniereDecision || '—'}
+                  </td>
                   <td className="px-4 py-3">
                     <Link
-                      to={`/qualite/evaluation`}
-                      state={{ agentId: agent.id }}
+                      to="/qualite/evaluation-manuelle"
                       className="text-primary hover:underline text-xs font-medium"
                     >
                       Évaluer

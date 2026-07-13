@@ -8,6 +8,7 @@ public class ApplicationDbContext : DbContext
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
     // ─── MY EXISTING DbSets (TPH CRM) ────────────────────────────────────────
+    public DbSet<Utilisateur> Utilisateurs => Set<Utilisateur>();
     public DbSet<Agent> Agents => Set<Agent>();
     public DbSet<Commercial> Commerciaux => Set<Commercial>();
     public DbSet<Qualite> ServiceQualite => Set<Qualite>();
@@ -47,11 +48,25 @@ public class ApplicationDbContext : DbContext
     public DbSet<Client> Clients { get; set; }
     public DbSet<ContactNote> ContactNotes { get; set; }
 
+    // ─── KHALED'S DbSets (Qualité, IA, Salaires, Alertes, Leads) ─────────────
+    public DbSet<ManualEvaluation> ManualEvaluations => Set<ManualEvaluation>();
+    public DbSet<SalaryRule> SalaryRules => Set<SalaryRule>();
+    public DbSet<SalaireAgent> SalairesAgents => Set<SalaireAgent>();
+    public DbSet<AiEligibilityLog> AiEligibilityLogs => Set<AiEligibilityLog>();
+    public DbSet<AlertRule> AlertRules => Set<AlertRule>();
+    public DbSet<AlertHistory> AlertHistories => Set<AlertHistory>();
+    public DbSet<ImportedLead> ImportedLeads => Set<ImportedLead>();
+    public DbSet<AdvancedAttendance> AdvancedAttendances => Set<AdvancedAttendance>();
+    public DbSet<AttendanceBreak> AttendanceBreaks => Set<AttendanceBreak>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         // ─── MY EXISTING: Héritage TPH ────────────────────────────────────────
+        // ─── Fix: migration created "Utilisateur" (singular), DbSet name defaults to plural ─
+        modelBuilder.Entity<Utilisateur>().ToTable("Utilisateur");
+
         modelBuilder.Entity<Utilisateur>()
             .HasDiscriminator<string>("Role")
             .HasValue<Agent>("AGENT")
@@ -208,6 +223,78 @@ public class ApplicationDbContext : DbContext
         {
             entity.ToTable("contacts");
             entity.HasKey(e => e.Id);
+        });
+
+        // ─── KHALED's ENTITIES ────────────────────────────────────────────────
+        modelBuilder.Entity<ManualEvaluation>(entity =>
+        {
+            entity.ToTable("ManualEvaluations");
+            entity.HasOne(e => e.Agent)
+                .WithMany()
+                .HasForeignKey(e => e.AgentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Evaluator)
+                .WithMany()
+                .HasForeignKey(e => e.EvaluatorId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SalaryRule>(entity =>
+        {
+            entity.ToTable("SalaryRules");
+            entity.Property(e => e.Role).HasDefaultValue("agent");
+        });
+
+        modelBuilder.Entity<SalaireAgent>(entity =>
+        {
+            entity.ToTable("SalairesAgents");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PaymentStatus).HasDefaultValue("pending");
+            entity.HasOne(e => e.Agent)
+                .WithMany()
+                .HasForeignKey(e => e.AgentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AiEligibilityLog>(entity =>
+        {
+            entity.ToTable("AiEligibilityLogs");
+        });
+
+        modelBuilder.Entity<AlertRule>(entity =>
+        {
+            entity.ToTable("AlertRules");
+        });
+
+        modelBuilder.Entity<AlertHistory>(entity =>
+        {
+            entity.ToTable("AlertHistories");
+            entity.Property(e => e.Severity).HasDefaultValue("warning");
+        });
+
+        modelBuilder.Entity<ImportedLead>(entity =>
+        {
+            entity.ToTable("ImportedLeads");
+            entity.Property(e => e.Status).HasDefaultValue("new");
+        });
+
+        modelBuilder.Entity<AdvancedAttendance>(entity =>
+        {
+            entity.ToTable("AdvancedAttendances");
+            entity.Property(e => e.Status).HasDefaultValue("active");
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AttendanceBreak>(entity =>
+        {
+            entity.ToTable("AttendanceBreaks");
+            entity.HasOne(e => e.Attendance)
+                .WithMany(a => a.Breaks)
+                .HasForeignKey(e => e.AttendanceId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
