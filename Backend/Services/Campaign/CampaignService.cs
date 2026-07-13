@@ -202,18 +202,18 @@ namespace Backend.Services.Campaigns
         // ==================== READ (ALL) ====================
         public async Task<List<CampaignResponseDto>> GetAllAsync()
         {
+            // Avoid .ThenInclude(ca => ca.User) and .Include(c => c.CreatedByUser):
+            // User.Role FK points to a roles table that may not exist → EF 500.
             var campaigns = await _db.Campaigns
               .Where(c => !c.IsDeleted)
               .Include(c => c.CampaignFiles)
                   .ThenInclude(cf => cf.SourceFile)
               .Include(c => c.CampaignAgents)
-                  .ThenInclude(ca => ca.User)
-              .Include(c => c.CreatedByUser) // ← add this
               .OrderByDescending(c => c.CreatedAt)
+              .AsNoTracking()
               .ToListAsync();
 
             return campaigns.Select(c => MapToResponseDto(c)).ToList();
-
         }
 
         // ==================== READ (BY ID) ====================

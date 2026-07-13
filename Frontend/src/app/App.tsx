@@ -38,8 +38,15 @@ import PermissionPage from './pages/admin/PermissionPage';
 // ── SERVICE QUALITÉ ──────────────────────────────────────────
 import QualiteDashboard from './pages/qualite/QualiteDashboard';
 import AgendaRefusEquipe from './pages/qualite/AgendaRefusEquipe';
-import EvaluationPage from './pages/qualite/EvaluationPage';
 import StatsAppelsPage from './pages/qualite/StatsAppelsPage';
+import ManualEvaluationPage from './pages/qualite/ManualEvaluationPage';
+import QualityAnalyticsPage from './pages/qualite/QualityAnalyticsPage';
+// ── MODULES KHALED (Admin) ────────────────────────────────────
+import SalaryPage from './pages/admin/SalaryPage';
+import AiScoringPage from './pages/admin/AiScoringPage';
+import AnalyticsKhaledPage from './pages/admin/AnalyticsKhaledPage';
+import AlertsManagePage from './pages/admin/AlertsManagePage';
+import LeadsKhaledPage from './pages/admin/LeadsKhaledPage';
 // ── COMMERCIAL ───────────────────────────────────────────────
 import CommercialDashboard from './pages/commercial/CommercialDashboard';
 import CommercialAgenda from './pages/commercial/CommercialAgenda';
@@ -161,13 +168,22 @@ function AppRoutes() {
       {/* ─────────────────────────────────────────────────── */}
       <Route path="/create-contact" element={<ProtectedRoute><CreateContactPage /></ProtectedRoute>} />
 
+      {/* ==================== MODULES KHALED (Admin) — avec Layout sidebar ==================== */}
+      <Route element={<ProtectedRoute><Layout><Outlet /></Layout></ProtectedRoute>}>
+        <Route path="/admin/salary" element={<SalaryPage />} />
+        <Route path="/admin/ai-scoring" element={<AiScoringPage />} />
+        <Route path="/admin/analytics-advanced" element={<AnalyticsKhaledPage />} />
+        <Route path="/admin/alerts-manage" element={<AlertsManagePage />} />
+        <Route path="/admin/leads-khaled" element={<LeadsKhaledPage />} />
+      </Route>
+
       {/* ==================== SERVICE QUALITÉ ==================== */}
       <Route path="/qualite" element={<Layout><Outlet /></Layout>}>
         <Route path="dashboard" element={<QualiteDashboard />} />
         <Route path="agenda-refus" element={<AgendaRefusEquipe />} />
-        <Route path="evaluation" element={<EvaluationPage />} />
-        <Route path="evaluation/:agentId" element={<EvaluationPage />} />
         <Route path="stats-appels" element={<StatsAppelsPage />} />
+        <Route path="evaluation-manuelle" element={<ManualEvaluationPage />} />
+        <Route path="analytics-qualite" element={<QualityAnalyticsPage />} />
       </Route>
 
       {/* ==================== COMMERCIAL ==================== */}

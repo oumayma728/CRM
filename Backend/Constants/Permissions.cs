@@ -200,7 +200,7 @@ namespace Backend.Constants
                 Files.View, Files.Upload, Files.Inject, Files.Delete, Files.Rename,
                 Campaigns.View, Campaigns.Create, Campaigns.Edit, Campaigns.Delete,
                 Suppliers.View, Suppliers.Create, Countries.View, LeadTypes.View,
-                Users.View, Users.Create, Users.Edit, Roles.AssignPermissions
+                Users.View, Users.Create, Users.Edit, Roles.AssignPermissions, Users.AssignPermissions
             },
             ["AGENT"] = new[] {
                 AgentDashboard, AgentAppel, AgentContacts, AgentHistorique, AgentPerformance, AgentAgenda,

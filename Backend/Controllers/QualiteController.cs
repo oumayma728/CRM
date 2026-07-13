@@ -68,36 +68,53 @@ public class QualiteController : ControllerBase
     [HttpGet("agents")]
     public async Task<IActionResult> GetAgents()
     {
-        // Materialize first — avoid calling .ToString() inside EF LINQ (can't translate to SQL)
-        var agentsRaw = await _context.Agents
-            .Select(a => new
-            {
-                a.Id, a.Nom, a.Prenom, a.Email, a.DateEmbauche, a.IsElite, a.TypeContrat
-            })
-            .ToListAsync();
-
-        var agentIds = agentsRaw.Select(a => a.Id).ToList();
-        var dernieresNotes = await _context.Evaluations
-            .Where(e => agentIds.Contains(e.AgentId))
-            .Select(e => new { e.AgentId, e.NoteGlobale, e.DateEvaluation })
-            .ToListAsync();
-
-        var notesParAgent = dernieresNotes
-            .GroupBy(e => e.AgentId)
-            .ToDictionary(
-                g => g.Key,
-                g => (double?)g.OrderByDescending(e => e.DateEvaluation).First().NoteGlobale
-            );
-
-        // In-memory projection — safe to call .ToString() / ?. here
-        var result = agentsRaw.Select(a => new
+        try
         {
-            a.Id, a.Nom, a.Prenom, a.Email, a.DateEmbauche, a.IsElite,
-            TypeContrat = a.TypeContrat?.ToString(),
-            DerniereNote = notesParAgent.TryGetValue(a.Id, out var note) ? note : null
-        });
+            // Query base Utilisateur (not _context.Agents) to avoid TPH column mapping issues
+            // (TypeContrat value converter or missing columns would cause 500 on _context.Agents)
+            var agentsRaw = (await _context.Utilisateurs
+                .Where(u => u.Role == "AGENT")
+                .Select(u => new { u.Id, u.Nom, u.Prenom, u.Email })
+                .AsNoTracking()
+                .ToListAsync())
+                .DistinctBy(u => u.Email)
+                .ToList();
 
-        return Ok(result);
+            var agentIds = agentsRaw.Select(a => a.Id).ToList();
+
+            // Evaluations table might not exist in all environments — guard separately
+            var notesParAgent = new Dictionary<long, double?>();
+            try
+            {
+                var dernieresNotes = await _context.Evaluations
+                    .Where(e => agentIds.Contains(e.AgentId))
+                    .Select(e => new { e.AgentId, e.NoteGlobale, e.DateEvaluation })
+                    .ToListAsync();
+
+                notesParAgent = dernieresNotes
+                    .GroupBy(e => e.AgentId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => (double?)g.OrderByDescending(e => e.DateEvaluation).First().NoteGlobale
+                    );
+            }
+            catch { /* Evaluations table may not exist yet */ }
+
+            var result = agentsRaw.Select(a => new
+            {
+                a.Id, a.Nom, a.Prenom, a.Email,
+                TypeContrat = (string?)null,
+                IsElite = false,
+                DateEmbauche = (DateTime?)null,
+                DerniereNote = notesParAgent.TryGetValue(a.Id, out var note) ? note : null
+            });
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message, detail = ex.InnerException?.Message });
+        }
     }
 
     // ── STATISTIQUES APPELS ───────────────────────────────────────────────
@@ -107,9 +124,11 @@ public class QualiteController : ControllerBase
     public async Task<IActionResult> GetStatsAppels([FromQuery] DateTime? debut, [FromQuery] DateTime? fin, [FromQuery] long? agentId)
     {
         var debutUtc = debut.HasValue ? DateTime.SpecifyKind(debut.Value, DateTimeKind.Utc) : (DateTime?)null;
-        var finUtc   = fin.HasValue   ? DateTime.SpecifyKind(fin.Value,   DateTimeKind.Utc) : (DateTime?)null;
+        // Make fin inclusive of the full last day
+        var finUtc   = fin.HasValue   ? DateTime.SpecifyKind(fin.Value.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc) : (DateTime?)null;
 
-        var query = _context.Appels.Include(a => a.Agent).AsQueryable();
+        // AsNoTracking + no Include — groupby only needs AgentId and DateHeure
+        var query = _context.Appels.AsNoTracking().AsQueryable();
 
         if (debutUtc.HasValue) query = query.Where(a => a.DateHeure >= debutUtc.Value);
         if (finUtc.HasValue)   query = query.Where(a => a.DateHeure <= finUtc.Value);

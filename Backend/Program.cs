@@ -177,7 +177,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+// Dynamic policy provider: any "Permission_..." policy just requires authentication
+// (Role-based access is enforced separately by RequirePermissionAttribute at runtime)
+builder.Services.AddAuthorization(options =>
+{
+    options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+    options.FallbackPolicy = null;
+});
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider,
+    Backend.Authorization.PermissionPolicyProvider>();
 
 // ============================================================================
 // BUILD & CONFIGURE PIPELINE

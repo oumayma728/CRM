@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Check,
@@ -13,6 +13,7 @@ import {
   UserCog,
   Users,
   X,
+  Globe,
 } from "lucide-react";
 import { Layout } from '../../components/Layout';
 import { Button } from '../../components/ui/button';
@@ -25,7 +26,7 @@ import {
   type UserPermissionScopeDto,
 } from '../../../services/permissionAdminService';
 
-type PermissionMode = "roles" | "users";
+type PermissionMode = "roles" | "users" | "endpoints";
 
 const USER_SCOPE_TYPE = "User";
 const FEATURED_SCOPED_PERMISSION = "Agents.ViewOtherAgendas";
@@ -396,6 +397,8 @@ export default function PermissionPage() {
           <div className="rounded-md border border-border bg-card p-10 text-center text-sm text-muted-foreground">
             Chargement des permissions...
           </div>
+        ) : mode === "endpoints" ? (
+          <EndpointsView roles={roles} />
         ) : mode === "roles" ? (
           <RolePermissionsView
             groupedPermissions={filteredGroupedPermissions}
@@ -492,39 +495,47 @@ function ModeSwitch({
   onChange: (mode: PermissionMode) => void;
 }) {
   return (
-    <div className="grid gap-2 rounded-md border border-border bg-muted p-1 md:grid-cols-2">
+    <div className="grid gap-2 rounded-md border border-border bg-muted p-1 md:grid-cols-3">
       <button
         type="button"
         onClick={() => onChange("roles")}
         disabled={disabled}
-        className={`flex items-center justify-between gap-3 rounded-md px-4 py-3 text-left transition-colors ${
+        className={`flex items-center gap-3 rounded-md px-4 py-3 text-left transition-colors ${
           mode === "roles" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:bg-card/70"
         }`}
       >
-        <span className="flex min-w-0 items-center gap-3">
-          <KeyRound className="h-4 w-4 flex-shrink-0" />
-          <span className="min-w-0">
-            <span className="block text-sm font-semibold">Roles</span>
-            <span className="block truncate text-xs">{rolesCount} roles, droits par defaut</span>
-          </span>
+        <KeyRound className="h-4 w-4 flex-shrink-0" />
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold">Par Rôle</span>
+          <span className="block truncate text-xs">{rolesCount} rôles configurés</span>
         </span>
       </button>
       <button
         type="button"
         onClick={() => onChange("users")}
         disabled={disabled}
-        className={`flex items-center justify-between gap-3 rounded-md px-4 py-3 text-left transition-colors ${
+        className={`flex items-center gap-3 rounded-md px-4 py-3 text-left transition-colors ${
           mode === "users" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:bg-card/70"
         }`}
       >
-        <span className="flex min-w-0 items-center gap-3">
-          <UserCog className="h-4 w-4 flex-shrink-0" />
-          <span className="min-w-0">
-            <span className="block text-sm font-semibold">Utilisateurs</span>
-            <span className="block truncate text-xs">
-              {usersCount} comptes, {directUserAssignments} directs, {scopedAssignments} cibles
-            </span>
-          </span>
+        <UserCog className="h-4 w-4 flex-shrink-0" />
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold">Par Utilisateur</span>
+          <span className="block truncate text-xs">{usersCount} comptes, {directUserAssignments} droits</span>
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("endpoints")}
+        disabled={disabled}
+        className={`flex items-center gap-3 rounded-md px-4 py-3 text-left transition-colors ${
+          mode === "endpoints" ? "bg-card text-card-foreground shadow-sm" : "text-muted-foreground hover:bg-card/70"
+        }`}
+      >
+        <Globe className="h-4 w-4 flex-shrink-0" />
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold">Par Endpoint</span>
+          <span className="block truncate text-xs">Accès par route API</span>
         </span>
       </button>
     </div>
@@ -547,6 +558,15 @@ function StatusMessage({ type, message }: { type: "error" | "success"; message: 
     >
       <Icon className="mt-0.5 h-4 w-4 flex-shrink-0" />
       <span>{message}</span>
+    </div>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
+      <Shield className="mb-2 h-8 w-8 opacity-30" />
+      <p className="text-sm">{text}</p>
     </div>
   );
 }
@@ -1104,6 +1124,152 @@ function PermissionGroups({
   );
 }
 
-function EmptyState({ text }: { text: string }) {
-  return <div className="px-4 py-8 text-center text-sm text-muted-foreground">{text}</div>;
+// ─── Endpoints View ─────────────────────────────────────────────────────────
+// Shows which roles can access which API endpoints / features.
+
+const ENDPOINT_MAP: { method: string; path: string; permission: string; description: string }[] = [
+  { method: 'GET',    path: '/api/SourceFiles/tree',          permission: 'Files.View',              description: 'Arborescence fichiers sources' },
+  { method: 'POST',   path: '/api/SourceFiles/upload',        permission: 'Files.Upload',            description: 'Upload fichier source' },
+  { method: 'DELETE', path: '/api/SourceFiles/{id}',          permission: 'Files.Delete',            description: 'Supprimer fichier source' },
+  { method: 'GET',    path: '/api/SourceFiles/search',        permission: 'Files.Search',            description: 'Recherche fichiers' },
+  { method: 'GET',    path: '/api/admin/dashboard',           permission: 'Admin.Dashboard',         description: 'Dashboard admin' },
+  { method: 'GET',    path: '/api/admin/pointage',            permission: 'Admin.Pointage',          description: 'Pointage agents' },
+  { method: 'GET',    path: '/api/admin/scorecards',          permission: 'Admin.Scorecards',        description: 'Scorecards agents' },
+  { method: 'GET',    path: '/api/admin/analytics',           permission: 'Admin.Analytics',         description: 'Analytique appels' },
+  { method: 'GET',    path: '/api/admin/users',               permission: 'Users.View',              description: 'Liste utilisateurs' },
+  { method: 'POST',   path: '/api/admin/users',               permission: 'Users.Create',            description: 'Créer utilisateur' },
+  { method: 'PUT',    path: '/api/admin/users/{id}',          permission: 'Users.Edit',              description: 'Modifier utilisateur' },
+  { method: 'GET',    path: '/api/Permissions',               permission: 'Roles.AssignPermissions', description: 'Gestion permissions' },
+  { method: 'GET',    path: '/api/qualite/agents',            permission: 'Agents.View',             description: 'Agents (service qualité)' },
+  { method: 'GET',    path: '/api/qualite/stats-appels',      permission: 'Agents.ViewPointage',     description: 'Stats appels' },
+  { method: 'GET',    path: '/api/quality/evaluations',       permission: 'Agents.Evaluate',         description: 'Évaluations manuelles' },
+  { method: 'POST',   path: '/api/quality/evaluations',       permission: 'Agents.Evaluate',         description: 'Créer évaluation' },
+  { method: 'GET',    path: '/api/analytics/agents-performance', permission: 'Statistics.ViewGlobal', description: 'Performance agents (analytics)' },
+  { method: 'GET',    path: '/api/salary/calculate',          permission: 'Admin.Dashboard',         description: 'Calcul salaires' },
+  { method: 'GET',    path: '/api/agent/dashboard',           permission: 'Agent.Dashboard',         description: 'Dashboard agent' },
+  { method: 'GET',    path: '/api/agent/contacts',            permission: 'Agent.Contacts',          description: 'Contacts agent' },
+  { method: 'POST',   path: '/api/agent/appel',              permission: 'Agent.Appel',             description: 'Passer un appel' },
+  { method: 'GET',    path: '/api/confirmation1/*',           permission: 'Confirmation1.View',      description: 'Confirmatrice 1 (lecture)' },
+  { method: 'PUT',    path: '/api/confirmation1/*',           permission: 'Confirmation1.Edit',      description: 'Confirmatrice 1 (écriture)' },
+  { method: 'GET',    path: '/api/confirmation2/*',           permission: 'Confirmation2.View',      description: 'Confirmatrice 2 (lecture)' },
+  { method: 'GET',    path: '/api/confirmation-client/*',     permission: 'ConfirmationClient.View', description: 'Confirmatrice Client (lecture)' },
+];
+
+const METHOD_COLORS: Record<string, string> = {
+  GET:    'bg-blue-100 text-blue-700',
+  POST:   'bg-green-100 text-green-700',
+  PUT:    'bg-yellow-100 text-yellow-700',
+  DELETE: 'bg-red-100 text-red-700',
+  PATCH:  'bg-purple-100 text-purple-700',
+};
+
+function EndpointsView({ roles }: { roles: RolePermissionDto[] }) {
+  const [search, setSearch] = React.useState('');
+  const [filterRole, setFilterRole] = React.useState('');
+
+  const filtered = ENDPOINT_MAP.filter(ep => {
+    const matchSearch =
+      !search ||
+      ep.path.toLowerCase().includes(search.toLowerCase()) ||
+      ep.description.toLowerCase().includes(search.toLowerCase()) ||
+      ep.permission.toLowerCase().includes(search.toLowerCase());
+
+    const matchRole =
+      !filterRole ||
+      roles.find(r => r.roleName === filterRole)?.permissionNames.includes(ep.permission);
+
+    return matchSearch && matchRole;
+  });
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher endpoint, permission..."
+            className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+        <select
+          value={filterRole}
+          onChange={e => setFilterRole(e.target.value)}
+          className="px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+        >
+          <option value="">Tous les rôles</option>
+          {roles.map(r => (
+            <option key={r.roleId} value={r.roleName}>{r.roleName}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-md border border-border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 border-b border-border">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground w-16">Méthode</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Endpoint</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Description</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Permission requise</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground">Rôles autorisés</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                    Aucun endpoint trouvé
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((ep, idx) => {
+                  const authorizedRoles = roles.filter(r =>
+                    r.permissionNames.includes(ep.permission)
+                  );
+                  return (
+                    <tr key={idx} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex px-2 py-0.5 rounded text-xs font-bold font-mono ${METHOD_COLORS[ep.method] ?? 'bg-muted text-muted-foreground'}`}>
+                          {ep.method}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-foreground">{ep.path}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{ep.description}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium">
+                          {ep.permission}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {authorizedRoles.length === 0 ? (
+                            <span className="text-xs text-muted-foreground italic">Aucun rôle</span>
+                          ) : (
+                            authorizedRoles.map(r => (
+                              <span key={r.roleId} className="inline-flex px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-xs">
+                                {r.roleName}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        {filtered.length} endpoint(s) affiché(s) · Les rôles sont déterminés par les permissions configurées dans l'onglet "Par Rôle".
+      </p>
+    </div>
+  );
 }

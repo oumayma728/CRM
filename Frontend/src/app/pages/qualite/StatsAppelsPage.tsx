@@ -25,9 +25,7 @@ export default function StatsAppelsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [agentFilter, setAgentFilter] = useState('');
-  const [debutFilter, setDebutFilter] = useState(() => {
-    const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0];
-  });
+  const [debutFilter, setDebutFilter] = useState('2026-01-01');
   const [finFilter, setFinFilter] = useState(() => new Date().toISOString().split('T')[0]);
 
   useEffect(() => {

@@ -26,30 +26,31 @@ public class AdminService : IAdminService
 
     public async Task<DashboardAdminDTO> GetDashboardLiveAsync()
     {
-        var aujourd = DateTime.UtcNow.Date;
-        
-        var totalAgents = await _context.Agents.CountAsync();
-        
+        var aujourd = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
+
+        // Use base Utilisateur table — never _context.Agents (TPH materialization)
+        var totalAgents = await _context.Utilisateurs.CountAsync(u => u.Role == "AGENT");
+
         var agentsEnLigne = await _context.Pointages
             .Where(p => p.Date == aujourd && p.DernierAppel != null)
             .Select(p => p.AgentId)
             .Distinct()
             .CountAsync();
-        
+
         var enAppel = await _context.Appels
             .Where(a => a.DateHeure.Date == aujourd && a.DateHeure > DateTime.UtcNow.AddMinutes(-30))
             .Select(a => a.AgentId)
             .Distinct()
             .CountAsync();
-        
+
         var appelsDuJour = await _context.Appels
             .CountAsync(a => a.DateHeure.Date == aujourd);
-        
+
         var conversions = await _context.Appels
             .CountAsync(a => a.DateHeure.Date == aujourd && a.Qualification == TypeQualification.RENDEZ_VOUS);
-        
+
         var tauxConversion = appelsDuJour > 0 ? Math.Round((double)conversions / appelsDuJour * 100, 1) : 0;
-        
+
         // Performance horaire (8h à 18h)
         var perfHoraire = new List<PerformanceHoraireDTO>();
         for (int h = 8; h <= 18; h++)
@@ -60,24 +61,36 @@ public class AdminService : IAdminService
             var convs = await _context.Appels.CountAsync(a => a.DateHeure >= debut && a.DateHeure < fin && a.Qualification == TypeQualification.RENDEZ_VOUS);
             perfHoraire.Add(new PerformanceHoraireDTO { Heure = $"{h:D2}:00", Appels = appels, Conversions = convs });
         }
-        
-        // Alertes (pauses > 30min)
+
+        // Alertes (pauses > 30min) — avoid Include(p => p.Agent) to skip TPH
         var alertes = new List<AlerteDTO>();
-        var pausesLongues = await _context.Pointages
-            .Where(p => p.Date == aujourd && p.Pauses.Any(pause => pause.DureeSecondes > 1800))
-            .Include(p => p.Agent)
-            .ToListAsync();
-        
-        foreach (var pointage in pausesLongues)
+        try
         {
-            alertes.Add(new AlerteDTO 
-            { 
-                AgentNom = pointage.Agent?.Nom ?? "Agent", 
-                Message = "Pause prolongée (>30min)", 
-                Type = "pause" 
-            });
+            var pauseAgentIds = await _context.Pointages
+                .Where(p => p.Date == aujourd && p.Pauses.Any(pause => pause.DureeSecondes > 1800))
+                .Select(p => p.AgentId)
+                .ToListAsync();
+
+            if (pauseAgentIds.Any())
+            {
+                var nomMap = await _context.Utilisateurs
+                    .Where(u => pauseAgentIds.Contains(u.Id))
+                    .Select(u => new { u.Id, Nom = u.Prenom + " " + u.Nom })
+                    .ToDictionaryAsync(u => u.Id, u => u.Nom);
+
+                foreach (var agentId in pauseAgentIds)
+                {
+                    alertes.Add(new AlerteDTO
+                    {
+                        AgentNom = nomMap.TryGetValue(agentId, out var n) ? n : "Agent",
+                        Message = "Pause prolongée (>30min)",
+                        Type = "pause"
+                    });
+                }
+            }
         }
-        
+        catch { /* Pauses not available — skip alertes */ }
+
         return new DashboardAdminDTO
         {
             AgentsEnLigne = agentsEnLigne,
@@ -96,43 +109,74 @@ public class AdminService : IAdminService
 
     public async Task<List<AgentStatutDTO>> GetAgentsStatutAsync()
     {
-        var aujourd = DateTime.UtcNow.Date;
-        
-        var agents = await _context.Agents
-            .Select(a => new AgentStatutDTO
+        var aujourd = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
+
+        // Use Utilisateurs base table — never _context.Agents (TPH)
+        var agentsBase = await _context.Utilisateurs
+            .Where(u => u.Role == "AGENT")
+            .Select(u => new { u.Id, u.Nom, u.Prenom })
+            .AsNoTracking()
+            .ToListAsync();
+
+        // Deduplicate by name (DB may have duplicates)
+        agentsBase = agentsBase.DistinctBy(u => u.Id).ToList();
+
+        // Load today's appels counts in bulk
+        var agentIds = agentsBase.Select(a => a.Id).ToList();
+        var appelsDuJour = await _context.Appels
+            .Where(a => a.DateHeure.Date == aujourd && agentIds.Contains(a.AgentId))
+            .GroupBy(a => a.AgentId)
+            .Select(g => new { AgentId = g.Key, Count = g.Count(), Conv = g.Count(a => a.Qualification == TypeQualification.RENDEZ_VOUS) })
+            .ToListAsync();
+        var appelsMap = appelsDuJour.ToDictionary(x => x.AgentId, x => x);
+
+        // Load last appel per agent (in last 15min) in bulk
+        var cutoff15 = DateTime.UtcNow.AddMinutes(-15);
+        var derniersAppels = await _context.Appels
+            .Where(a => agentIds.Contains(a.AgentId) && a.DateHeure > cutoff15)
+            .OrderByDescending(a => a.DateHeure)
+            .GroupBy(a => a.AgentId)
+            .Select(g => new { AgentId = g.Key, Appel = g.OrderByDescending(a => a.DateHeure).First() })
+            .ToListAsync();
+        var derniersMap = derniersAppels.ToDictionary(x => x.AgentId, x => x.Appel);
+
+        // Load pointages in bulk
+        var pointages = await _context.Pointages
+            .Where(p => p.Date == aujourd && agentIds.Contains(p.AgentId))
+            .Select(p => new { p.AgentId, p.TotalSecondesTravaillees })
+            .ToListAsync();
+        var pointageMap = pointages.ToDictionary(p => p.AgentId, p => p.TotalSecondesTravaillees);
+
+        var result = agentsBase.Select(a =>
+        {
+            var stats = appelsMap.TryGetValue(a.Id, out var s) ? s : null;
+            var statut = "Hors ligne";
+            var dureeAppel = "";
+
+            if (derniersMap.TryGetValue(a.Id, out var dernierAppel))
+            {
+                statut = "En appel";
+                dureeAppel = $"{dernierAppel.DureeSecondes / 60}:{dernierAppel.DureeSecondes % 60:D2}";
+            }
+            else if (pointageMap.TryGetValue(a.Id, out var pts) && pts > 0)
+            {
+                statut = "En ligne";
+            }
+
+            return new AgentStatutDTO
             {
                 Id = a.Id,
                 Nom = a.Nom,
                 Prenom = a.Prenom,
-                Statut = "En ligne",
-                Appels = _context.Appels.Count(app => app.AgentId == a.Id && app.DateHeure.Date == aujourd),
-                Conversions = _context.Appels.Count(app => app.AgentId == a.Id && app.DateHeure.Date == aujourd && app.Qualification == TypeQualification.RENDEZ_VOUS),
+                Statut = statut,
+                DureeAppel = dureeAppel,
+                Appels = stats?.Count ?? 0,
+                Conversions = stats?.Conv ?? 0,
                 Score = 85
-            })
-            .ToListAsync();
-        
-        // Mise à jour des statuts
-        foreach (var agent in agents)
-        {
-            var dernierAppel = await _context.Appels
-                .Where(a => a.AgentId == agent.Id && a.DateHeure > DateTime.UtcNow.AddMinutes(-15))
-                .OrderByDescending(a => a.DateHeure)
-                .FirstOrDefaultAsync();
-            
-            if (dernierAppel != null)
-            {
-                agent.Statut = "En appel";
-                agent.DureeAppel = $"{dernierAppel.DureeSecondes / 60}:{dernierAppel.DureeSecondes % 60:D2}";
-            }
-            
-            var pointage = await _context.Pointages
-                .FirstOrDefaultAsync(p => p.AgentId == agent.Id && p.Date == aujourd);
-            
-            if (pointage?.TotalSecondesTravaillees == 0 || pointage == null)
-                agent.Statut = "Hors ligne";
-        }
-        
-        return agents;
+            };
+        }).ToList();
+
+        return result;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -141,39 +185,56 @@ public class AdminService : IAdminService
 
     public async Task<List<ScorecardAgentDTO>> GetScorecardsAgentsAsync()
     {
-        var debutMois = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-        
-        var agents = await _context.Agents
-            .Select(a => new ScorecardAgentDTO
+        var debutMois = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // Use Utilisateurs base table — never _context.Agents (TPH)
+        var agentsBase = (await _context.Utilisateurs
+            .Where(u => u.Role == "AGENT")
+            .Select(u => new { u.Id, u.Nom, u.Prenom })
+            .AsNoTracking()
+            .ToListAsync())
+            .DistinctBy(u => u.Id)
+            .ToList();
+
+        var agentIds = agentsBase.Select(a => a.Id).ToList();
+
+        // Bulk-load appels counts for this month
+        var appelsStats = await _context.Appels
+            .Where(a => a.DateHeure >= debutMois && agentIds.Contains(a.AgentId))
+            .GroupBy(a => a.AgentId)
+            .Select(g => new {
+                AgentId = g.Key,
+                Total = g.Count(),
+                Conv = g.Count(a => a.Qualification == TypeQualification.RENDEZ_VOUS)
+            })
+            .ToListAsync();
+        var statsMap = appelsStats.ToDictionary(x => x.AgentId, x => x);
+
+        var agents = agentsBase.Select(a =>
+        {
+            var stats = statsMap.TryGetValue(a.Id, out var s) ? s : null;
+            var appels = stats?.Total ?? 0;
+            var conv = stats?.Conv ?? 0;
+            var taux = appels > 0 ? (double)conv / appels * 100 : 0;
+            var score = (int)(50 + taux * 0.5);
+
+            return new ScorecardAgentDTO
             {
                 AgentId = a.Id,
                 AgentNom = $"{a.Prenom} {a.Nom}",
-                Appels = _context.Appels.Count(app => app.AgentId == a.Id && app.DateHeure >= debutMois),
-                Conversions = _context.Appels.Count(app => app.AgentId == a.Id && app.DateHeure >= debutMois && app.Qualification == TypeQualification.RENDEZ_VOUS),
-                ScoreGlobal = 85,
-                Qualite = 85,
+                Appels = appels,
+                Conversions = conv,
+                ScoreGlobal = score,
+                Qualite = Math.Min(100, score + 5),
                 ARevoir = 0,
-                Tendance = "stable"
-            })
-            .ToListAsync();
-        
-        // Calcul du score global (simulé)
-        foreach (var agent in agents)
-        {
-            var tauxConversion = agent.Appels > 0 ? (double)agent.Conversions / agent.Appels * 100 : 0;
-            agent.ScoreGlobal = (int)(50 + tauxConversion * 0.5);
-            agent.Qualite = Math.Min(100, agent.ScoreGlobal + 5);
-            agent.Tendance = agent.ScoreGlobal > 80 ? "up" : agent.ScoreGlobal > 70 ? "stable" : "down";
-        }
-        
-        // Tri et attribution des rangs
-        var sorted = agents.OrderByDescending(a => a.ScoreGlobal).ToList();
-        for (int i = 0; i < sorted.Count; i++)
-        {
-            sorted[i].Rang = i + 1;
-        }
-        
-        return sorted;
+                Tendance = score > 80 ? "up" : score > 70 ? "stable" : "down"
+            };
+        }).OrderByDescending(a => a.ScoreGlobal).ToList();
+
+        for (int i = 0; i < agents.Count; i++)
+            agents[i].Rang = i + 1;
+
+        return agents;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -182,22 +243,40 @@ public class AdminService : IAdminService
 
     public async Task<List<AgentSuiviDTO>> GetAgentsSuiviAsync()
     {
-        var debutMois = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-        
-        var agents = await _context.Agents
+        var debutMois = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // Use Utilisateurs base table — never _context.Agents (TPH)
+        var agentsBase = (await _context.Utilisateurs
+            .Where(u => u.Role == "AGENT")
+            .Select(u => new { u.Id, u.Nom, u.Prenom })
+            .AsNoTracking()
+            .ToListAsync())
+            .DistinctBy(u => u.Id)
+            .ToList();
+
+        var agentIds = agentsBase.Select(a => a.Id).ToList();
+
+        var appelsSuivi = await _context.Appels
+            .Where(a => a.DateHeure >= debutMois && a.Enregistre && agentIds.Contains(a.AgentId))
+            .GroupBy(a => a.AgentId)
+            .Select(g => new { AgentId = g.Key, Count = g.Count() })
+            .ToListAsync();
+        var suiviMap = appelsSuivi.ToDictionary(x => x.AgentId, x => x.Count);
+
+        var agents = agentsBase
             .Select(a => new AgentSuiviDTO
             {
                 AgentId = a.Id,
                 AgentNom = $"{a.Prenom} {a.Nom}",
                 Score = 85,
-                AppelsAVerifier = _context.Appels.Count(app => app.AgentId == a.Id && app.DateHeure >= debutMois && app.Enregistre),
+                AppelsAVerifier = suiviMap.TryGetValue(a.Id, out var c) ? c : 0,
                 Tendance = "down"
             })
             .Where(a => a.AppelsAVerifier > 0)
             .OrderByDescending(a => a.AppelsAVerifier)
             .Take(5)
-            .ToListAsync();
-        
+            .ToList();
+
         return agents;
     }
 
@@ -207,39 +286,54 @@ public class AdminService : IAdminService
 
     public async Task<PointageAdminDTO> GetPointageAsync(DateTime date)
     {
-        var pointages = await _context.Pointages
-            .Include(p => p.Agent)
-            .Where(p => p.Date == date.Date)
+        // Load full Pointage entities — Pauses is [Owned] so it loads with the parent.
+        // Avoid .Select(p => new { ..., Pauses = p.Pauses }) which EF Core cannot translate.
+        var dateUtc = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+        var pointagesRaw = await _context.Pointages
+            .Where(p => p.Date == dateUtc)
+            .AsNoTracking()
             .ToListAsync();
-        
-        var totalAgents = await _context.Agents.CountAsync();
-        
-        var details = pointages.Select(p => new PointageDetailDTO
+
+        // Load agent names via base Utilisateur (avoids TPH column mapping)
+        var agentIds = pointagesRaw.Select(p => p.AgentId).Distinct().ToList();
+        var agentNoms = await _context.Utilisateurs
+            .Where(u => agentIds.Contains(u.Id))
+            .Select(u => new { u.Id, Nom = u.Prenom + " " + u.Nom })
+            .AsNoTracking()
+            .ToDictionaryAsync(u => u.Id, u => u.Nom);
+
+        var totalAgents = await _context.Utilisateurs.CountAsync(u => u.Role == "AGENT");
+
+        var details = pointagesRaw.Select(p => new PointageDetailDTO
         {
-            AgentNom = p.Agent?.Nom ?? "Inconnu",
+            AgentNom = agentNoms.TryGetValue(p.AgentId, out var nom) ? nom : "Inconnu",
             Arrivee = p.PremierAppel?.ToString("HH:mm") ?? "-",
             PremierAppel = p.PremierAppel?.ToString("HH:mm") ?? "-",
             DernierAppel = p.DernierAppel?.ToString("HH:mm") ?? "-",
             Depart = p.DernierAppel?.ToString("HH:mm") ?? "-",
-            Pauses = p.Pauses != null && p.Pauses.Any() 
-                ? $"{p.Pauses.Sum(ps => ps.DureeSecondes) / 60}min" 
+            Pauses = p.Pauses != null && p.Pauses.Any()
+                ? $"{p.Pauses.Sum(ps => ps.DureeSecondes) / 60}min"
                 : "-",
-            TempsProductif = p.TotalSecondesTravaillees.HasValue 
-                ? $"{p.TotalSecondesTravaillees.Value / 3600}h {(p.TotalSecondesTravaillees.Value % 3600) / 60}m" 
+            TempsProductif = p.TotalSecondesTravaillees.HasValue
+                ? $"{p.TotalSecondesTravaillees.Value / 3600}h {(p.TotalSecondesTravaillees.Value % 3600) / 60}m"
                 : "-",
             Statut = p.PremierAppel?.Hour > 9 ? "Retard" : "À l'heure"
         }).ToList();
-        
-        var presents = pointages.Count;
+
+        var presents = pointagesRaw.Count;
         var retards = details.Count(d => d.Statut == "Retard");
-        
-        var tempsTotal = pointages.Where(p => p.TotalSecondesTravaillees.HasValue)
-            .Average(p => p.TotalSecondesTravaillees ?? 0);
-        
-        var pausesTotal = pointages.SelectMany(p => p.Pauses ?? new List<Pause>())
-            .DefaultIfEmpty()
-            .Average(p => p?.DureeSecondes ?? 0);
-        
+
+        var tempsTotal = pointagesRaw.Where(p => p.TotalSecondesTravaillees.HasValue)
+            .Select(p => (double)(p.TotalSecondesTravaillees ?? 0))
+            .DefaultIfEmpty(0)
+            .Average();
+
+        var pausesTotal = pointagesRaw
+            .SelectMany(p => p.Pauses ?? new List<Pause>())
+            .Select(p => (double)p.DureeSecondes)
+            .DefaultIfEmpty(0)
+            .Average();
+
         return new PointageAdminDTO
         {
             Presents = presents,

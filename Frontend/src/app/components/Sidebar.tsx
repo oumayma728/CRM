@@ -32,7 +32,11 @@ import {
   Shield,
   // Qualité + Commercial
   ShieldCheck,
-  BadgeCheck
+  BadgeCheck,
+  // Modules Khaled
+  Brain,
+  Bell,
+  Euro
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -99,6 +103,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Download, label: 'Rapports', path: '/admin/reports' },
     { icon: Upload, label: 'Import Leads', path: '/admin/import-leads' },
     { icon: Upload, label: 'Fichier à charger', path: '/admin/leads' },
+    // ── Modules Khaled ──────────────────────────────────
+    { icon: Banknote, label: 'Salaires', path: '/admin/salary' },
+    { icon: Brain, label: 'Scoring IA', path: '/admin/ai-scoring' },
+    { icon: BarChart3, label: 'Analytics Avancé', path: '/admin/analytics-advanced' },
+    { icon: Bell, label: 'Alertes', path: '/admin/alerts-manage' },
+    { icon: Euro, label: 'Leads Import', path: '/admin/leads-khaled' },
   ];
 
   // ==================== MENU CONFIRMATRICE 1 (Call Client 1) ====================
@@ -145,8 +155,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const qualiteMenuItems = [
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/qualite/dashboard' },
     { icon: XCircle, label: 'Agenda Refus Équipe', path: '/qualite/agenda-refus' },
-    { icon: Star, label: 'Évaluation Agents', path: '/qualite/evaluation' },
     { icon: BarChart3, label: 'Stats Appels', path: '/qualite/stats-appels' },
+    { icon: ClipboardCheck, label: 'Éval. Manuelle', path: '/qualite/evaluation-manuelle' },
+    { icon: TrendingUp, label: 'Analytique Qualité', path: '/qualite/analytics-qualite' },
   ];
 
   // ==================== MENU COMMERCIAL ====================
@@ -304,11 +315,20 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
         {!collapsed && (
-          <img
-            src="figma:asset/1f68a91521dcb3acfdd2e96b2d386548db63be5d.png"
-            alt="EBI Call Center"
-            className="h-10"
-          />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+              <span className="text-primary-foreground font-bold text-sm">EBI</span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-sidebar-foreground leading-tight">EBI Call</p>
+              <p className="text-xs text-sidebar-foreground/60 leading-tight">Center CRM</p>
+            </div>
+          </div>
+        )}
+        {collapsed && (
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center mx-auto">
+            <span className="text-primary-foreground font-bold text-xs">EBI</span>
+          </div>
         )}
         <button
           onClick={onToggle}

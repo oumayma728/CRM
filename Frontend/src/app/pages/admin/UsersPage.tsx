@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Layout } from '../../components/Layout';
 import { adminService } from '../../../services/adminService';
-import { User, Plus, Edit, Trash2, Shield, Search, X, Users, UserCheck, UserCog, Headphones, Wrench, BadgeCheck, KeyRound, CalendarDays } from 'lucide-react';
+import { User, Plus, Edit, Trash2, Shield, Search, X, Users, UserCheck, UserCog, Headphones, Wrench, BadgeCheck, KeyRound, CalendarDays, Eye, Mail, Phone, Clock } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = ((import.meta as any).env?.VITE_API_URL || 'http://localhost:5241') + '/api';
@@ -78,6 +78,7 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<Utilisateur | null>(null);
+  const [viewingUser, setViewingUser] = useState<Utilisateur | null>(null);
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
@@ -320,6 +321,13 @@ export default function UsersPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setViewingUser(user)}
+                          className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title="Voir les détails"
+                        >
+                          <Eye className="w-4 h-4 text-blue-500" />
+                        </button>
                         {user.role?.toUpperCase() === 'CONFIRMATRICE' && (
                           <button
                             onClick={() => openAgendaModal(user)}
@@ -409,6 +417,121 @@ export default function UsersPage() {
             <div className="flex justify-end mt-6">
               <button
                 onClick={() => setAgendaTarget(null)}
+                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Voir Détails Utilisateur */}
+      {viewingUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full max-w-lg p-6">
+            <div className="flex justify-between items-center mb-5">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Détails utilisateur</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Informations complètes du profil</p>
+              </div>
+              <button onClick={() => setViewingUser(null)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Avatar + nom + statut */}
+            <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <User className="w-8 h-8 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  {viewingUser.prenom} {viewingUser.nom}
+                </p>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs ${getRoleColor(viewingUser)}`}>
+                    {getRoleLabel(viewingUser)}
+                  </span>
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs ${
+                    !viewingUser.actif
+                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                      : viewingUser.statut === 'EN_ATTENTE'
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  }`}>
+                    {!viewingUser.actif ? 'Inactif' : viewingUser.statut === 'EN_ATTENTE' ? 'En attente' : 'Actif'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Détails */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Email</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">{viewingUser.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                  <Shield className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Rôle</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{getRoleLabel(viewingUser)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                  <Users className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Équipe</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{viewingUser.equipe || '—'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {viewingUser.type && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                  <UserCog className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Type</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{viewingUser.type}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                  <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Date création</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {viewingUser.dateCreation
+                        ? new Date(viewingUser.dateCreation).toLocaleDateString('fr-FR')
+                        : '—'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                  <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Dernière connexion</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {viewingUser.derniereConnexion
+                        ? new Date(viewingUser.derniereConnexion).toLocaleDateString('fr-FR')
+                        : '—'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setViewingUser(null)}
                 className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
               >
                 Fermer

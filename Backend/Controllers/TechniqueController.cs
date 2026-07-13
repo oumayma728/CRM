@@ -27,16 +27,17 @@ public class TechniqueController : ControllerBase
     [HttpGet("agents")]
     public async Task<IActionResult> GetAgents()
     {
-        var agents = await _context.Agents
-            .Select(a => new
+        var agents = await _context.Utilisateurs
+            .Where(u => u.Role == "AGENT")
+            .Select(u => new
             {
-                id        = a.Id,
-                nom       = a.Nom,
-                prenom    = a.Prenom,
-                email     = a.Email,
-                actif     = a.Actif,
-                dateEmbauche = a.DateEmbauche,
-                isElite   = a.IsElite,
+                id        = u.Id,
+                nom       = u.Nom,
+                prenom    = u.Prenom,
+                email     = u.Email,
+                actif     = u.Actif,
+                dateEmbauche = (DateTime?)null,
+                isElite   = false,
             })
             .OrderBy(a => a.nom)
             .ToListAsync();
@@ -51,9 +52,9 @@ public class TechniqueController : ControllerBase
     [HttpGet("agents/{agentId:long}/production")]
     public async Task<IActionResult> GetAgentProduction(long agentId)
     {
-        var agent = await _context.Agents
-            .Where(a => a.Id == agentId)
-            .Select(a => new { a.Id, a.Nom, a.Prenom })
+        var agent = await _context.Utilisateurs
+            .Where(u => u.Id == agentId && u.Role == "AGENT")
+            .Select(u => new { u.Id, u.Nom, u.Prenom })
             .FirstOrDefaultAsync();
 
         if (agent == null) return NotFound(new { message = "Agent introuvable" });
