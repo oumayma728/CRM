@@ -12,7 +12,7 @@ namespace Backend.Controllers;
 
 [ApiController]
 [Route("api/leads-import")]
-[Authorize(Roles = "ADMIN,QUALITE")]
+[Authorize(Roles = "ADMIN,QUALITE,SuperAdmin")]
 public class LeadsImportController : ControllerBase
 {
     private readonly ApplicationDbContext _context;

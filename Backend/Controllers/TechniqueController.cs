@@ -9,7 +9,7 @@ namespace Backend.Controllers;
 
 [ApiController]
 [Route("api/technique")]
-[Authorize(Roles = "TECH,ADMIN")]
+[Authorize(Roles = "TECH,ADMIN,SuperAdmin")]
 [Produces("application/json")]
 public class TechniqueController : ControllerBase
 {

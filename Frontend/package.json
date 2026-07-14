@@ -8,7 +8,6 @@
     "dev": "vite"
   },
   "dependencies": {
-    "@microsoft/signalr": "^8.0.0",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@fullcalendar/core": "^6.1.15",
@@ -16,6 +15,7 @@
     "@fullcalendar/interaction": "^6.1.15",
     "@fullcalendar/react": "^6.1.15",
     "@fullcalendar/timegrid": "^6.1.15",
+    "@microsoft/signalr": "^8.0.0",
     "@mui/icons-material": "7.3.5",
     "@mui/material": "7.3.5",
     "@popperjs/core": "2.11.8",
@@ -48,6 +48,7 @@
     "@types/moment": "^2.11.29",
     "@types/react-big-calendar": "^1.16.3",
     "axios": "^1.15.2",
+    "bcryptjs": "^3.0.3",
     "canvas-confetti": "1.9.4",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",

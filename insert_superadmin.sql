@@ -1,0 +1,2 @@
+INSERT INTO "Utilisateur" ("Nom", "Prenom", "Email", "MotDePasse", "Role", "Statut", "Actif", "DateCreation")
+VALUES ('Super', 'Admin', 'superadmin@ebi.com', '$2b$10$4X0jXEpovisW.scRW8TjkumZB/YWq0GO08QE8JsYwm5l5ouzUq/xy', 'SuperAdmin', 'ACTIF', true, NOW());

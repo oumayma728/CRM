@@ -92,7 +92,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Reset du mot de passe par l'admin (génère un mot de passe temporaire)</summary>
     [HttpPost("admin-reset-password")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN,SuperAdmin")]
     [ProducesResponseType(200)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> AdminResetPassword([FromBody] AdminResetPasswordRequest request)

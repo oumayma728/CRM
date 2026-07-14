@@ -11,7 +11,7 @@ namespace Backend.Controllers;
 
 [ApiController]
 [Route("api/quality")]
-[Authorize(Roles = "ADMIN,QUALITE")]
+[Authorize(Roles = "ADMIN,QUALITE,SuperAdmin")]
 public class QualityController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
