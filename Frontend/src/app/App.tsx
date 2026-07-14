@@ -35,6 +35,7 @@ import ConfirmatricesAgendasPage from './pages/admin/ConfirmatricesAgendasPage';
 // ── NEW from colleague ──────────────────────────────────────
 import InjectionPage from './pages/admin/InjectionPage';
 import PermissionPage from './pages/admin/PermissionPage';
+import SuperAdminDashboard from './pages/admin/SuperAdminDashboard';
 // ── SERVICE QUALITÉ ──────────────────────────────────────────
 import QualiteDashboard from './pages/qualite/QualiteDashboard';
 import AgendaRefusEquipe from './pages/qualite/AgendaRefusEquipe';
@@ -165,6 +166,9 @@ function AppRoutes() {
       {/* ── New routes from colleague ─────────────────────── */}
       <Route path="/admin/injection" element={<ProtectedRoute><InjectionPage /></ProtectedRoute>} />
       <Route path="/admin/permissions" element={<ProtectedRoute><PermissionPage /></ProtectedRoute>} />
+      {/* ── SuperAdmin routes ─────────────────────────────── */}
+      <Route path="/superadmin/dashboard" element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
+      <Route path="/superadmin/permissions" element={<ProtectedRoute><PermissionPage /></ProtectedRoute>} />
       {/* ─────────────────────────────────────────────────── */}
       <Route path="/create-contact" element={<ProtectedRoute><CreateContactPage /></ProtectedRoute>} />
 
@@ -206,6 +210,7 @@ function AppRoutes() {
       {/* ==================== REDIRECTION PAR DÉFAUT ==================== */}
       <Route path="/" element={
         !user ? <Navigate to="/login" /> :
+        user.role === 'superadmin' ? <Navigate to="/superadmin/dashboard" /> :
         user.role === 'admin' ? <Navigate to="/admin/dashboard" /> :
         user.role === 'conf1' ? <Navigate to="/confirmation1/dashboard" /> :
         user.role === 'conf2' ? <Navigate to="/confirmation2/dashboard" /> :

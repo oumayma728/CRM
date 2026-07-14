@@ -9,7 +9,7 @@ namespace Backend.Controllers;
 
 [ApiController]
 [Route("api/salaries")]
-[Authorize(Roles = "ADMIN,QUALITE")]
+[Authorize(Roles = "ADMIN,QUALITE,SuperAdmin")]
 public class SalaryController : ControllerBase
 {
     private readonly ApplicationDbContext _context;

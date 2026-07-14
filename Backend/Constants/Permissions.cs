@@ -194,13 +194,13 @@ namespace Backend.Constants
         // =========================
         public static readonly Dictionary<string, string[]> RolePermissions = new()
         {
-            ["ADMIN"] = new[] { 
+            ["ADMIN"] = new[] {
                 AdminDashboard, AdminUsersView, AdminUsersCreate, AdminUsersEdit, AdminUsersDelete,
                 AdminPointage, AdminScorecards, AdminAnalytics, AdminMap, AdminIAConfig, AdminImportLeads,
                 Files.View, Files.Upload, Files.Inject, Files.Delete, Files.Rename,
                 Campaigns.View, Campaigns.Create, Campaigns.Edit, Campaigns.Delete,
                 Suppliers.View, Suppliers.Create, Countries.View, LeadTypes.View,
-                Users.View, Users.Create, Users.Edit, Roles.AssignPermissions, Users.AssignPermissions
+                Users.View, Users.Create, Users.Edit
             },
             ["AGENT"] = new[] {
                 AgentDashboard, AgentAppel, AgentContacts, AgentHistorique, AgentPerformance, AgentAgenda,
@@ -216,6 +216,8 @@ namespace Backend.Constants
                 ConfirmationClientView, ConfirmationClientEdit
             },
             ["SuperAdmin"] = new[] {
+                AdminDashboard, AdminUsersView, AdminUsersCreate, AdminUsersEdit, AdminUsersDelete,
+                AdminPointage, AdminScorecards, AdminAnalytics, AdminMap, AdminIAConfig, AdminImportLeads,
                 Files.View, Files.Upload, Files.Inject, Files.Delete, Files.Rename,
                 Campaigns.View, Campaigns.Create, Campaigns.Edit, Campaigns.Delete,
                 Suppliers.View, Suppliers.Create, Countries.View, LeadTypes.View,

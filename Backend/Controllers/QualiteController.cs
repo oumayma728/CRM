@@ -9,7 +9,7 @@ namespace Backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "QUALITE,ADMIN")]
+[Authorize(Roles = "QUALITE,ADMIN,SuperAdmin")]
 [Produces("application/json")]
 public class QualiteController : ControllerBase
 {

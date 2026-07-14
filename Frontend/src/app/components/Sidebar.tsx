@@ -96,7 +96,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Map, label: 'Carte Géographique', path: '/admin/map' },
     { icon: Users, label: 'Utilisateurs', path: '/admin/users' },
     { icon: Database, label: 'Gestion Fichiers', path: '/admin/injection' },
-    { icon: Shield, label: 'Permissions', path: '/admin/permissions' },
     { icon: Settings, label: 'Configuration IA', path: '/admin/ai-config' },
     { icon: Plug, label: 'Intégrations', path: '/admin/integrations' },
     { icon: FileText, label: 'Stats Agents', path: '/admin/agent-stats' },
@@ -104,6 +103,29 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Upload, label: 'Import Leads', path: '/admin/import-leads' },
     { icon: Upload, label: 'Fichier à charger', path: '/admin/leads' },
     // ── Modules Khaled ──────────────────────────────────
+    { icon: Banknote, label: 'Salaires', path: '/admin/salary' },
+    { icon: Brain, label: 'Scoring IA', path: '/admin/ai-scoring' },
+    { icon: BarChart3, label: 'Analytics Avancé', path: '/admin/analytics-advanced' },
+    { icon: Bell, label: 'Alertes', path: '/admin/alerts-manage' },
+    { icon: Euro, label: 'Leads Import', path: '/admin/leads-khaled' },
+  ];
+
+  // ==================== MENU SUPERADMIN ====================
+  const superAdminMenuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard Live', path: '/superadmin/dashboard' },
+    { icon: ClipboardCheck, label: 'Scorecards Agents', path: '/admin/scorecards' },
+    { icon: Clock, label: 'Pointage', path: '/admin/pointage' },
+    { icon: BarChart3, label: 'Analytique Appels', path: '/admin/analytics' },
+    { icon: Map, label: 'Carte Géographique', path: '/admin/map' },
+    { icon: Users, label: 'Utilisateurs', path: '/admin/users' },
+    { icon: Database, label: 'Gestion Fichiers', path: '/admin/injection' },
+    { icon: Shield, label: 'Permissions', path: '/superadmin/permissions' },
+    { icon: Settings, label: 'Configuration IA', path: '/admin/ai-config' },
+    { icon: Plug, label: 'Intégrations', path: '/admin/integrations' },
+    { icon: FileText, label: 'Stats Agents', path: '/admin/agent-stats' },
+    { icon: Download, label: 'Rapports', path: '/admin/reports' },
+    { icon: Upload, label: 'Import Leads', path: '/admin/import-leads' },
+    { icon: Upload, label: 'Fichier à charger', path: '/admin/leads' },
     { icon: Banknote, label: 'Salaires', path: '/admin/salary' },
     { icon: Brain, label: 'Scoring IA', path: '/admin/ai-scoring' },
     { icon: BarChart3, label: 'Analytics Avancé', path: '/admin/analytics-advanced' },
@@ -196,7 +218,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   // ==================== SÉLECTION DES MENUS SELON LE RÔLE ====================
   let menuItems;
-  if (userRole === 'admin') {
+  if (userRole === 'superadmin') {
+    menuItems = superAdminMenuItems;
+  } else if (userRole === 'admin') {
     menuItems = adminMenuItems;
   } else if (userRole === 'confirmatrice') {
     if (confType === 'CONF1') menuItems = filterByAgenda(confirmation1MenuItems);
@@ -294,6 +318,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   // Libellés du service pour l'affichage
   const getServiceLabel = () => {
+    if (userRole === 'superadmin') return 'Super Administration';
     if (userRole === 'admin') return 'Administration';
     if (userRole === 'confirmatrice') {
       if (confType === 'CONF1') return 'Call Client Niveau 1';

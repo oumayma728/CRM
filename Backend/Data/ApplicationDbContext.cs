@@ -9,6 +9,7 @@ public class ApplicationDbContext : DbContext
 
     // ─── MY EXISTING DbSets (TPH CRM) ────────────────────────────────────────
     public DbSet<Utilisateur> Utilisateurs => Set<Utilisateur>();
+    public DbSet<SuperAdmin> SuperAdmins => Set<SuperAdmin>();
     public DbSet<Agent> Agents => Set<Agent>();
     public DbSet<Commercial> Commerciaux => Set<Commercial>();
     public DbSet<Qualite> ServiceQualite => Set<Qualite>();
@@ -69,6 +70,7 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Utilisateur>()
             .HasDiscriminator<string>("Role")
+            .HasValue<SuperAdmin>("SuperAdmin")
             .HasValue<Agent>("AGENT")
             .HasValue<Commercial>("COMMERCIAL")
             .HasValue<Admin>("ADMIN")

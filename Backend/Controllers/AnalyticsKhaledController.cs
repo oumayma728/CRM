@@ -9,7 +9,7 @@ namespace Backend.Controllers;
 /// <summary>Analytics avancé (module Khaled) — performance, supervision, géo, live agents</summary>
 [ApiController]
 [Route("api/analytics")]
-[Authorize(Roles = "ADMIN,QUALITE")]
+[Authorize(Roles = "ADMIN,QUALITE,SuperAdmin")]
 public class AnalyticsKhaledController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -61,6 +61,7 @@ public class AnalyticsKhaledController : ControllerBase
                 .ToListAsync())
                 .DistinctBy(u => u.Email)
                 .ToList();
+            var currentMonth = DateTime.UtcNow.ToString("yyyy-MM");
             var result = new List<object>();
             foreach (var a in agents)
             {
@@ -68,7 +69,7 @@ public class AnalyticsKhaledController : ControllerBase
                 var appels = await _context.Appels.AsNoTracking().Where(ap => ap.AgentId == a.Id).ToListAsync();
                 var evals = await _context.ManualEvaluations.AsNoTracking().Where(e => e.AgentId == a.Id).ToListAsync();
                 var salary = await _context.SalairesAgents.AsNoTracking()
-                    .Where(s => s.AgentId == a.Id && s.Month == DateTime.UtcNow.ToString("yyyy-MM"))
+                    .Where(s => s.AgentId == a.Id && s.Month == currentMonth)
                     .FirstOrDefaultAsync();
 
                 result.Add(new

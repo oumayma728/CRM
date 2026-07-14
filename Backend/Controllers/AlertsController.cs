@@ -33,7 +33,7 @@ public class AlertsController : ControllerBase
     }
 
     [HttpPost("rules")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN,SuperAdmin")]
     public async Task<IActionResult> CreateRule([FromBody] CreateAlertRuleDto dto)
     {
         if (dto == null) return BadRequest(new { error = "Body requis" });
@@ -43,7 +43,7 @@ public class AlertsController : ControllerBase
     }
 
     [HttpPut("rules/{ruleId}")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN,SuperAdmin")]
     public async Task<IActionResult> UpdateRule(long ruleId, [FromBody] UpdateAlertRuleDto dto)
     {
         var rule = await _context.AlertRules.FindAsync(ruleId);
@@ -56,7 +56,7 @@ public class AlertsController : ControllerBase
     }
 
     [HttpDelete("rules/{ruleId}")]
-    [Authorize(Roles = "ADMIN")]
+    [Authorize(Roles = "ADMIN,SuperAdmin")]
     public async Task<IActionResult> DeleteRule(long ruleId)
     {
         var rule = await _context.AlertRules.FindAsync(ruleId);
