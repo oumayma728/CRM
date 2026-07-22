@@ -68,57 +68,84 @@ public class ConfirmationClientController : ControllerBase
     // =========================
 
     [HttpGet("agenda")]
-    // [RequirePermission(Permissions.ConfirmationClientAgenda)]
     public async Task<IActionResult> GetAgenda()
     {
         var rdvs = await _context.RendezVous
-            .Include(r => r.Contact)
-            .Include(r => r.Agent)
-            .Include(r => r.Commercial)
+            .Include(r => r.Contact).Include(r => r.Agent).Include(r => r.Commercial)
             .Where(r => r.Statut == StatutRendezVous.CONFIRME)
-            .OrderBy(r => r.DateRendezVous)
-            .ToListAsync();
-
-        return Ok(rdvs.Select(r => new RdvConfirmationDTO
-        {
-            Id                    = r.Id,
-            ContactId             = r.Contact?.Id ?? 0,
-            ContactNom            = r.Contact?.Nom ?? "",
-            ContactPrenom         = r.Contact?.Prenom ?? "",
-            Telephone             = r.Contact?.Telephone ?? "",
-            NumGSM                = r.Contact?.NumGSM,
-            Email                 = r.Contact?.Email,
-            Adresse               = r.Contact?.Adresse,
-            CodePostal            = r.Contact?.CodePostal,
-            Ville                 = r.Contact?.Ville,
-            Source                = r.Contact?.Source ?? "",
-            AgentId               = r.AgentId,
-            AgentNom              = r.Agent != null ? $"{r.Agent.Prenom} {r.Agent.Nom}" : "",
-            DateCreation          = r.DateCreation,
-            DateRendezVous        = r.DateRendezVous,
-            Statut                = r.Statut.ToString(),
-            CommentaireAgent      = r.Commentaire,
-            CommentaireConfirmation = r.CommentaireConfirmation,
-            CommentaireBanque     = r.CommentaireBanque,
-            Projet                = r.Contact?.Projet,
-            ProprietaireDepuis    = r.Contact?.ProprietaireDepuis,
-            ModeChauffage         = r.Contact?.ModeChauffage,
-            ConsommationChauffage = r.Contact?.ConsommationChauffage,
-            AgeChaudiere          = r.Contact?.AgeChaudiere,
-            EtudePV               = r.Contact?.EtudePV,
-            EquipePV              = r.Contact?.EquipePV,
-            EquipePAC             = r.Contact?.EquipePAC,
-            EtatToiture           = r.Contact?.EtatToiture,
-            EtatIsolation         = r.Contact?.EtatIsolation,
-            Surface               = r.Contact?.Surface,
-            NombrePersonnes       = r.Contact?.NombrePersonnes,
-            ProfessionMr          = r.Contact?.ProfessionMr,
-            ProfessionMme         = r.Contact?.ProfessionMme,
-            Credits               = r.Contact?.Credits,
-            Revenus               = r.Contact?.Revenus,
-            Fichage               = r.Contact?.Fichage,
-        }));
+            .OrderBy(r => r.DateRendezVous).ToListAsync();
+        return Ok(rdvs.Select(MapRdv));
     }
+
+    [HttpGet("agenda-client2")]
+    public async Task<IActionResult> GetAgendaClient2()
+    {
+        var rdvs = await _context.RendezVous
+            .Include(r => r.Contact).Include(r => r.Agent)
+            .Where(r => r.Statut == StatutRendezVous.CONFIRME && r.CommercialId == null)
+            .OrderBy(r => r.DateRendezVous).ToListAsync();
+        return Ok(rdvs.Select(MapRdv));
+    }
+
+    [HttpGet("agenda-refus")]
+    public async Task<IActionResult> GetAgendaRefus()
+    {
+        var rdvs = await _context.RendezVous
+            .Include(r => r.Contact).Include(r => r.Agent)
+            .Where(r => r.Statut == StatutRendezVous.ANNULE)
+            .OrderByDescending(r => r.DateCreation).ToListAsync();
+        return Ok(rdvs.Select(MapRdv));
+    }
+
+    [HttpGet("agenda-ebi")]
+    public async Task<IActionResult> GetAgendaEBI()
+    {
+        var rdvs = await _context.RendezVous
+            .Include(r => r.Contact).Include(r => r.Agent)
+            .Where(r => r.Statut == StatutRendezVous.CONFIRME || r.Statut == StatutRendezVous.BRUT)
+            .OrderBy(r => r.DateRendezVous).ToListAsync();
+        return Ok(rdvs.Select(MapRdv));
+    }
+
+    private RdvConfirmationDTO MapRdv(RendezVous r) => new()
+    {
+        Id                      = r.Id,
+        ContactId               = r.Contact?.Id ?? 0,
+        ContactNom              = r.Contact?.Nom ?? "",
+        ContactPrenom           = r.Contact?.Prenom ?? "",
+        Telephone               = r.Contact?.Telephone ?? "",
+        NumGSM                  = r.Contact?.NumGSM,
+        Email                   = r.Contact?.Email,
+        Adresse                 = r.Contact?.Adresse,
+        CodePostal              = r.Contact?.CodePostal,
+        Ville                   = r.Contact?.Ville,
+        Source                  = r.Contact?.Source ?? "",
+        AgentId                 = r.AgentId,
+        AgentNom                = r.Agent != null ? $"{r.Agent.Prenom} {r.Agent.Nom}" : "",
+        DateCreation            = r.DateCreation,
+        DateRendezVous          = r.DateRendezVous,
+        Statut                  = r.Statut.ToString(),
+        CommentaireAgent        = r.Commentaire,
+        CommentaireConfirmation = r.CommentaireConfirmation,
+        CommentaireBanque       = r.CommentaireBanque,
+        Projet                  = r.Contact?.Projet,
+        ProprietaireDepuis      = r.Contact?.ProprietaireDepuis,
+        ModeChauffage           = r.Contact?.ModeChauffage,
+        ConsommationChauffage   = r.Contact?.ConsommationChauffage,
+        AgeChaudiere            = r.Contact?.AgeChaudiere,
+        EtudePV                 = r.Contact?.EtudePV,
+        EquipePV                = r.Contact?.EquipePV,
+        EquipePAC               = r.Contact?.EquipePAC,
+        EtatToiture             = r.Contact?.EtatToiture,
+        EtatIsolation           = r.Contact?.EtatIsolation,
+        Surface                 = r.Contact?.Surface,
+        NombrePersonnes         = r.Contact?.NombrePersonnes,
+        ProfessionMr            = r.Contact?.ProfessionMr,
+        ProfessionMme           = r.Contact?.ProfessionMme,
+        Credits                 = r.Contact?.Credits,
+        Revenus                 = r.Contact?.Revenus,
+        Fichage                 = r.Contact?.Fichage,
+    };
 
     // =========================
     // SUIVI COMMERCIAUX

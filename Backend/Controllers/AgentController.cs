@@ -309,4 +309,138 @@ public class AgentController : ControllerBase
 
         return Ok(evals);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // AUTO-DIALER
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns the ordered contact queue for the auto-dialer.
+    /// Priority: A_APPELER first, then RAPPEL, sorted by ScoreIA desc.
+    /// Includes progress stats (total, called today).
+    /// </summary>
+    [HttpGet("me/dialer/contacts")]
+    [Authorize(Roles = "AGENT")]
+    public async Task<IActionResult> GetDialerContacts()
+    {
+        var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? User.FindFirst("sub")?.Value ?? "0");
+
+        var today = DateTime.UtcNow.Date;
+
+        var contacts = await _context.Contacts
+            .Where(c => c.AgentId == userId && c.Statut != "TRAITE")
+            .OrderBy(c => c.Statut == "A_APPELER" ? 0 : c.Statut == "RAPPEL" ? 1 : 2)
+            .ThenByDescending(c => c.ScoreIA ?? 0)
+            .ThenBy(c => c.DateDernierAppel)
+            .Select(c => new {
+                c.Id,
+                c.Nom,
+                c.Prenom,
+                c.Telephone,
+                c.NumGSM,
+                c.Email,
+                c.Adresse,
+                c.CodePostal,
+                c.Ville,
+                c.Source,
+                c.Statut,
+                c.StatutAgent,
+                c.NombreNRP,
+                c.ScoreIA,
+                c.TypeRendezVous,
+                c.ModeChauffage,
+                c.AgeChaudiere,
+                c.Surface,
+                c.Projet,
+                c.DateRappelPlanifie,
+                c.DateDernierAppel,
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        var calledToday = await _context.Appels
+            .Where(a => a.AgentId == userId && a.DateHeure.Date == today)
+            .Select(a => a.ContactId)
+            .Distinct()
+            .CountAsync();
+
+        return Ok(new {
+            contacts,
+            total = contacts.Count,
+            calledToday,
+        });
+    }
+
+    /// <summary>Log an ad-hoc call to an external number (not in contact list)</summary>
+    [HttpPost("me/appels/externe")]
+    [Authorize(Roles = "AGENT")]
+    public async Task<IActionResult> LogAppelExterne([FromBody] LogAppelExterneDto dto)
+    {
+        var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? User.FindFirst("sub")?.Value ?? "0");
+
+        // Create a phantom contact for the external number
+        var contact = new Backend.Entities.Contact
+        {
+            Nom       = dto.Nom ?? "Externe",
+            Prenom    = "",
+            Telephone = dto.Numero,
+            Source    = "EXTERNE",
+            Statut    = "TRAITE",
+            AgentId   = userId,
+        };
+        _context.Contacts.Add(contact);
+        await _context.SaveChangesAsync();
+
+        var appel = new Backend.Entities.Appel
+        {
+            AgentId       = userId,
+            ContactId     = contact.Id,
+            DateHeure     = DateTime.UtcNow,
+            DureeSecondes = dto.DureeSecondes,
+            Qualification = Backend.Entities.TypeQualification.NRP,
+        };
+        _context.Appels.Add(appel);
+        await _context.SaveChangesAsync();
+
+        return Ok(new { message = "Appel externe enregistré", id = appel.Id });
+    }
+
+    /// <summary>Log a dialer pause with type and duration (appended to today's pointage)</summary>
+    [HttpPost("me/dialer/pause")]
+    [Authorize(Roles = "AGENT")]
+    public async Task<IActionResult> LogDialerPause([FromBody] LogPauseDto dto)
+    {
+        var userId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? User.FindFirst("sub")?.Value ?? "0");
+
+        var today = DateTime.UtcNow.Date;
+        var pointage = await _context.Pointages
+            .FirstOrDefaultAsync(p => p.AgentId == userId && p.Date.Date == today);
+
+        if (pointage == null)
+        {
+            pointage = new Backend.Entities.Pointage
+            {
+                AgentId = userId,
+                Date    = DateTime.UtcNow,
+            };
+            _context.Pointages.Add(pointage);
+        }
+
+        pointage.Pauses.Add(new Backend.Entities.Pause
+        {
+            Debut          = dto.Debut,
+            Fin            = dto.Fin,
+            DureeSecondes  = dto.DureeSecondes,
+            AlerteEnvoyee  = false,
+        });
+
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Pause enregistrée" });
+    }
 }
+
+public record LogPauseDto(DateTime Debut, DateTime Fin, int DureeSecondes, string Type);
+public record LogAppelExterneDto(string Numero, string? Nom, int DureeSecondes, string? Notes);

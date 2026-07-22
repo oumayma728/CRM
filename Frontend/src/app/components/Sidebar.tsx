@@ -84,47 +84,60 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Users, label: 'Liste contacts', path: '/agent/contacts' },
     { icon: History, label: 'Historique', path: '/agent/history' },
     { icon: TrendingUp, label: 'Performance', path: '/agent/performance' },
-    { icon: Calendar, label: 'Agenda', path: '/agent/agenda' }
+    { icon: Calendar, label: 'Agenda', path: '/agent/agenda' },
+    { icon: Clock, label: 'Mon Pointage', path: '/agent/pointage' },
+    { icon: FileText, label: 'Créer une fiche contact', path: '/create-contact' }
   ];
 
   // ==================== MENU ADMIN ====================
- const adminMenuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard Live', path: '/admin/dashboard' },
-    { icon: ClipboardCheck, label: 'Scorecards Agents', path: '/admin/scorecards' },
-    { icon: Clock, label: 'Pointage', path: '/admin/pointage' },
-    { icon: BarChart3, label: 'Analytique Appels', path: '/admin/analytics' },
-    { icon: Map, label: 'Carte Géographique', path: '/admin/map' },
-    { icon: Users, label: 'Utilisateurs', path: '/admin/users' },
-    { icon: Briefcase, label: 'Clients Partenaires', path: '/admin/clients' },
-    { icon: Database, label: 'Gestion Fichiers', path: '/admin/injection' },
-    { icon: Settings, label: 'Configuration IA', path: '/admin/ai-config' },
-    { icon: Plug, label: 'Intégrations', path: '/admin/integrations' },
-    { icon: FileText, label: 'Stats Agents', path: '/admin/agent-stats' },
-    { icon: Download, label: 'Rapports', path: '/admin/reports' },
+  // Identique au superadmin sauf : sans Permissions, routes /admin/...
+  const adminMenuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard Live',           path: '/admin/dashboard' },
+    { icon: ClipboardCheck,  label: 'Scorecards Agents',        path: '/admin/scorecards' },
+    { icon: Clock,           label: 'Pointage',                 path: '/admin/pointage' },
+    { icon: BarChart3,       label: 'Analytique Appels',        path: '/admin/analytics' },
+    { icon: Map,             label: 'Carte Géographique',       path: '/admin/map' },
+    { icon: Users,           label: 'Utilisateurs',             path: '/admin/users' },
+    { icon: Database,        label: 'Gestion Fichiers',         path: '/admin/injection' },
+    { icon: Settings,        label: 'Configuration IA',         path: '/admin/ai-config' },
+    { icon: Plug,            label: 'Intégrations',             path: '/admin/integrations' },
+    { icon: FileText,        label: 'Stats Agents',             path: '/admin/agent-stats' },
+    { icon: Download,        label: 'Rapports',                 path: '/admin/reports' },
+    { icon: Upload,          label: 'Import Leads',             path: '/admin/import-leads' },
+    { icon: Upload,          label: 'Fichier à charger',        path: '/admin/leads' },
+    { icon: Banknote,        label: 'Salaires',                 path: '/admin/salary' },
+    { icon: Brain,           label: 'Scoring IA',               path: '/admin/ai-scoring' },
+    { icon: BarChart3,       label: 'Analytics Avancé',         path: '/admin/analytics-advanced' },
+    { icon: Bell,            label: 'Alertes',                  path: '/admin/alerts-manage' },
+    { icon: Euro,            label: 'Leads Import',             path: '/admin/leads-khaled' },
+    { icon: FileText,        label: 'Créer une fiche contact',  path: '/create-contact' },
   ];
 
   // ==================== MENU SUPERADMIN ====================
+  // Identique à admin + Permissions (superadmin uniquement), routes /superadmin/...
   const superAdminMenuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard Live', path: '/superadmin/dashboard' },
-    { icon: ClipboardCheck, label: 'Scorecards Agents', path: '/admin/scorecards' },
-    { icon: Shield, label: 'Permissions', path: '/admin/permissions' },
-
-    { icon: Clock, label: 'Pointage', path: '/admin/pointage' },
-    { icon: BarChart3, label: 'Analytique Appels', path: '/admin/analytics' },
-    { icon: Map, label: 'Carte Géographique', path: '/admin/map' },
-    { icon: Users, label: 'Utilisateurs', path: '/admin/users' },
-    { icon: Database, label: 'Gestion Fichiers', path: '/admin/injection' },
-    { icon: Shield, label: 'Permissions', path: '/superadmin/permissions' },
-    { icon: Settings, label: 'Configuration IA', path: '/admin/ai-config' },
-    { icon: Plug, label: 'Intégrations', path: '/admin/integrations' },
-    { icon: FileText, label: 'Stats Agents', path: '/admin/agent-stats' },
-    { icon: Download, label: 'Rapports', path: '/admin/reports' },
-    { icon: Banknote, label: 'Salaires', path: '/admin/salary' },
-    { icon: Brain, label: 'Scoring IA', path: '/admin/ai-scoring' },
-    { icon: BarChart3, label: 'Analytics Avancé', path: '/admin/analytics-advanced' },
-    { icon: Bell, label: 'Alertes', path: '/admin/alerts-manage' },
-    
+    { icon: LayoutDashboard, label: 'Dashboard Live',           path: '/superadmin/dashboard' },
+    { icon: ClipboardCheck,  label: 'Scorecards Agents',        path: '/superadmin/scorecards' },
+    { icon: Shield,          label: 'Permissions',              path: '/superadmin/permissions' },
+    { icon: Clock,           label: 'Pointage',                 path: '/superadmin/pointage' },
+    { icon: BarChart3,       label: 'Analytique Appels',        path: '/superadmin/analytics' },
+    { icon: Map,             label: 'Carte Géographique',       path: '/superadmin/map' },
+    { icon: Users,           label: 'Utilisateurs',             path: '/superadmin/users' },
+    { icon: Database,        label: 'Gestion Fichiers',         path: '/superadmin/injection' },
+    { icon: Settings,        label: 'Configuration IA',         path: '/superadmin/ai-config' },
+    { icon: Plug,            label: 'Intégrations',             path: '/superadmin/integrations' },
+    { icon: FileText,        label: 'Stats Agents',             path: '/superadmin/agent-stats' },
+    { icon: Download,        label: 'Rapports',                 path: '/superadmin/reports' },
+    { icon: Upload,          label: 'Import Leads',             path: '/superadmin/import-leads' },
+    { icon: Upload,          label: 'Fichier à charger',        path: '/superadmin/leads' },
+    { icon: Banknote,        label: 'Salaires',                 path: '/superadmin/salary' },
+    { icon: Brain,           label: 'Scoring IA',               path: '/superadmin/ai-scoring' },
+    { icon: BarChart3,       label: 'Analytics Avancé',         path: '/superadmin/analytics-advanced' },
+    { icon: Bell,            label: 'Alertes',                  path: '/superadmin/alerts-manage' },
+    { icon: Euro,            label: 'Leads Import',             path: '/superadmin/leads-khaled' },
+    { icon: FileText,        label: 'Créer une fiche contact',  path: '/create-contact' },
   ];
+
   // ==================== MENU CONFIRMATRICE 1 (Call Client 1) ====================
   const confirmation1MenuItems = [
     { icon: LayoutDashboard, label: 'Tableau de bord', path: '/confirmation1/dashboard' },
@@ -163,6 +176,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Building2,       label: 'Agenda EBI',       path: '/confirmation-client/agenda-ebi',      agendaId: 'EBI' },
     { icon: Briefcase,       label: 'Suivi Commerciaux', path: '/confirmation-client/commerciaux' },
     { icon: CheckSquare,     label: 'Attribution RDV',  path: '/confirmation-client/attribution' },
+    { icon: FileText,        label: 'Créer une fiche contact', path: '/create-contact' },
   ];
 
   // ==================== MENU QUALITE ====================
@@ -182,9 +196,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   // ==================== MENU SERVICE TECHNIQUE ====================
   const techniqueMenuItems = [
-    { icon: Users,           label: 'Liste des Agents',   path: '/technique/agents' },
+    { icon: LayoutDashboard, label: 'Dashboard',           path: '/technique/dashboard' },
+    { icon: Users,           label: 'Liste des Agents',    path: '/technique/agents' },
     { icon: FileText,        label: 'Fichier des contacts', path: '/technique/fichiers' },
-    { icon: Clock,           label: 'Pointage',            path: '/technique/pointage' },
+    { icon: Clock,           label: 'Pointage équipe',     path: '/technique/pointage' },
+    { icon: UserCheck,       label: 'Mon Pointage',        path: '/technique/monpointage' },
     { icon: Shield,          label: 'Gérer accès',         path: '/technique/acces' },
     { icon: Calendar,        label: 'Compte calendrier',   path: '/technique/calendrier' },
     { icon: Star,            label: 'Évaluation',          path: '/technique/evaluation' },

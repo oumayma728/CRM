@@ -38,6 +38,10 @@ public class SalaryCalculationDto
     public float InstallationBonus { get; set; }
     public float Penalties { get; set; }
     public float TotalSalary { get; set; }
+    /// <summary>Nombre de retards ce mois</summary>
+    public int RetardCount { get; set; }
+    /// <summary>Pénalité totale retard (TND)</summary>
+    public float RetardPenalty { get; set; }
 }
 
 public class MonthlySummaryDto

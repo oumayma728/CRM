@@ -1,16 +1,17 @@
 import React from 'react';
-import { 
-  Phone, CheckCircle, Clock, TrendingUp, 
-  AlertCircle 
+import {
+  Phone, CheckCircle, Clock, TrendingUp,
+  AlertCircle
 } from 'lucide-react';
-import { 
-  AreaChart, Area, BarChart, Bar, 
-  XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, Legend 
+import {
+  AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend
 } from 'recharts';
 import { Layout } from '../../components/Layout';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useAgentDashboard } from '../../../hooks/useAgentDashboard';
+import AttendanceWidget from '../../components/AttendanceWidget';
 
 export default function AgentDashboard() {
   const { user } = useAuth();
@@ -72,8 +73,43 @@ export default function AgentDashboard() {
           <p className="text-muted-foreground mt-1">Vue d'ensemble de votre activité du jour</p>
         </div>
 
-        {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Pointage widget */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-1">
+            <AttendanceWidget />
+          </div>
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-card rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-muted-foreground text-sm">Appels du jour</h3>
+                <Phone className="w-4 h-4 text-primary" />
+              </div>
+              <p className="text-3xl font-medium text-foreground">{dashboard.appelsDuJour}</p>
+              <p className={`text-sm mt-1 ${dashboard.evolutionAppels >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {dashboard.evolutionAppels >= 0 ? '+' : ''}{dashboard.evolutionAppels}% vs hier
+              </p>
+            </div>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-muted-foreground text-sm">Conversions</h3>
+                <CheckCircle className="w-4 h-4 text-success" />
+              </div>
+              <p className="text-3xl font-medium text-foreground">{dashboard.conversionsDuJour}</p>
+              <p className="text-sm text-muted-foreground mt-1">Taux: {dashboard.tauxConversion}%</p>
+            </div>
+            <div className="bg-card rounded-lg border border-border p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-muted-foreground text-sm">Score Qualité</h3>
+                <TrendingUp className="w-4 h-4 text-warning" />
+              </div>
+              <p className="text-3xl font-medium text-foreground">{dashboard.scoreQualite}/100</p>
+              <p className="text-sm text-success mt-1">+5 points</p>
+            </div>
+          </div>
+        </div>
+
+        {/* KPIs — hidden (merged above) */}
+        <div className="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-card rounded-lg border border-border p-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-muted-foreground">Appels du jour</h3>
@@ -119,32 +155,33 @@ export default function AgentDashboard() {
             <h3 className="mb-4">Performance du jour</h3>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={dashboard.statistiquesParHeure}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="heure" stroke="var(--color-muted-foreground)" />
-                <YAxis stroke="var(--color-muted-foreground)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="heure" stroke="#94a3b8" tick={{ fontSize: 12 }} />
+                <YAxis stroke="#94a3b8" tick={{ fontSize: 12 }} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'var(--color-card)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px'
+                    backgroundColor: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '8px',
+                    color: '#f1f5f9'
                   }}
                 />
                 <Legend />
-                <Area 
-                  type="monotone" 
-                  dataKey="appels" 
-                  stroke="var(--color-primary)" 
-                  fill="var(--color-primary)" 
-                  fillOpacity={0.2} 
-                  name="Appels" 
+                <Area
+                  type="monotone"
+                  dataKey="appels"
+                  stroke="#6366f1"
+                  fill="#6366f1"
+                  fillOpacity={0.2}
+                  name="Appels"
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="conversions" 
-                  stroke="var(--color-success)" 
-                  fill="var(--color-success)" 
-                  fillOpacity={0.2} 
-                  name="Conversions" 
+                <Area
+                  type="monotone"
+                  dataKey="conversions"
+                  stroke="#22c55e"
+                  fill="#22c55e"
+                  fillOpacity={0.2}
+                  name="Conversions"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -154,19 +191,20 @@ export default function AgentDashboard() {
             <h3 className="mb-4">Taux de conversion par heure</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={dashboard.statistiquesParHeure}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="heure" stroke="var(--color-muted-foreground)" />
-                <YAxis stroke="var(--color-muted-foreground)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="heure" stroke="#94a3b8" tick={{ fontSize: 12 }} />
+                <YAxis stroke="#94a3b8" tick={{ fontSize: 12 }} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'var(--color-card)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px'
+                    backgroundColor: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '8px',
+                    color: '#f1f5f9'
                   }}
                 />
                 <Legend />
-                <Bar dataKey="appels" fill="var(--color-chart-1)" name="Appels" />
-                <Bar dataKey="conversions" fill="var(--color-chart-4)" name="Conversions" />
+                <Bar dataKey="appels" fill="#6366f1" name="Appels" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="conversions" fill="#22c55e" name="Conversions" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -174,8 +212,21 @@ export default function AgentDashboard() {
 
         {/* Appels récents */}
         <div className="bg-card rounded-lg border border-border">
-          <div className="p-6 border-b border-border">
-            <h3>Appels récents</h3>
+          <div className="p-6 border-b border-border flex items-center justify-between">
+            <div>
+              <h3>Historique du jour</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Appels enregistrés aujourd'hui — remis à zéro chaque matin
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-muted-foreground">
+                Total : <span className="font-bold text-foreground">{dashboard.appelsDuJour}</span>
+              </span>
+              <span className="text-muted-foreground">
+                Convertis : <span className="font-bold text-success">{dashboard.conversionsDuJour}</span>
+              </span>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">

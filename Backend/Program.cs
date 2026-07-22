@@ -20,6 +20,7 @@ using Backend.Services.Files;
 using Backend.Services.UserService;
 using Backend.Services.Email;
 using Backend.Services.Clients;
+using Backend.Services.Attendance;
 using Backend.Filters;
 using Backend.Hubs;
 using Microsoft.AspNetCore.Http.Features;
@@ -84,6 +85,9 @@ builder.Services.AddScoped<IClientService,                   ClientService>();
 builder.Services.AddScoped<PasswordHasher>();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddHostedService<SourceFileImportWorker>();
+
+// ─── ATTENDANCE / POINTAGE ───────────────────────────────────────────────
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 
 // ─── SIGNALR (Chat temps réel) ───────────────────────────────────────────
 builder.Services.AddSignalR();

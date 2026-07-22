@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.Entities;
+using Backend.Services.Admin;
 using System.Text;
 
 namespace Backend.Controllers;
@@ -14,10 +15,52 @@ namespace Backend.Controllers;
 public class TechniqueController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly IAdminService _adminService;
 
-    public TechniqueController(ApplicationDbContext context)
+    public TechniqueController(ApplicationDbContext context, IAdminService adminService)
     {
-        _context = context;
+        _context      = context;
+        _adminService = adminService;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 0. DASHBOARD
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [HttpGet("dashboard")]
+    public async Task<IActionResult> GetDashboard()
+    {
+        var agentsTotal  = await _context.Utilisateurs.Where(u => u.Role == "AGENT" && u.Actif).CountAsync();
+        var fichiersTotal = await _context.FichiersImport.CountAsync();
+        var evalTotal    = await _context.Evaluations.CountAsync();
+        var today        = DateTime.UtcNow.Date;
+        var todayUtc     = DateTime.SpecifyKind(today, DateTimeKind.Utc);
+        var tomorrowUtc  = DateTime.SpecifyKind(today.AddDays(1), DateTimeKind.Utc);
+
+        var pointagesAujourd = await _context.Pointages
+            .Where(p => p.Date >= todayUtc && p.Date < tomorrowUtc)
+            .CountAsync();
+
+        var evalsRecentes = await _context.Evaluations
+            .Include(e => e.Agent)
+            .OrderByDescending(e => e.DateEvaluation)
+            .Take(5)
+            .Select(e => new
+            {
+                agentNom    = $"{e.Agent.Prenom} {e.Agent.Nom}",
+                noteGlobale = Math.Round(e.NoteGlobale, 1),
+                date        = e.DateEvaluation.ToString("dd/MM/yyyy"),
+            })
+            .ToListAsync();
+
+        return Ok(new
+        {
+            agentsTotal,
+            fichiersTotal,
+            evalTotal,
+            pointagesAujourd,
+            evalsRecentes,
+        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -27,20 +70,27 @@ public class TechniqueController : ControllerBase
     [HttpGet("agents")]
     public async Task<IActionResult> GetAgents()
     {
-        var agents = await _context.Utilisateurs
+        // Charger en mémoire puis dédupliquer par email (données DB potentiellement dupliquées)
+        var raw = await _context.Utilisateurs
             .Where(u => u.Role == "AGENT")
+            .OrderBy(u => u.Nom)
+            .ToListAsync();
+
+        var agents = raw
+            .GroupBy(u => u.Email)
+            .Select(g => g.First())
             .Select(u => new
             {
-                id        = u.Id,
-                nom       = u.Nom,
-                prenom    = u.Prenom,
-                email     = u.Email,
-                actif     = u.Actif,
+                id           = u.Id,
+                nom          = u.Nom,
+                prenom       = u.Prenom,
+                email        = u.Email,
+                actif        = u.Actif,
                 dateEmbauche = (DateTime?)null,
-                isElite   = false,
+                isElite      = false,
             })
             .OrderBy(a => a.nom)
-            .ToListAsync();
+            .ToList();
 
         return Ok(agents);
     }
@@ -175,59 +225,18 @@ public class TechniqueController : ControllerBase
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 5. POINTAGE AGENTS
+    // 5. POINTAGE — délègue au service admin (même données, même format)
     // ─────────────────────────────────────────────────────────────────────────
 
     [HttpGet("pointage")]
-    public async Task<IActionResult> GetPointageAgents([FromQuery] string? date = null)
+    public async Task<IActionResult> GetPointage([FromQuery] string? date = null)
     {
         var targetDate = date != null
-            ? DateTime.Parse(date).Date
-            : DateTime.UtcNow.Date;
+            ? DateTime.SpecifyKind(DateTime.Parse(date).Date, DateTimeKind.Utc)
+            : DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
 
-        var pointages = await _context.Pointages
-            .Include(p => p.Agent)
-            .Where(p => p.Date.Date == targetDate)
-            .Select(p => new
-            {
-                agentNom       = p.Agent != null ? $"{p.Agent.Prenom} {p.Agent.Nom}" : "—",
-                jour           = p.Date.ToString("dddd dd"),
-                mois           = p.Date.ToString("MMMM"),
-                premierAppel   = p.PremierAppel.HasValue ? p.PremierAppel.Value.ToString("HH'h'mm") : "—",
-                dernierAppel   = p.DernierAppel.HasValue ? p.DernierAppel.Value.ToString("HH'h'mm") : "—",
-            })
-            .ToListAsync();
-
-        return Ok(new { date = targetDate.ToString("yyyy-MM-dd"), pointages });
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // 6. POINTAGE MEMBRES ADMINISTRATION (connexion / déconnexion)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    [HttpGet("pointage/admin")]
-    public async Task<IActionResult> GetPointageAdmin([FromQuery] string? date = null)
-    {
-        var targetDate = date != null
-            ? DateTime.Parse(date).Date
-            : DateTime.UtcNow.Date;
-
-        // On retourne les utilisateurs non-agents avec leur heure de première/dernière connexion
-        // (basé sur les contacts appelés ou approximation)
-        var membres = await _context.Set<Backend.Entities.Utilisateur>()
-            .Where(u => u.Role != "AGENT" && u.Actif)
-            .Select(u => new
-            {
-                role             = u.Role,
-                nomComplet       = $"{u.Prenom} {u.Nom}",
-                jour             = targetDate.ToString("dddd dd"),
-                mois             = targetDate.ToString("MMMM"),
-                sessionConnexion    = (string?)null,
-                sessionDeconnexion  = (string?)null,
-            })
-            .ToListAsync();
-
-        return Ok(new { date = targetDate.ToString("yyyy-MM-dd"), membres });
+        var pointage = await _adminService.GetPointageAsync(targetDate);
+        return Ok(pointage);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -1,7 +1,8 @@
 // frontend/src/app/pages/CreateContactPage.tsx
 import React, { useEffect, useState } from 'react';
-import { User, Home, Zap, Users, Phone, Mail, MapPin, Building, Loader2, Save, XCircle } from 'lucide-react';
+import { User, Home, Zap, Users, Loader2, Save, RotateCcw, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { api } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Agent {
   id: number;
@@ -9,6 +10,7 @@ interface Agent {
   prenom: string;
 }
 
+// Champs numériques optionnels stockés en string pour affichage correct dans les inputs
 interface NewContact {
   nom: string;
   prenom: string;
@@ -18,19 +20,19 @@ interface NewContact {
   source: string;
   agentId: number;
   // Logement
-  proprietaireDepuis: number;
+  proprietaireDepuis: string;
   modeChauffage: string;
   consommationChauffage: string;
-  ageChaudiere: number;
+  ageChaudiere: string;
   etatToiture: string;
   etatIsolation: string;
-  surface: number;
+  surface: string;
   // Énergie
   etudePV: boolean;
   equipePV: boolean;
   equipePAC: boolean;
   // Foyer
-  nbPersonnes: number;
+  nbPersonnes: string;
   professionMr: string;
   professionMme: string;
   credits: string;
@@ -38,18 +40,25 @@ interface NewContact {
   fichage: string;
 }
 
+const EMPTY_CONTACT = (agentId = 1): NewContact => ({
+  nom: '', prenom: '', telephone: '', email: '', adresse: '', source: 'Marketing', agentId,
+  proprietaireDepuis: '', modeChauffage: '', consommationChauffage: '', ageChaudiere: '',
+  etatToiture: '', etatIsolation: '', surface: '',
+  etudePV: false, equipePV: false, equipePAC: false,
+  nbPersonnes: '', professionMr: '', professionMme: '', credits: '', revenus: '', fichage: '',
+});
+
 export default function CreateContactPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  const currentUserId = user?.id || 1;
+
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newContact, setNewContact] = useState<NewContact>({
-    nom: '', prenom: '', telephone: '', email: '', adresse: '', source: 'Marketing', agentId: 1,
-    proprietaireDepuis: 0, modeChauffage: '', consommationChauffage: '', ageChaudiere: 0,
-    etatToiture: '', etatIsolation: '', surface: 0,
-    etudePV: false, equipePV: false, equipePAC: false,
-    nbPersonnes: 0, professionMr: '', professionMme: '', credits: '', revenus: '', fichage: ''
-  });
+  // Par défaut : assigner à l'utilisateur connecté
+  const [newContact, setNewContact] = useState<NewContact>(EMPTY_CONTACT(currentUserId));
 
   useEffect(() => {
     fetchAgents();
@@ -59,61 +68,102 @@ export default function CreateContactPage() {
     try {
       const response = await api.get('/agent');
       setAgents(response.data);
-      if (response.data.length > 0) {
-        setNewContact(prev => ({ ...prev, agentId: response.data[0].id }));
+      // Admin : premier agent par défaut. Agent : toujours lui-même.
+      if (isAdmin && response.data.length > 0) {
+        setNewContact(EMPTY_CONTACT(response.data[0].id));
       }
+      // Pour un agent, on garde currentUserId (déjà initialisé)
     } catch (error) {
       console.error('Erreur fetchAgents:', error);
     }
   };
 
+  // Helper — convertit les strings en types attendus par le backend
+  const toPayload = () => ({
+    nom:                  newContact.nom,
+    prenom:               newContact.prenom,
+    telephone:            newContact.telephone,
+    email:                newContact.email || null,
+    adresse:              newContact.adresse || null,
+    source:               newContact.source,
+    agentId:              newContact.agentId,
+    // Logement
+    proprietaireDepuis:   newContact.proprietaireDepuis ? parseInt(newContact.proprietaireDepuis) : null,
+    modeChauffage:        newContact.modeChauffage || null,
+    consommationChauffage: newContact.consommationChauffage || null,
+    ageChaudiere:         newContact.ageChaudiere ? parseInt(newContact.ageChaudiere) : null,
+    etatToiture:          newContact.etatToiture || null,
+    etatIsolation:        newContact.etatIsolation || null,
+    surface:              newContact.surface ? parseFloat(newContact.surface) : null,
+    // Énergie
+    etudePV:              newContact.etudePV,
+    equipePV:             newContact.equipePV,
+    equipePAC:            newContact.equipePAC,
+    // Foyer
+    nbPersonnes:          newContact.nbPersonnes ? parseInt(newContact.nbPersonnes) : null,
+    professionMr:         newContact.professionMr || null,
+    professionMme:        newContact.professionMme || null,
+    credits:              newContact.credits || null,
+    revenus:              newContact.revenus || null,
+    fichage:              newContact.fichage || null,
+  });
+
+  const handleReset = () => {
+    setError(null);
+    // Reset : admin → premier agent, agent → lui-même
+    setNewContact(EMPTY_CONTACT(isAdmin ? (agents[0]?.id || 1) : currentUserId));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newContact.nom || !newContact.prenom || !newContact.telephone) {
+    if (!newContact.nom.trim() || !newContact.prenom.trim() || !newContact.telephone.trim()) {
       setError('Veuillez remplir les champs obligatoires (Nom, Prénom, Téléphone)');
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      await api.post('/contact', newContact);
+      await api.post('/contact', toPayload());
       setSuccess(true);
-      // Réinitialiser le formulaire
-      setNewContact({
-        nom: '', prenom: '', telephone: '', email: '', adresse: '', source: 'Marketing', agentId: agents[0]?.id || 1,
-        proprietaireDepuis: 0, modeChauffage: '', consommationChauffage: '', ageChaudiere: 0,
-        etatToiture: '', etatIsolation: '', surface: 0,
-        etudePV: false, equipePV: false, equipePAC: false,
-        nbPersonnes: 0, professionMr: '', professionMme: '', credits: '', revenus: '', fichage: ''
-      });
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (error) {
-      console.error('Erreur création contact:', error);
-      setError('Erreur lors de la création du contact');
+      setNewContact(EMPTY_CONTACT(agents[0]?.id || 1));
+      setTimeout(() => setSuccess(false), 4000);
+    } catch (err) {
+      console.error('Erreur création contact:', err);
+      setError('Erreur lors de la création du contact. Vérifiez les données saisies.');
     } finally {
       setLoading(false);
     }
   };
+
+  // Nom affiché pour l'agent connecté
+  const currentAgentLabel = (() => {
+    const a = agents.find(ag => ag.id === currentUserId);
+    return a ? `${a.prenom} ${a.nom}` : (user?.name || 'Vous');
+  })();
 
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
       {/* En-tête */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Créer une fiche contact</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">Ajoutez un nouveau contact avec toutes ses informations</p>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">
+          Saisissez les informations du prospect qualifié lors de l'appel
+        </p>
       </div>
 
       {/* Message de succès */}
       {success && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-green-700 dark:text-green-400">
-          ✅ Contact créé avec succès !
+        <div className="flex items-center gap-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-xl p-4 text-green-700 dark:text-green-400">
+          <CheckCircle size={18} className="flex-shrink-0" />
+          <span className="font-medium">Contact créé avec succès ! Le formulaire a été réinitialisé.</span>
         </div>
       )}
 
       {/* Message d'erreur */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
-          ❌ {error}
+        <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-4 text-red-700 dark:text-red-400">
+          <AlertCircle size={18} className="flex-shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
@@ -193,14 +243,26 @@ export default function CreateContactPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Agent</label>
-              <select
-                value={newContact.agentId}
-                onChange={(e) => setNewContact({...newContact, agentId: parseInt(e.target.value)})}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-              >
-                {agents.map(a => <option key={a.id} value={a.id}>{a.prenom} {a.nom}</option>)}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Agent assigné
+              </label>
+              {isAdmin ? (
+                /* Admin : peut choisir n'importe quel agent */
+                <select
+                  value={newContact.agentId}
+                  onChange={(e) => setNewContact({...newContact, agentId: parseInt(e.target.value)})}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+                >
+                  {agents.map(a => <option key={a.id} value={a.id}>{a.prenom} {a.nom}</option>)}
+                </select>
+              ) : (
+                /* Agent : pré-assigné à lui-même, non modifiable */
+                <div className="w-full p-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <Lock size={13} className="text-gray-400 flex-shrink-0" />
+                  <span>{currentAgentLabel}</span>
+                  <span className="ml-auto text-xs text-gray-400">Assigné à vous</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -216,10 +278,11 @@ export default function CreateContactPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Propriétaire depuis</label>
               <input
                 type="number"
+                min="0"
                 value={newContact.proprietaireDepuis}
-                onChange={(e) => setNewContact({...newContact, proprietaireDepuis: parseInt(e.target.value)})}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                placeholder="années"
+                onChange={(e) => setNewContact({...newContact, proprietaireDepuis: e.target.value})}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+                placeholder="Année (ex: 2010)"
               />
             </div>
             <div>
@@ -247,10 +310,11 @@ export default function CreateContactPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Âge chaudière</label>
               <input
                 type="number"
+                min="0"
                 value={newContact.ageChaudiere}
-                onChange={(e) => setNewContact({...newContact, ageChaudiere: parseInt(e.target.value)})}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                placeholder="années"
+                onChange={(e) => setNewContact({...newContact, ageChaudiere: e.target.value})}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+                placeholder="En années (ex: 8)"
               />
             </div>
             <div>
@@ -279,10 +343,11 @@ export default function CreateContactPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Surface (m²)</label>
               <input
                 type="number"
+                min="0"
                 value={newContact.surface}
-                onChange={(e) => setNewContact({...newContact, surface: parseInt(e.target.value)})}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                placeholder="Surface en m²"
+                onChange={(e) => setNewContact({...newContact, surface: e.target.value})}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+                placeholder="Ex: 90"
               />
             </div>
           </div>
@@ -336,10 +401,11 @@ export default function CreateContactPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nbre de personnes</label>
               <input
                 type="number"
+                min="0"
                 value={newContact.nbPersonnes}
-                onChange={(e) => setNewContact({...newContact, nbPersonnes: parseInt(e.target.value)})}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                placeholder="Nombre de personnes"
+                onChange={(e) => setNewContact({...newContact, nbPersonnes: e.target.value})}
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+                placeholder="Ex: 3"
               />
             </div>
             <div>
@@ -383,44 +449,43 @@ export default function CreateContactPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fichage</label>
-              <input
-                type="text"
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fichage Banque de France</label>
+              <select
                 value={newContact.fichage}
                 onChange={(e) => setNewContact({...newContact, fichage: e.target.value})}
-                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                placeholder="Fichage"
-              />
+                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Non précisé</option>
+                <option value="non">Non</option>
+                <option value="oui">Oui</option>
+              </select>
             </div>
           </div>
         </div>
 
         {/* Boutons */}
-        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              setNewContact({
-                nom: '', prenom: '', telephone: '', email: '', adresse: '', source: 'Marketing', agentId: agents[0]?.id || 1,
-                proprietaireDepuis: 0, modeChauffage: '', consommationChauffage: '', ageChaudiere: 0,
-                etatToiture: '', etatIsolation: '', surface: 0,
-                etudePV: false, equipePV: false, equipePAC: false,
-                nbPersonnes: 0, professionMr: '', professionMme: '', credits: '', revenus: '', fichage: ''
-              });
-            }}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-          >
-            <XCircle size={16} className="inline mr-2" />
-            Réinitialiser
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition flex items-center gap-2"
-          >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            {loading ? 'Création...' : 'Créer le contact'}
-          </button>
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between gap-3">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            <span className="text-red-500">*</span> Champs obligatoires
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="px-4 py-2 flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-400 transition font-medium text-sm"
+            >
+              <RotateCcw size={15} />
+              Réinitialiser
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition flex items-center gap-2 font-medium text-sm"
+            >
+              {loading ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+              {loading ? 'Création en cours…' : 'Créer le contact'}
+            </button>
+          </div>
         </div>
       </form>
     </div>

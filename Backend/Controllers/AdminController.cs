@@ -51,6 +51,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("pointage")]
+    [Authorize(Roles = "ADMIN,SuperAdmin,TECH")]
     public async Task<IActionResult> GetPointage([FromQuery] DateTime? date)
     {
         var pointage = await _adminService.GetPointageAsync(date ?? DateTime.Today);

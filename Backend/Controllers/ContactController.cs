@@ -87,6 +87,19 @@ public class ContactController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
+        // Conversion fichage : "oui" → true, "non" → false, autrement null
+        bool? fichageBool = dto.Fichage?.ToLowerInvariant() switch
+        {
+            "oui" => true,
+            "non" => false,
+            _ => null
+        };
+
+        // Conversion propriétaire depuis : année (int) → DateTime UTC
+        DateTime? proprietaireDepuis = dto.ProprietaireDepuis is > 1900
+            ? new DateTime(dto.ProprietaireDepuis.Value, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            : null;
+
         var contact = new Contact
         {
             Nom = dto.Nom,
@@ -95,8 +108,28 @@ public class ContactController : ControllerBase
             Email = dto.Email,
             Adresse = dto.Adresse,
             Source = dto.Source,
+            AgentId = dto.AgentId,
             Statut = "A_APPELER",
-            DateImport = DateTime.UtcNow
+            DateImport = DateTime.UtcNow,
+            // Logement
+            ProprietaireDepuis = proprietaireDepuis,
+            ModeChauffage = dto.ModeChauffage,
+            ConsommationChauffage = dto.ConsommationChauffage,
+            AgeChaudiere = dto.AgeChaudiere,
+            EtatToiture = dto.EtatToiture,
+            EtatIsolation = dto.EtatIsolation,
+            Surface = dto.Surface,
+            // Énergie
+            EtudePV = dto.EtudePV,
+            EquipePV = dto.EquipePV,
+            EquipePAC = dto.EquipePAC,
+            // Foyer
+            NombrePersonnes = dto.NbPersonnes,
+            ProfessionMr = dto.ProfessionMr,
+            ProfessionMme = dto.ProfessionMme,
+            Credits = dto.Credits,
+            Revenus = dto.Revenus,
+            Fichage = fichageBool,
         };
 
         _context.Contacts.Add(contact);

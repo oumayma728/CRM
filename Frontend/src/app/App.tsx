@@ -10,10 +10,12 @@ import ChangePasswordPage from './pages/ChangePasswordPage';
 import LeadsPage from './pages/admin/leads/LeadsPage';
 import AgentDashboard from './pages/agent/AgentDashboard';
 import ContactPage from './pages/agent/ContactPage';
+import DialerPage from './pages/agent/DialerPage';
 import HistoryPage from './pages/agent/HistoryPage';
 import PerformancePage from './pages/agent/PerformancePage';
 import AgendaPage from './pages/agent/AgendaPage';
 import ContactsListPage from './pages/agent/ContactsListPage';
+import MonPointagePage from './pages/agent/MonPointagePage';
 import CreateContactPage from './pages/CreateContactPage';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -52,12 +54,14 @@ import LeadsKhaledPage from './pages/admin/LeadsKhaledPage';
 import CommercialDashboard from './pages/commercial/CommercialDashboard';
 import CommercialAgenda from './pages/commercial/CommercialAgenda';
 // ── SERVICE TECHNIQUE ─────────────────────────────────────────
+import TechniqueDashboard from './pages/technique/TechniqueDashboard';
 import ListeAgents from './pages/technique/ListeAgents';
 import FichierContacts from './pages/technique/FichierContacts';
 import PointageTech from './pages/technique/Pointage';
 import GererAcces from './pages/technique/GererAcces';
 import CompteCalendrier from './pages/technique/CompteCalendrier';
 import EvaluationTech from './pages/technique/EvaluationTech';
+import MonPointageTech from './pages/technique/MonPointageTech';
 // ─────────────────────────────────────────────────────────────
 
 import Confirmation1Dashboard from './pages/confirmation/Confirmation1Dashboard copy';
@@ -106,10 +110,12 @@ function AppRoutes() {
       {/* ==================== AGENT ==================== */}
       <Route path="/agent/dashboard" element={<ProtectedRoute><AgentDashboard /></ProtectedRoute>} />
       <Route path="/agent/contact" element={<ProtectedRoute><ContactPage /></ProtectedRoute>} />
+      <Route path="/agent/dialer" element={<ProtectedRoute><DialerPage /></ProtectedRoute>} />
       <Route path="/agent/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
       <Route path="/agent/performance" element={<ProtectedRoute><PerformancePage /></ProtectedRoute>} />
       <Route path="/agent/agenda" element={<ProtectedRoute><AgendaPage /></ProtectedRoute>} />
       <Route path="/agent/contacts" element={<ProtectedRoute><ContactsListPage /></ProtectedRoute>} />
+      <Route path="/agent/pointage" element={<ProtectedRoute><MonPointagePage /></ProtectedRoute>} />
 
       {/* ==================== CONFIRMATRICE 1 ==================== */}
       <Route path="/confirmation1" element={<Layout><Outlet /></Layout>}>
@@ -166,19 +172,38 @@ function AppRoutes() {
       {/* ── New routes from colleague ─────────────────────── */}
       <Route path="/admin/injection" element={<ProtectedRoute><InjectionPage /></ProtectedRoute>} />
       <Route path="/admin/permissions" element={<ProtectedRoute><PermissionPage /></ProtectedRoute>} />
-      {/* ── SuperAdmin routes ─────────────────────────────── */}
-      <Route path="/superadmin/dashboard" element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
-      <Route path="/superadmin/permissions" element={<ProtectedRoute><PermissionPage /></ProtectedRoute>} />
+      {/* ── SuperAdmin routes (toutes en /superadmin/...) ────── */}
+      <Route path="/superadmin/dashboard"           element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
+      <Route path="/superadmin/permissions"         element={<ProtectedRoute><PermissionPage /></ProtectedRoute>} />
+      <Route path="/superadmin/pointage"            element={<ProtectedRoute><PointagePage /></ProtectedRoute>} />
+      <Route path="/superadmin/scorecards"          element={<ProtectedRoute><ScorecardsPage /></ProtectedRoute>} />
+      <Route path="/superadmin/analytics"           element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+      <Route path="/superadmin/map"                 element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
+      <Route path="/superadmin/users"               element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+      <Route path="/superadmin/injection"           element={<ProtectedRoute><InjectionPage /></ProtectedRoute>} />
+      <Route path="/superadmin/ai-config"           element={<ProtectedRoute><AIConfigPage /></ProtectedRoute>} />
+      <Route path="/superadmin/integrations"        element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
+      <Route path="/superadmin/agent-stats"         element={<ProtectedRoute><AgentStatsPage /></ProtectedRoute>} />
+      <Route path="/superadmin/reports"             element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+      <Route path="/superadmin/import-leads"        element={<ProtectedRoute><ImportLeadsPage /></ProtectedRoute>} />
+      <Route path="/superadmin/leads"               element={<ProtectedRoute><LeadsPage /></ProtectedRoute>} />
       {/* ─────────────────────────────────────────────────── */}
       <Route path="/create-contact" element={<ProtectedRoute><CreateContactPage /></ProtectedRoute>} />
 
-      {/* ==================== MODULES KHALED (Admin) — avec Layout sidebar ==================== */}
+      {/* ==================== MODULES KHALED — avec Layout sidebar ==================== */}
       <Route element={<ProtectedRoute><Layout><Outlet /></Layout></ProtectedRoute>}>
-        <Route path="/admin/salary" element={<SalaryPage />} />
-        <Route path="/admin/ai-scoring" element={<AiScoringPage />} />
-        <Route path="/admin/analytics-advanced" element={<AnalyticsKhaledPage />} />
-        <Route path="/admin/alerts-manage" element={<AlertsManagePage />} />
-        <Route path="/admin/leads-khaled" element={<LeadsKhaledPage />} />
+        {/* Admin */}
+        <Route path="/admin/salary"                element={<SalaryPage />} />
+        <Route path="/admin/ai-scoring"            element={<AiScoringPage />} />
+        <Route path="/admin/analytics-advanced"    element={<AnalyticsKhaledPage />} />
+        <Route path="/admin/alerts-manage"         element={<AlertsManagePage />} />
+        <Route path="/admin/leads-khaled"          element={<LeadsKhaledPage />} />
+        {/* SuperAdmin mirrors */}
+        <Route path="/superadmin/salary"           element={<SalaryPage />} />
+        <Route path="/superadmin/ai-scoring"       element={<AiScoringPage />} />
+        <Route path="/superadmin/analytics-advanced" element={<AnalyticsKhaledPage />} />
+        <Route path="/superadmin/alerts-manage"    element={<AlertsManagePage />} />
+        <Route path="/superadmin/leads-khaled"     element={<LeadsKhaledPage />} />
       </Route>
 
       {/* ==================== SERVICE QUALITÉ ==================== */}
@@ -198,10 +223,12 @@ function AppRoutes() {
 
       {/* ==================== SERVICE TECHNIQUE ==================== */}
       <Route path="/technique" element={<Layout><Outlet /></Layout>}>
-        <Route index element={<ListeAgents />} />
+        <Route index element={<TechniqueDashboard />} />
+        <Route path="dashboard" element={<TechniqueDashboard />} />
         <Route path="agents" element={<ListeAgents />} />
         <Route path="fichiers" element={<FichierContacts />} />
         <Route path="pointage" element={<PointageTech />} />
+        <Route path="monpointage" element={<MonPointageTech />} />
         <Route path="acces" element={<GererAcces />} />
         <Route path="calendrier" element={<CompteCalendrier />} />
         <Route path="evaluation" element={<EvaluationTech />} />
@@ -217,7 +244,7 @@ function AppRoutes() {
         user.role === 'confclient' ? <Navigate to="/confirmation-client/dashboard" /> :
         user.role === 'qualite' ? <Navigate to="/qualite/dashboard" /> :
         user.role === 'commercial' ? <Navigate to="/commercial/dashboard" /> :
-        user.role === 'tech' ? <Navigate to="/technique/agents" /> :
+        (user.role === 'tech' || user.role === 'technique') ? <Navigate to="/technique/dashboard" /> :
         user.role === 'agent' ? <Navigate to="/agent/dashboard" /> :
         <Navigate to="/login" />
       } />

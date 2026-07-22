@@ -215,7 +215,7 @@ export default function AgendaCalendarPage({ title, icon, fetchEndpoint, updateE
         </div>
 
         {selectedRdv && (
-          <div className="w-2/5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden sticky top-4 self-start max-h-[calc(100vh-8rem)]">
+          <div className="w-2/5 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-y-auto sticky top-4 self-start max-h-[calc(100vh-8rem)]">
             <FicheContactPanel
               rdv={selectedRdv}
               agendaType={agendaType}

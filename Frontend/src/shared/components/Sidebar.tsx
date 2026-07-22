@@ -10,6 +10,7 @@ import {
   Upload,
   Shield,
   Handshake,
+  FileText,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -30,7 +31,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Users, label: 'Liste contacts', path: '/agent/contacts' },
     { icon: History, label: 'Historique', path: '/agent/history' },
     { icon: TrendingUp, label: 'Performance', path: '/agent/performance' },
-    { icon: Calendar, label: 'Agenda', path: '/agent/agenda' }
+    { icon: Calendar, label: 'Agenda', path: '/agent/agenda' },
+    { icon: FileText, label: 'Créer une fiche contact', path: '/create-contact' }
   ];
 
   const adminMenuItems = [

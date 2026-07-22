@@ -7,10 +7,33 @@ export interface Contact {
   nom: string;
   prenom: string;
   telephone: string;
-  email: string;
-  adresse: string;
+  numGSM?: string;
+  email?: string;
+  adresse?: string;
+  codePostal?: string;
+  ville?: string;
   source: string;
   statut: string;
+  statutAgent?: string;
+  commentaire?: string;
+  projet?: string;
+  typeRendezVous?: string;
+  modeChauffage?: string;
+  ageChaudiere?: number;
+  surface?: number;
+  etatToiture?: string;
+  etatIsolation?: string;
+  etudePV?: boolean;
+  equipePV?: boolean;
+  equipePAC?: boolean;
+  situationPro?: string;
+  revenusMensuels?: number;
+  nombrePersonnes?: number;
+  proprietaireDepuis?: string;
+  nombreNRP?: number;
+  scoreIA?: number;
+  creneauOptimalIA?: string;
+  dateDernierAppel?: string;
   agentId?: number;
   agentNom?: string;
   dateRappelPlanifie?: string;
@@ -93,5 +116,43 @@ export const agentService = {
   getAllContacts: async (): Promise<Contact[]> => {
     const response = await api.get('/contact');
     return response.data;
-  }
+  },
+
+  // Dialer : contacts ordonnés + progression du jour
+  getDialerContacts: async (): Promise<{ contacts: Contact[]; total: number; calledToday: number }> => {
+    const response = await api.get('/agent/me/dialer/contacts');
+    return response.data;
+  },
+
+  // ─── Attendance / Pointage ──────────────────────────────────────────────
+
+  getAttendanceStatus: async (): Promise<{
+    status: 'offline' | 'active' | 'break';
+    clockIn?: string;
+    breakType?: string;
+    startTime?: string;
+  }> => {
+    const response = await api.get('/attendance/status');
+    return response.data;
+  },
+
+  clockIn: async (): Promise<{ success: boolean; message?: string }> => {
+    const response = await api.post('/attendance/clock-in');
+    return response.data;
+  },
+
+  clockOut: async (): Promise<{ success: boolean; message?: string }> => {
+    const response = await api.post('/attendance/clock-out');
+    return response.data;
+  },
+
+  startBreak: async (type: string): Promise<{ success: boolean; message?: string }> => {
+    const response = await api.post('/attendance/break/start', { type });
+    return response.data;
+  },
+
+  endBreak: async (): Promise<{ success: boolean; message?: string }> => {
+    const response = await api.post('/attendance/break/end');
+    return response.data;
+  },
 };

@@ -140,8 +140,8 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
-      {/* Header */}
+    <div className="flex flex-col bg-white dark:bg-gray-800">
+      {/* Header — sticky par rapport au conteneur scrollable parent */}
       <div className="flex items-start justify-between p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 sticky top-0 z-10">
         <div className="flex-1 min-w-0">
           <p className="font-bold text-gray-900 dark:text-white text-lg truncate">

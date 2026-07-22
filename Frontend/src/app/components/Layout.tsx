@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
 import Chat from './Chat';
+import FloatingDialer from './FloatingDialer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,6 +22,8 @@ export function Layout({ children }: LayoutProps) {
       </div>
       {/* Chat temps réel — disponible sur toutes les pages */}
       <Chat />
+      {/* Floating dialer — appels externes (agents uniquement) */}
+      <FloatingDialer />
     </div>
   );
 }

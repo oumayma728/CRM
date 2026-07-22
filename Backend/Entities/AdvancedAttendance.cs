@@ -36,8 +36,15 @@ public class AttendanceBreak
 
     public long AttendanceId { get; set; }
 
+    /// <summary>inter_appel | cafe | dejeuner | priere | technique | personnelle</summary>
+    [MaxLength(50)]
+    public string Type { get; set; } = string.Empty;
+
     public DateTime StartTime { get; set; }
     public DateTime? EndTime { get; set; }
+
+    /// <summary>Durée calculée en minutes à la fermeture de la pause</summary>
+    public int DurationMinutes { get; set; }
 
     // Navigation
     [ForeignKey(nameof(AttendanceId))]

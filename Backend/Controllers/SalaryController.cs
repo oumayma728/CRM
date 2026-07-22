@@ -13,7 +13,12 @@ namespace Backend.Controllers;
 public class SalaryController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
-    public SalaryController(ApplicationDbContext context) => _context = context;
+    private readonly IConfiguration _config;
+    public SalaryController(ApplicationDbContext context, IConfiguration config)
+    {
+        _context = context;
+        _config = config;
+    }
 
     // ── Liste des salaires ────────────────────────────────────────────────────
     [HttpGet]
@@ -80,11 +85,22 @@ public class SalaryController : ControllerBase
 
         float Base(string role) => rules.FirstOrDefault(r => r.RuleType == "base_salary" && r.Role == role)?.Amount
                                 ?? rules.FirstOrDefault(r => r.RuleType == "base_salary")?.Amount ?? 1500;
-        float RdvBonus() => rules.FirstOrDefault(r => r.RuleType == "rdv_bonus")?.Amount ?? 50;
-        float PoseBonus() => rules.FirstOrDefault(r => r.RuleType == "pose_bonus")?.Amount ?? 150;
+        float RdvBonus()     => rules.FirstOrDefault(r => r.RuleType == "rdv_bonus")?.Amount ?? 50;
+        float PoseBonus()    => rules.FirstOrDefault(r => r.RuleType == "pose_bonus")?.Amount ?? 150;
         float QualityBonus() => rules.FirstOrDefault(r => r.RuleType == "quality_bonus")?.Amount ?? 200;
         float InstallBonus() => rules.FirstOrDefault(r => r.RuleType == "installation_bonus")?.Amount ?? 300;
         float RefusPenalty() => rules.FirstOrDefault(r => r.RuleType == "refus_penalty")?.Amount ?? 30;
+        float LatePenalty()  => rules.FirstOrDefault(r => r.RuleType == "late_penalty")?.Amount
+                             ?? _config.GetValue<float>("WorkSchedule:LatePenaltyPerRetard", 30f);
+
+        // Work-schedule params for retard detection
+        int wsHour      = _config.GetValue<int>("WorkSchedule:StartHour", 8);
+        int wsMinute    = _config.GetValue<int>("WorkSchedule:StartMinute", 0);
+        int wsTolerance = _config.GetValue<int>("WorkSchedule:LateToleranceMinutes", 10);
+
+        // Month date range (UTC)
+        var monthStartUtc = DateTime.SpecifyKind(new DateTime(year, monthNumber, 1), DateTimeKind.Utc);
+        var monthEndUtc   = DateTime.SpecifyKind(monthStartUtc.AddMonths(1), DateTimeKind.Utc);
 
         var result = new List<SalaryCalculationDto>();
         foreach (var agent in agents)
@@ -92,20 +108,34 @@ public class SalaryController : ControllerBase
             var rdvs = await _context.RendezVous.AsNoTracking()
                 .Where(r => r.AgentId == agent.Id && r.DateRendezVous.Year == year && r.DateRendezVous.Month == monthNumber)
                 .ToListAsync();
-            int rdvCount = rdvs.Count;
-            int poseCount = rdvs.Count(r => r.Statut == StatutRendezVous.SIGNE);
+            int rdvCount   = rdvs.Count;
+            int poseCount  = rdvs.Count(r => r.Statut == StatutRendezVous.SIGNE);
             int refusCount = rdvs.Count(r => r.Statut == StatutRendezVous.ANNULE || r.Statut == StatutRendezVous.HORS_CIBLE);
 
             var evals = await _context.ManualEvaluations.AsNoTracking().Where(e => e.AgentId == agent.Id).ToListAsync();
             float qualityRate = evals.Count > 0 ? evals.Average(e => e.GlobalScore) : 0;
 
-            float baseSalary = Base("agent");
-            float rdvBonus = rdvCount * RdvBonus();
-            float poseBonus = poseCount * PoseBonus();
-            float qualityBonus = qualityRate >= 70 ? QualityBonus() : qualityRate >= 50 ? QualityBonus() / 2 : 0;
+            // ── Retard count from attendance ──────────────────────────────────
+            var attendances = await _context.AdvancedAttendances.AsNoTracking()
+                .Where(a => a.UserId == agent.Id && a.Date >= monthStartUtc && a.Date < monthEndUtc)
+                .ToListAsync();
+
+            int retardCount = attendances.Count(a =>
+            {
+                var localTime = a.ClockIn.ToLocalTime();
+                var workStart = localTime.Date.AddHours(wsHour).AddMinutes(wsMinute + wsTolerance);
+                return localTime > workStart;
+            });
+            float retardPenalty = retardCount * LatePenalty();
+
+            // ── Salary calculation ────────────────────────────────────────────
+            float baseSalary       = Base("agent");
+            float rdvBonus         = rdvCount * RdvBonus();
+            float poseBonus        = poseCount * PoseBonus();
+            float qualityBonus     = qualityRate >= 70 ? QualityBonus() : qualityRate >= 50 ? QualityBonus() / 2 : 0;
             float installationBonus = poseCount > 0 ? InstallBonus() * poseCount / 10 : 0;
-            float penalties = refusCount * RefusPenalty();
-            float totalSalary = baseSalary + rdvBonus + poseBonus + qualityBonus + installationBonus - penalties;
+            float penalties        = refusCount * RefusPenalty() + retardPenalty;
+            float totalSalary      = baseSalary + rdvBonus + poseBonus + qualityBonus + installationBonus - penalties;
 
             var existing = await _context.SalairesAgents.FirstOrDefaultAsync(s => s.AgentId == agent.Id && s.Month == month);
             if (existing != null)
@@ -131,7 +161,8 @@ public class SalaryController : ControllerBase
                 Role = agent.Role, Month = month, BaseSalary = baseSalary, RdvCount = rdvCount,
                 PoseCount = poseCount, RefusCount = refusCount, QualityRate = qualityRate,
                 RdvBonus = rdvBonus, PoseBonus = poseBonus, QualityBonus = qualityBonus,
-                InstallationBonus = installationBonus, Penalties = penalties, TotalSalary = totalSalary
+                InstallationBonus = installationBonus, Penalties = penalties, TotalSalary = totalSalary,
+                RetardCount = retardCount, RetardPenalty = retardPenalty
             });
         }
         await _context.SaveChangesAsync();
