@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router';
 import {
   Star, Save, RefreshCw, Search, Trash2, CheckCircle2, X, AlertCircle, ClipboardCheck
 } from 'lucide-react';
@@ -33,6 +34,9 @@ const CRITERIA = [
 ];
 
 export default function ManualEvaluationPage() {
+  const [searchParams] = useSearchParams();
+  const preselectedAgentId = Number(searchParams.get('agentId') ?? 0);
+
   const [agents, setAgents] = useState<Agent[]>([]);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +46,7 @@ export default function ManualEvaluationPage() {
   const [activeTab, setActiveTab] = useState<'form' | 'history'>('form');
 
   const [form, setForm] = useState({
-    agentId: 0,
+    agentId: preselectedAgentId,
     callRef: '',
     scores: Object.fromEntries(CRITERIA.map(c => [c.key, 0])),
     decision: '',
@@ -54,6 +58,17 @@ export default function ManualEvaluationPage() {
   );
 
   useEffect(() => { fetchData(); }, []);
+
+  // Pré-sélectionner l'agent une fois la liste chargée
+  useEffect(() => {
+    if (preselectedAgentId && agents.length > 0) {
+      const agent = agents.find(a => a.id === preselectedAgentId);
+      if (agent) {
+        setForm(f => ({ ...f, agentId: preselectedAgentId }));
+        setSearchAgent(`${agent.prenom} ${agent.nom}`);
+      }
+    }
+  }, [preselectedAgentId, agents]);
 
   const fetchData = async () => {
     setLoading(true);

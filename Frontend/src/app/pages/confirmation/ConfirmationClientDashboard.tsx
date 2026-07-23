@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Calendar, Building, Phone, Users, CheckCircle, Briefcase, Banknote } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Calendar, Building, Phone, Users, CheckCircle, Briefcase, Banknote, CheckCircle2, XCircle } from 'lucide-react';
 
 const API_URL = ((import.meta as any).env?.VITE_API_URL || 'http://localhost:5241') + '/api';
 
@@ -40,8 +40,14 @@ export default function ConfirmationClientDashboard() {
 
   const [myAgendas, setMyAgendas] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>('CLIENT2');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const token = () => localStorage.getItem('token');
+
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
 
   useEffect(() => {
     fetchMyAgendas();
@@ -97,7 +103,7 @@ export default function ConfirmationClientDashboard() {
   };
 
   const assignerCommercial = async (rdvId: number) => {
-    if (!selectedCommercial) { alert('Veuillez sélectionner un commercial'); return; }
+    if (!selectedCommercial) { showToast('Veuillez sélectionner un commercial', 'error'); return; }
     try {
       const t = token();
       await fetch(`${API_URL}/confirmation2/rdv/${rdvId}/assigner`, {
@@ -116,10 +122,10 @@ export default function ConfirmationClientDashboard() {
       setSelectedCommercial('');
       setCommentaireBanque('');
       fetchAgenda();
-      alert('Rendez-vous assigné avec succès !');
+      showToast('Rendez-vous assigné avec succès !');
     } catch (error) {
       console.error('Erreur assignerCommercial:', error);
-      alert("Erreur lors de l'assignation");
+      showToast("Erreur lors de l'assignation", 'error');
     }
   };
 
@@ -159,6 +165,20 @@ export default function ConfirmationClientDashboard() {
 
   return (
     <div className="space-y-6 pb-20">
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-xl text-white text-sm font-medium transition-all duration-300 ${
+          toast.type === 'success'
+            ? 'bg-emerald-500'
+            : 'bg-red-500'
+        }`}>
+          {toast.type === 'success'
+            ? <CheckCircle2 size={18} className="shrink-0" />
+            : <XCircle size={18} className="shrink-0" />}
+          {toast.message}
+        </div>
+      )}
+
       {/* En-tête */}
       <div>
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Service Confirmation Client</h1>
