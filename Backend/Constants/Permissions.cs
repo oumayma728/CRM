@@ -73,6 +73,8 @@ namespace Backend.Constants
             public const string ViewGlobal = "Statistics.ViewGlobal";
             public const string ViewPersonal = "Statistics.ViewPersonal";
             public const string ViewTeam = "Statistics.ViewTeam";
+            public const string Compare = "Statistics.Compare";
+            public const string Export = "Statistics.Export";
         }
 
         // ====================== CONTACTS ======================
@@ -82,7 +84,11 @@ namespace Backend.Constants
             public const string Create = "Contacts.Create";
             public const string Qualify = "Contacts.Qualify";
             public const string Update = "Contacts.Update";
+            public const string Delete = "Contacts.Delete";
             public const string ViewHistory = "Contacts.ViewHistory";
+            public const string Import = "Contacts.Import";
+            public const string Export = "Contacts.Export";
+            public const string Assign = "Contacts.Assign";
         }
 
         // ========== COUNTRY PERMISSIONS ==========
@@ -135,6 +141,8 @@ namespace Backend.Constants
         public static class Dashboard
         {
             public const string View = "Dashboard.View";
+            public const string ViewLive = "Dashboard.ViewLive";
+            public const string ViewQuality = "Dashboard.ViewQuality";
             public const string ViewAnalytics = "Dashboard.ViewAnalytics";
             public const string ExportStats = "Dashboard.ExportStats";
             public const string Configure = "Dashboard.Configure";
@@ -200,20 +208,23 @@ namespace Backend.Constants
                 Files.View, Files.Upload, Files.Inject, Files.Delete, Files.Rename,
                 Campaigns.View, Campaigns.Create, Campaigns.Edit, Campaigns.Delete,
                 Suppliers.View, Suppliers.Create, Countries.View, LeadTypes.View,
-                Users.View, Users.Create, Users.Edit
+                Users.View, Users.Create, Users.Edit,
+                Dashboard.ViewLive, Dashboard.ViewQuality,
+                Contacts.Delete, Contacts.Import, Contacts.Export, Contacts.Assign,
+                Statistics.Compare, Statistics.Export
             },
             ["AGENT"] = new[] {
                 AgentDashboard, AgentAppel, AgentContacts, AgentHistorique, AgentPerformance, AgentAgenda,
                 Agents.View
             },
             ["CONF1"] = new[] {
-                Confirmation1View, Confirmation1Edit
+                Confirmation1View, Confirmation1Edit, Contacts.View, Contacts.Update, Contacts.ViewHistory
             },
             ["CONF2"] = new[] {
-                Confirmation2View, Confirmation2Edit
+                Confirmation2View, Confirmation2Edit, Contacts.View, Contacts.Update, Contacts.ViewHistory
             },
             ["CONFCLIENT"] = new[] {
-                ConfirmationClientView, ConfirmationClientEdit
+                ConfirmationClientView, ConfirmationClientEdit, Contacts.View, Contacts.ViewHistory
             },
             ["SuperAdmin"] = new[] {
                 AdminDashboard, AdminUsersView, AdminUsersCreate, AdminUsersEdit, AdminUsersDelete,
@@ -221,7 +232,10 @@ namespace Backend.Constants
                 Files.View, Files.Upload, Files.Inject, Files.Delete, Files.Rename,
                 Campaigns.View, Campaigns.Create, Campaigns.Edit, Campaigns.Delete,
                 Suppliers.View, Suppliers.Create, Countries.View, LeadTypes.View,
-                Users.View, Users.Create, Users.Edit, Roles.AssignPermissions, Users.AssignPermissions
+                Users.View, Users.Create, Users.Edit, Roles.AssignPermissions, Users.AssignPermissions,
+                Dashboard.ViewLive, Dashboard.ViewQuality,
+                Contacts.Delete, Contacts.Import, Contacts.Export, Contacts.Assign,
+                Statistics.Compare, Statistics.Export
             }
         };
     }
