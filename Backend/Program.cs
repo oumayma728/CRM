@@ -21,6 +21,7 @@ using Backend.Services.UserService;
 using Backend.Services.Email;
 using Backend.Services.Clients;
 using Backend.Services.Attendance;
+using Backend.Services.Message;
 using Backend.Filters;
 using Backend.Hubs;
 using Microsoft.AspNetCore.Http.Features;
@@ -85,6 +86,9 @@ builder.Services.AddScoped<IClientService,                   ClientService>();
 builder.Services.AddScoped<PasswordHasher>();
 builder.Services.AddScoped<JwtTokenGenerator>();
 builder.Services.AddHostedService<SourceFileImportWorker>();
+
+// ─── MESSAGES ────────────────────────────────────────────────────────────
+builder.Services.AddScoped<IMessageService, MessageService>();
 
 // ─── ATTENDANCE / POINTAGE ───────────────────────────────────────────────
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();

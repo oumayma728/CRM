@@ -49,6 +49,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<Client> Clients { get; set; }
     public DbSet<ContactNote> ContactNotes { get; set; }
 
+    // ─── MESSAGES (Internal CRM Messaging) ─────────────────────────────────
+    public DbSet<Backend.Entities.Message> Messages => Set<Backend.Entities.Message>();
+
     // ─── KHALED'S DbSets (Qualité, IA, Salaires, Alertes, Leads) ─────────────
     public DbSet<ManualEvaluation> ManualEvaluations => Set<ManualEvaluation>();
     public DbSet<SalaryRule> SalaryRules => Set<SalaryRule>();
@@ -225,6 +228,21 @@ public class ApplicationDbContext : DbContext
         {
             entity.ToTable("contacts");
             entity.HasKey(e => e.Id);
+        });
+
+        // ─── MESSAGES ─────────────────────────────────────────────────────────
+        modelBuilder.Entity<Backend.Entities.Message>(entity =>
+        {
+            entity.ToTable("messages");
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Sender)
+                .WithMany()
+                .HasForeignKey(e => e.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Receiver)
+                .WithMany()
+                .HasForeignKey(e => e.ReceiverId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // ─── KHALED's ENTITIES ────────────────────────────────────────────────
