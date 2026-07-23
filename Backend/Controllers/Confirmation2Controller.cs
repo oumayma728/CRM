@@ -264,13 +264,13 @@ public class Confirmation2Controller : ControllerBase
                 dateDebut = aujourd.AddDays(-7);
                 break;
             case "mois":
-                dateDebut = new DateTime(aujourd.Year, aujourd.Month, 1);
+                dateDebut = DateTime.SpecifyKind(new DateTime(aujourd.Year, aujourd.Month, 1), DateTimeKind.Utc);
                 break;
             case "trimestre":
                 dateDebut = aujourd.AddMonths(-3);
                 break;
             default:
-                dateDebut = new DateTime(aujourd.Year, aujourd.Month, 1);
+                dateDebut = DateTime.SpecifyKind(new DateTime(aujourd.Year, aujourd.Month, 1), DateTimeKind.Utc);
                 break;
         }
 

@@ -156,7 +156,7 @@ export default function QualiteDashboard() {
                   </td>
                   <td className="px-4 py-3">
                     <Link
-                      to="/qualite/evaluation-manuelle"
+                      to={`/qualite/evaluation-manuelle?agentId=${agent.id}`}
                       className="text-primary hover:underline text-xs font-medium"
                     >
                       Évaluer
