@@ -38,7 +38,8 @@ import {
   Brain,
   Bell,
   Euro,
-  Activity
+  Activity,
+  Sliders
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -103,13 +104,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Users,           label: 'Utilisateurs',             path: '/admin/users' },
     { icon: Database,        label: 'Gestion Fichiers',         path: '/admin/injection' },
     { icon: Settings,        label: 'Configuration IA',         path: '/admin/ai-config' },
-    { icon: Plug,            label: 'Intégrations',             path: '/admin/integrations' },
-    { icon: FileText,        label: 'Stats Agents',             path: '/admin/agent-stats' },
-    { icon: Download,        label: 'Rapports',                 path: '/admin/reports' },
-    { icon: Download,        label: 'Export',                   path: '/admin/export' },
-    { icon: TrendingUp,      label: 'Performance',              path: '/admin/performance' },
-    { icon: BarChart3,       label: 'Comparaison Qualité',      path: '/admin/quality-comparison' },
-    { icon: Clock,           label: 'Suivi Prospects',          path: '/admin/followups' },
+    { icon: Sliders,         label: 'Paramètres',               path: '/admin/settings' },
     { icon: Upload,          label: 'Import Leads',             path: '/admin/import-leads' },
     { icon: Upload,          label: 'Fichier à charger',        path: '/admin/leads' },
     { icon: Banknote,        label: 'Salaires',                 path: '/admin/salary' },
@@ -133,6 +128,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: MessageSquare,   label: 'Messages',                 path: '/superadmin/messages' },
     { icon: Database,        label: 'Gestion Fichiers',         path: '/superadmin/injection' },
     { icon: Settings,        label: 'Configuration IA',         path: '/superadmin/ai-config' },
+    { icon: Sliders,         label: 'Paramètres',               path: '/admin/settings' },
     { icon: Plug,            label: 'Intégrations',             path: '/superadmin/integrations' },
     { icon: FileText,        label: 'Stats Agents',             path: '/superadmin/agent-stats' },
     { icon: Download,        label: 'Rapports',                 path: '/superadmin/reports' },
