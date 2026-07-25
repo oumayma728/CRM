@@ -137,6 +137,64 @@ public class PerformanceController : ControllerBase
         catch (Exception ex) { return Problem(ex.Message); }
     }
 
+    [HttpGet("agent/{agentId}")]
+    public async Task<IActionResult> GetAgentPerformance(long agentId)
+    {
+        var now = DateTime.UtcNow;
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var prevMonthStart = monthStart.AddMonths(-1);
+
+        var calls = await _context.Appels.AsNoTracking()
+            .Where(a => a.AgentId == agentId)
+            .ToListAsync();
+
+        var rdvs = await _context.RendezVous.AsNoTracking()
+            .Where(r => r.AgentId == agentId)
+            .ToListAsync();
+
+        var agent = await _context.Utilisateurs.AsNoTracking()
+            .Where(u => u.Id == agentId)
+            .Select(u => $"{u.Prenom} {u.Nom}")
+            .FirstOrDefaultAsync() ?? $"Agent #{agentId}";
+
+        var currentCalls = calls.Where(a => a.DateHeure >= monthStart).ToList();
+        var prevCalls = calls.Where(a => a.DateHeure >= prevMonthStart && a.DateHeure < monthStart).ToList();
+        var currentRdvs = rdvs.Where(r => r.DateRendezVous >= monthStart).ToList();
+        var prevRdvs = rdvs.Where(r => r.DateRendezVous >= prevMonthStart && r.DateRendezVous < monthStart).ToList();
+
+        var dailyPerf = Enumerable.Range(0, Math.Min(DateTime.DaysInMonth(now.Year, now.Month), now.Day))
+            .Select(d => rdvs.Count(r => r.DateRendezVous.Date == monthStart.AddDays(d).Date))
+            .ToArray();
+
+        return Ok(new
+        {
+            agent_id = agentId,
+            agent_name = agent,
+            current_month = new
+            {
+                calls = currentCalls.Count,
+                appointments = currentRdvs.Count,
+                conversion_rate = currentCalls.Count > 0 ? Math.Round((double)currentRdvs.Count / currentCalls.Count * 100, 1) : 0,
+                avg_call_duration = currentCalls.Count > 0 ? Math.Round(currentCalls.Average(a => (double)a.DureeSecondes), 0) : 0,
+                quality_score = Math.Round(currentCalls.Count > 0
+                    ? currentCalls.Average(a => a.DureeSecondes > 0 ? Math.Min(a.DureeSecondes / 180.0 * 100, 100) : 0)
+                    : 0, 1),
+                attendance_rate = 100,
+                daily_performance = dailyPerf
+            },
+            previous_month = new
+            {
+                calls = prevCalls.Count,
+                appointments = prevRdvs.Count,
+                conversion_rate = prevCalls.Count > 0 ? Math.Round((double)prevRdvs.Count / prevCalls.Count * 100, 1) : 0,
+                avg_call_duration = prevCalls.Count > 0 ? Math.Round(prevCalls.Average(a => (double)a.DureeSecondes), 0) : 0,
+                quality_score = 0,
+                attendance_rate = 0,
+                daily_performance = Array.Empty<int>()
+            }
+        });
+    }
+
     [HttpGet("agents")]
     public async Task<IActionResult> GetAgents([FromQuery] string? month)
     {

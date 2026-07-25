@@ -44,12 +44,21 @@ import AgendaRefusEquipe from './pages/qualite/AgendaRefusEquipe';
 import StatsAppelsPage from './pages/qualite/StatsAppelsPage';
 import ManualEvaluationPage from './pages/qualite/ManualEvaluationPage';
 import QualityAnalyticsPage from './pages/qualite/QualityAnalyticsPage';
+import QualityPerformancePage from './pages/qualite/QualityPerformancePage';
 // ── MODULES KHALED (Admin) ────────────────────────────────────
 import SalaryPage from './pages/admin/SalaryPage';
 import AiScoringPage from './pages/admin/AiScoringPage';
 import AnalyticsKhaledPage from './pages/admin/AnalyticsKhaledPage';
 import AlertsManagePage from './pages/admin/AlertsManagePage';
 import LeadsKhaledPage from './pages/admin/LeadsKhaledPage';
+// ── MODULES KHALED (Integration) ─────────────────────────────
+import AdminMessagesPage from './pages/admin/MessagesPage';
+import ExportPage from './pages/admin/ExportPage';
+import AdminPerformancePage from './pages/admin/PerformancePage';
+import QualityComparisonPage from './pages/admin/QualityComparisonPage';
+import FollowupsPage from './pages/admin/FollowupsPage';
+import RealTimePage from './pages/admin/RealTimePage';
+import SettingsPage from './pages/admin/SettingsPage';
 // ── COMMERCIAL ───────────────────────────────────────────────
 import CommercialDashboard from './pages/commercial/CommercialDashboard';
 import CommercialAgenda from './pages/commercial/CommercialAgenda';
@@ -198,12 +207,27 @@ function AppRoutes() {
         <Route path="/admin/analytics-advanced"    element={<AnalyticsKhaledPage />} />
         <Route path="/admin/alerts-manage"         element={<AlertsManagePage />} />
         <Route path="/admin/leads-khaled"          element={<LeadsKhaledPage />} />
+        {/* Khaled Integration modules */}
+        <Route path="/admin/messages"             element={<AdminMessagesPage />} />
+        <Route path="/admin/export"               element={<ExportPage />} />
+        <Route path="/admin/performance"          element={<AdminPerformancePage />} />
+        <Route path="/admin/quality-comparison"   element={<QualityComparisonPage />} />
+        <Route path="/admin/followups"            element={<FollowupsPage />} />
+        <Route path="/admin/realtime"             element={<RealTimePage />} />
+        <Route path="/admin/settings"             element={<SettingsPage />} />
         {/* SuperAdmin mirrors */}
         <Route path="/superadmin/salary"           element={<SalaryPage />} />
         <Route path="/superadmin/ai-scoring"       element={<AiScoringPage />} />
         <Route path="/superadmin/analytics-advanced" element={<AnalyticsKhaledPage />} />
         <Route path="/superadmin/alerts-manage"    element={<AlertsManagePage />} />
         <Route path="/superadmin/leads-khaled"     element={<LeadsKhaledPage />} />
+        <Route path="/superadmin/messages"        element={<AdminMessagesPage />} />
+        <Route path="/superadmin/export"          element={<ExportPage />} />
+        <Route path="/superadmin/performance"     element={<AdminPerformancePage />} />
+        <Route path="/superadmin/quality-comparison" element={<QualityComparisonPage />} />
+        <Route path="/superadmin/followups"       element={<FollowupsPage />} />
+        <Route path="/superadmin/realtime"        element={<RealTimePage />} />
+        <Route path="/superadmin/settings"        element={<SettingsPage />} />
       </Route>
 
       {/* ==================== SERVICE QUALITÉ ==================== */}
@@ -213,6 +237,7 @@ function AppRoutes() {
         <Route path="stats-appels" element={<StatsAppelsPage />} />
         <Route path="evaluation-manuelle" element={<ManualEvaluationPage />} />
         <Route path="analytics-qualite" element={<QualityAnalyticsPage />} />
+        <Route path="performance" element={<QualityPerformancePage />} />
       </Route>
 
       {/* ==================== COMMERCIAL ==================== */}

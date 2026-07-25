@@ -194,6 +194,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: BarChart3, label: 'Stats Appels', path: '/qualite/stats-appels' },
     { icon: ClipboardCheck, label: 'Éval. Manuelle', path: '/qualite/evaluation-manuelle' },
     { icon: TrendingUp, label: 'Analytique Qualité', path: '/qualite/analytics-qualite' },
+    { icon: TrendingUp, label: 'Performance', path: '/qualite/performance' },
   ];
 
   // ==================== MENU COMMERCIAL ====================
