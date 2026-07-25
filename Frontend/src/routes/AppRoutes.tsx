@@ -8,6 +8,7 @@ import AdminMessagesPage from '../app/pages/admin/MessagesPage';
 import ExportPage from '../app/pages/admin/ExportPage';
 import PerformancePage from '../app/pages/admin/PerformancePage';
 import QualityComparisonPage from '../app/pages/admin/QualityComparisonPage';
+import FollowupsPage from '../app/pages/admin/FollowupsPage';
 import InjectionPage from '../Pages/admin/injectionPage.tsx';
 import PointagePage from '../Pages/admin/pointagePage.tsx';
 import PermissionPage from '../Pages/admin/PermissionPage.tsx';
@@ -31,6 +32,7 @@ export default function AppRoutes() {
         <Route path="/admin/export" element={<ExportPage />} />
         <Route path="/admin/performance" element={<PerformancePage />} />
         <Route path="/admin/quality-comparison" element={<QualityComparisonPage />} />
+        <Route path="/admin/followups" element={<FollowupsPage />} />
       </Route>
 
       <Route

@@ -59,6 +59,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<AiEligibilityLog> AiEligibilityLogs => Set<AiEligibilityLog>();
     public DbSet<AlertRule> AlertRules => Set<AlertRule>();
     public DbSet<AlertHistory> AlertHistories => Set<AlertHistory>();
+    public DbSet<Followup> Followups => Set<Followup>();
     public DbSet<ImportedLead> ImportedLeads => Set<ImportedLead>();
     public DbSet<AdvancedAttendance> AdvancedAttendances => Set<AdvancedAttendance>();
     public DbSet<AttendanceBreak> AttendanceBreaks => Set<AttendanceBreak>();
