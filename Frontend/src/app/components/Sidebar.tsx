@@ -37,7 +37,8 @@ import {
   // Modules Khaled
   Brain,
   Bell,
-  Euro
+  Euro,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -94,6 +95,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   // Identique au superadmin sauf : sans Permissions, routes /admin/...
   const adminMenuItems = [
     { icon: LayoutDashboard, label: 'Dashboard Live',           path: '/admin/dashboard' },
+    { icon: Activity,         label: 'Temps Réel',               path: '/admin/realtime' },
     { icon: ClipboardCheck,  label: 'Scorecards Agents',        path: '/admin/scorecards' },
     { icon: Clock,           label: 'Pointage',                 path: '/admin/pointage' },
     { icon: BarChart3,       label: 'Analytique Appels',        path: '/admin/analytics' },
