@@ -6,6 +6,7 @@ import ProtectedRoute from '../components/ProtectedRoute';
 import DashboardPage from '../Pages/admin/dashboardPage.tsx';
 import AdminMessagesPage from '../app/pages/admin/MessagesPage';
 import ExportPage from '../app/pages/admin/ExportPage';
+import PerformancePage from '../app/pages/admin/PerformancePage';
 import InjectionPage from '../Pages/admin/injectionPage.tsx';
 import PointagePage from '../Pages/admin/pointagePage.tsx';
 import PermissionPage from '../Pages/admin/PermissionPage.tsx';
@@ -27,6 +28,7 @@ export default function AppRoutes() {
         <Route path="/admin/clients" element={<ClientsPage />} />
         <Route path="/admin/messages" element={<AdminMessagesPage />} />
         <Route path="/admin/export" element={<ExportPage />} />
+        <Route path="/admin/performance" element={<PerformancePage />} />
       </Route>
 
       <Route
