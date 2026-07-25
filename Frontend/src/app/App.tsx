@@ -60,6 +60,7 @@ import QualityComparisonPage from './pages/admin/QualityComparisonPage';
 import FollowupsPage from './pages/admin/FollowupsPage';
 import RealTimePage from './pages/admin/RealTimePage';
 import SettingsPage from './pages/admin/SettingsPage';
+import PlanningPage from './pages/admin/PlanningPage';
 // ── COMMERCIAL ───────────────────────────────────────────────
 import CommercialDashboard from './pages/commercial/CommercialDashboard';
 import CommercialAgenda from './pages/commercial/CommercialAgenda';
@@ -215,7 +216,7 @@ function AppRoutes() {
         <Route path="/admin/quality-comparison"   element={<QualityComparisonPage />} />
         <Route path="/admin/followups"            element={<FollowupsPage />} />
         <Route path="/admin/realtime"             element={<RealTimePage />} />
-        <Route path="/admin/settings"             element={<SettingsPage />} />
+        <Route path="/admin/planning"             element={<PlanningPage />} />
         {/* SuperAdmin mirrors */}
         <Route path="/superadmin/salary"           element={<SalaryPage />} />
         <Route path="/superadmin/ai-scoring"       element={<AiScoringPage />} />
@@ -229,6 +230,7 @@ function AppRoutes() {
         <Route path="/superadmin/followups"       element={<FollowupsPage />} />
         <Route path="/superadmin/realtime"        element={<RealTimePage />} />
         <Route path="/superadmin/settings"        element={<SettingsPage />} />
+        <Route path="/superadmin/planning"        element={<PlanningPage />} />
       </Route>
 
       {/* ==================== SERVICE QUALITÉ ==================== */}

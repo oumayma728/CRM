@@ -39,7 +39,8 @@ import {
   Bell,
   Euro,
   Activity,
-  Sliders
+  Sliders,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -105,6 +106,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Database,        label: 'Gestion Fichiers',         path: '/admin/injection' },
     { icon: Settings,        label: 'Configuration IA',         path: '/admin/ai-config' },
     { icon: Sliders,         label: 'Paramètres',               path: '/admin/settings' },
+    { icon: Sparkles,        label: 'Planification',            path: '/admin/planning' },
     { icon: Upload,          label: 'Import Leads',             path: '/admin/import-leads' },
     { icon: Upload,          label: 'Fichier à charger',        path: '/admin/leads' },
     { icon: Banknote,        label: 'Salaires',                 path: '/admin/salary' },
@@ -129,6 +131,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Database,        label: 'Gestion Fichiers',         path: '/superadmin/injection' },
     { icon: Settings,        label: 'Configuration IA',         path: '/superadmin/ai-config' },
     { icon: Sliders,         label: 'Paramètres',               path: '/admin/settings' },
+    { icon: Sparkles,        label: 'Planification',            path: '/superadmin/planning' },
     { icon: Plug,            label: 'Intégrations',             path: '/superadmin/integrations' },
     { icon: FileText,        label: 'Stats Agents',             path: '/superadmin/agent-stats' },
     { icon: Download,        label: 'Rapports',                 path: '/superadmin/reports' },
