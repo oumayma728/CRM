@@ -206,6 +206,39 @@ public class QualityController : ControllerBase
         });
     }
 
+    // ── Évolution mensuelle d'un agent ─────────────────────────────────────────
+    [HttpGet("dashboard/agent-trend/{agentId}")]
+    public async Task<IActionResult> GetAgentTrend(long agentId)
+    {
+        var evals = await _context.ManualEvaluations
+            .AsNoTracking()
+            .Where(e => e.AgentId == agentId)
+            .OrderBy(e => e.EvaluationDate)
+            .ToListAsync();
+
+        if (evals.Count == 0)
+            return Ok(new { agentId, months = Array.Empty<object>() });
+
+        var byMonth = evals
+            .GroupBy(e => new { e.EvaluationDate.Year, e.EvaluationDate.Month })
+            .Select(g => new
+            {
+                month = $"{g.Key.Year}-{g.Key.Month:D2}",
+                year = g.Key.Year,
+                monthNum = g.Key.Month,
+                count = g.Count(),
+                avgScore = Math.Round(g.Average(e => e.GlobalScore), 1),
+                minScore = g.Min(e => e.GlobalScore),
+                maxScore = g.Max(e => e.GlobalScore),
+                decisions = g.GroupBy(e => e.Decision ?? "N/A")
+                             .ToDictionary(d => d.Key, d => d.Count())
+            })
+            .OrderBy(g => g.year).ThenBy(g => g.monthNum)
+            .ToList();
+
+        return Ok(new { agentId, months = byMonth });
+    }
+
     // ── Comparaison des agents ────────────────────────────────────────────────
     [HttpGet("dashboard/comparison")]
     public async Task<IActionResult> GetComparison()
