@@ -107,6 +107,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Settings,        label: 'Configuration IA',         path: '/admin/ai-config' },
     { icon: Sliders,         label: 'Paramètres',               path: '/admin/settings' },
     { icon: Sparkles,        label: 'Planification',            path: '/admin/planning' },
+    { icon: Phone,           label: 'Centre d\'appels',         path: '/admin/call-workspace' },
     { icon: Upload,          label: 'Import Leads',             path: '/admin/import-leads' },
     { icon: Upload,          label: 'Fichier à charger',        path: '/admin/leads' },
     { icon: Banknote,        label: 'Salaires',                 path: '/admin/salary' },
@@ -132,6 +133,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: Settings,        label: 'Configuration IA',         path: '/superadmin/ai-config' },
     { icon: Sliders,         label: 'Paramètres',               path: '/admin/settings' },
     { icon: Sparkles,        label: 'Planification',            path: '/superadmin/planning' },
+    { icon: Phone,           label: 'Centre d\'appels',         path: '/superadmin/call-workspace' },
     { icon: Plug,            label: 'Intégrations',             path: '/superadmin/integrations' },
     { icon: FileText,        label: 'Stats Agents',             path: '/superadmin/agent-stats' },
     { icon: Download,        label: 'Rapports',                 path: '/superadmin/reports' },
@@ -200,6 +202,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: TrendingUp, label: 'Performance', path: '/qualite/performance' },
     { icon: Users, label: 'Détail Agent', path: '/qualite/agent-detail' },
     { icon: Clock, label: 'Supervision Pointage', path: '/qualite/attendance' },
+    { icon: Calendar, label: 'Validation RDV', path: '/qualite/appointments' },
+    { icon: Calendar, label: 'Calendrier Qualité', path: '/qualite/calendar' },
   ];
 
   // ==================== MENU COMMERCIAL ====================

@@ -47,6 +47,8 @@ import QualityAnalyticsPage from './pages/qualite/QualityAnalyticsPage';
 import QualityPerformancePage from './pages/qualite/QualityPerformancePage';
 import AgentDetailPage from './pages/qualite/AgentDetailPage';
 import QualityAttendance from './pages/qualite/QualityAttendance';
+import QualityAppointmentsPage from './pages/qualite/QualityAppointmentsPage';
+import QualityCalendarPage from './pages/qualite/QualityCalendarPage';
 // ── MODULES KHALED (Admin) ────────────────────────────────────
 import SalaryPage from './pages/admin/SalaryPage';
 import AiScoringPage from './pages/admin/AiScoringPage';
@@ -62,6 +64,7 @@ import FollowupsPage from './pages/admin/FollowupsPage';
 import RealTimePage from './pages/admin/RealTimePage';
 import SettingsPage from './pages/admin/SettingsPage';
 import PlanningPage from './pages/admin/PlanningPage';
+import CallWorkspace from './pages/admin/CallWorkspace';
 // ── COMMERCIAL ───────────────────────────────────────────────
 import CommercialDashboard from './pages/commercial/CommercialDashboard';
 import CommercialAgenda from './pages/commercial/CommercialAgenda';
@@ -217,7 +220,9 @@ function AppRoutes() {
         <Route path="/admin/quality-comparison"   element={<QualityComparisonPage />} />
         <Route path="/admin/followups"            element={<FollowupsPage />} />
         <Route path="/admin/realtime"             element={<RealTimePage />} />
+        <Route path="/admin/settings"             element={<SettingsPage />} />
         <Route path="/admin/planning"             element={<PlanningPage />} />
+        <Route path="/admin/call-workspace"       element={<CallWorkspace />} />
         {/* SuperAdmin mirrors */}
         <Route path="/superadmin/salary"           element={<SalaryPage />} />
         <Route path="/superadmin/ai-scoring"       element={<AiScoringPage />} />
@@ -232,6 +237,7 @@ function AppRoutes() {
         <Route path="/superadmin/realtime"        element={<RealTimePage />} />
         <Route path="/superadmin/settings"        element={<SettingsPage />} />
         <Route path="/superadmin/planning"        element={<PlanningPage />} />
+        <Route path="/superadmin/call-workspace"  element={<CallWorkspace />} />
       </Route>
 
       {/* ==================== SERVICE QUALITÉ ==================== */}
@@ -244,6 +250,8 @@ function AppRoutes() {
         <Route path="performance" element={<QualityPerformancePage />} />
         <Route path="agent-detail" element={<AgentDetailPage />} />
         <Route path="attendance" element={<QualityAttendance />} />
+        <Route path="appointments" element={<QualityAppointmentsPage />} />
+        <Route path="calendar" element={<QualityCalendarPage />} />
       </Route>
 
       {/* ==================== COMMERCIAL ==================== */}
