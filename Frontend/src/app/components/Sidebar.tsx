@@ -199,6 +199,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { icon: TrendingUp, label: 'Analytique Qualité', path: '/qualite/analytics-qualite' },
     { icon: TrendingUp, label: 'Performance', path: '/qualite/performance' },
     { icon: Users, label: 'Détail Agent', path: '/qualite/agent-detail' },
+    { icon: Clock, label: 'Supervision Pointage', path: '/qualite/attendance' },
   ];
 
   // ==================== MENU COMMERCIAL ====================

@@ -46,6 +46,7 @@ import ManualEvaluationPage from './pages/qualite/ManualEvaluationPage';
 import QualityAnalyticsPage from './pages/qualite/QualityAnalyticsPage';
 import QualityPerformancePage from './pages/qualite/QualityPerformancePage';
 import AgentDetailPage from './pages/qualite/AgentDetailPage';
+import QualityAttendance from './pages/qualite/QualityAttendance';
 // ── MODULES KHALED (Admin) ────────────────────────────────────
 import SalaryPage from './pages/admin/SalaryPage';
 import AiScoringPage from './pages/admin/AiScoringPage';
@@ -242,6 +243,7 @@ function AppRoutes() {
         <Route path="analytics-qualite" element={<QualityAnalyticsPage />} />
         <Route path="performance" element={<QualityPerformancePage />} />
         <Route path="agent-detail" element={<AgentDetailPage />} />
+        <Route path="attendance" element={<QualityAttendance />} />
       </Route>
 
       {/* ==================== COMMERCIAL ==================== */}
