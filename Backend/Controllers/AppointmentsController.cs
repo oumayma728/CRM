@@ -27,8 +27,8 @@ public class AppointmentsController : ControllerBase
         {
             r.Id,
             r.AgentId,
-            AgentName = r.Agent.NomComplet,
-            ClientName = r.Contact.NomComplet,
+            AgentName = r.Agent.Prenom + " " + r.Agent.Nom,
+            ClientName = r.Contact.Prenom + " " + r.Contact.Nom,
             r.Contact.Telephone,
             r.DateRendezVous,
             r.Statut,

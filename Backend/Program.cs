@@ -22,11 +22,17 @@ using Backend.Services.Email;
 using Backend.Services.Clients;
 using Backend.Services.Attendance;
 using Backend.Services.Message;
+using Backend.Services.Analytics;
+using Backend.Services.Lead;
 using Backend.Filters;
 using Backend.Hubs;
 using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Load .env file if present (must be before config is consumed)
+if (File.Exists(Path.Combine(builder.Environment.ContentRootPath, ".env")))
+    DotNetEnv.Env.Load(Path.Combine(builder.Environment.ContentRootPath, ".env"));
 
 // ============================================================================
 // CONFIGURATION VALIDATION
@@ -92,6 +98,14 @@ builder.Services.AddScoped<IMessageService, MessageService>();
 
 // ─── ATTENDANCE / POINTAGE ───────────────────────────────────────────────
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+
+// ─── ANALYTICS & LEADS (intégrés de feature/khaled) ──────────────────────
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<ILeadService, LeadService>();
+
+// ─── BACKGROUND WORKERS ──────────────────────────────────────────────────
+builder.Services.AddHostedService<Backend.Services.Followup.FollowupBackgroundService>();
+builder.Services.AddHostedService<Backend.Services.InactivityAlertService>();
 
 // ─── SIGNALR (Chat temps réel) ───────────────────────────────────────────
 builder.Services.AddSignalR();
@@ -201,6 +215,8 @@ builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationP
 // BUILD & CONFIGURE PIPELINE
 // ============================================================================
 var app = builder.Build();
+
+app.UseMiddleware<Backend.Middleware.ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

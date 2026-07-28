@@ -19,13 +19,13 @@ public class CallsController : ControllerBase
         var query = _ctx.Set<Backend.Entities.Appel>().AsNoTracking()
             .Include(a => a.Agent).Include(a => a.Contact).AsQueryable();
         if (!string.IsNullOrWhiteSpace(agentName))
-            query = query.Where(a => a.Agent.NomComplet.Contains(agentName));
+            query = query.Where(a => (a.Agent.Prenom + " " + a.Agent.Nom).Contains(agentName));
         var total = await query.CountAsync();
         var calls = await query.OrderByDescending(a => a.DateHeure)
             .Skip(offset).Take(limit)
             .Select(a => new
             {
-                a.Id, AgentName = a.Agent.NomComplet, ClientName = a.Contact.NomComplet,
+                a.Id, AgentName = a.Agent.Prenom + " " + a.Agent.Nom, ClientName = a.Contact.Prenom + " " + a.Contact.Nom,
                 a.DateHeure, a.DureeSecondes, a.Qualification, a.Enregistre
             }).ToListAsync();
         return Ok(new { calls, total, limit, offset });
@@ -38,7 +38,7 @@ public class CallsController : ControllerBase
             .Include(a => a.Agent).Include(a => a.Contact)
             .Select(a => new
             {
-                a.Id, AgentName = a.Agent.NomComplet, ClientName = a.Contact.NomComplet,
+                a.Id, AgentName = a.Agent.Prenom + " " + a.Agent.Nom, ClientName = a.Contact.Prenom + " " + a.Contact.Nom,
                 a.DateHeure, a.DureeSecondes, a.Qualification, a.Enregistre, a.CheminEnregistrement
             }).FirstOrDefaultAsync(a => a.Id == id);
         if (call == null) return NotFound(new { error = "Call not found" });
