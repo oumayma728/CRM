@@ -1,12 +1,58 @@
-﻿# Windows
-Thumbs.db
-*.suo
+﻿# --- Environment & Secrets ---
+.env
+.env.*
+!.env.example
 
-# Backend
-Backend/bin/
-Backend/obj/
+# --- Node ---
+node_modules/
+**/node_modules/
 
-# Frontend
-Frontend/node_modules/
+# --- .NET ---
+bin/
+obj/
+**/bin/
+**/obj/
+
+# --- Frontend Build ---
+dist/
+build/
 Frontend/dist/
-Frontend/.env.local
+Frontend/build/
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln.docstates
+Thumbs.db
+
+# --- OS Files ---
+.DS_Store
+Desktop.ini
+
+# --- Coverage Reports ---
+coverage/
+
+# --- Application Data ---
+rag_db/
+audio/
+
+# --- Logs ---
+*.log
+
+# --- Binaries ---
+ffmpeg.exe
+ffprobe.exe
+
+# --- Database Files ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Test Output ---
+Backend/Backend.Tests/bin/
+Backend/Backend.Tests/obj/
+
+# --- Other Build Artifacts ---
+Backend/src/
