@@ -56,3 +56,6 @@ Backend/Backend.Tests/obj/
 
 # --- Other Build Artifacts ---
 Backend/src/
+
+# --- AI / ML / Docs ---
+.opencode/
