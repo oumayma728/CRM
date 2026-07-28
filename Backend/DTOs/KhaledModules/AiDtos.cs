@@ -70,6 +70,14 @@ public class TranscriptAnalysisRequestDto
     public string? Qualification { get; set; }
 }
 
+public class ScriptAnalysisRequestDto
+{
+    public string Transcript { get; set; } = string.Empty;
+    public int? CallDuration { get; set; }
+    public string? AgentName { get; set; }
+    public string? Qualification { get; set; }
+}
+
 public class DiarizationRequestDto
 {
     public string Transcript { get; set; } = string.Empty;
@@ -190,4 +198,34 @@ public class ScriptAnalysisResultDto
     public string Performance { get; set; } = string.Empty;
     public string? NextSteps { get; set; }
     public string? CustomerIntent { get; set; }
+}
+
+// ── AI Insights DTOs ─────────────────────────────────────────────────────────
+
+public class AiInsightsDto
+{
+    public long AgentId { get; set; }
+    public AppointmentStatsDto Appointments { get; set; } = new();
+    public List<DistributionDto> FinancingDistribution { get; set; } = new();
+    public List<DistributionDto> ProjectDistribution { get; set; } = new();
+    public CallStatsDto CallStats { get; set; } = new();
+    public string? Tip { get; set; }
+}
+
+public class AppointmentStatsDto
+{
+    public int Total { get; set; }
+    public double AvgScore { get; set; }
+}
+
+public class DistributionDto
+{
+    public string? Label { get; set; }
+    public int Count { get; set; }
+}
+
+public class CallStatsDto
+{
+    public int TotalCalls { get; set; }
+    public double AvgCallScore { get; set; }
 }
