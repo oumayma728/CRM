@@ -5,7 +5,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
-import { AlertTriangle, Users, Phone, Calendar, TrendingUp } from 'lucide-react';
+import { AlertTriangle, Users, Phone, Calendar, TrendingUp, Circle, PauseCircle, CircleOff, Loader2 } from 'lucide-react';
 
 interface DashboardData {
   agentsEnLigne: number;
@@ -85,23 +85,29 @@ export default function AdminDashboard() {
   const getStatutBadge = (statut: string) => {
     switch (statut) {
       case 'En appel':
-        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"><Phone size={12} />En appel</span>;
+        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-amber-200"><Phone size={12} className="text-amber-500" />En appel</span>;
       case 'En ligne':
-        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">🟢 En ligne</span>;
+        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"><Circle size={12} className="text-emerald-500" fill="#22c55e" />En ligne</span>;
       case 'Pause':
-        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">⏸ Pause</span>;
+        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 ring-1 ring-blue-200"><PauseCircle size={12} className="text-blue-500" />Pause</span>;
       case 'Hors ligne':
-        return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">⚫ Hors ligne</span>;
+        return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 ring-1 ring-gray-200"><CircleOff size={12} className="text-gray-400" />Hors ligne</span>;
       default:
-        return <span className="px-2 py-1 rounded-full text-xs bg-gray-100">{statut}</span>;
+        return <span className="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-600">{statut}</span>;
     }
   };
 
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="space-y-6 animate-pulse">
+          <div className="h-8 w-64 bg-gray-200 rounded-lg" />
+          <div className="h-4 w-96 bg-gray-200 rounded-lg" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1,2,3,4].map(i => <div key={i} className="h-32 bg-gray-200 rounded-xl" />)}
+          </div>
+          <div className="h-[400px] bg-gray-200 rounded-xl" />
+          <div className="h-64 bg-gray-200 rounded-xl" />
         </div>
       </Layout>
     );
@@ -111,57 +117,57 @@ export default function AdminDashboard() {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Live Opérationnel</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Supervision en temps réel de l'activité du centre d'appels</p>
+        <div className="border-l-4 border-primary pl-6">
+          <h1 className="text-2xl font-bold">Dashboard Live Opérationnel</h1>
+          <p className="text-muted-foreground text-sm mt-1">Supervision en temps réel de l'activité du centre d'appels</p>
         </div>
 
         {/* KPIs Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-card rounded-lg border border-border p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Agents en ligne</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{dashboard?.agentsEnLigne}/{dashboard?.totalAgents}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Agents en ligne</p>
+                <p className="text-3xl font-bold mt-0.5">{dashboard?.agentsEnLigne}<span className="text-lg text-muted-foreground">/{dashboard?.totalAgents}</span></p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center">
+                <Users className="w-5 h-5 text-primary" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-card rounded-lg border border-border p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">En appel</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{dashboard?.enAppel}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">En appel</p>
+                <p className="text-3xl font-bold mt-0.5">{dashboard?.enAppel}</p>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center">
-                <Phone className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <div className="w-11 h-11 bg-amber-50 dark:bg-amber-500/10 rounded-xl flex items-center justify-center">
+                <Phone className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-card rounded-lg border border-border p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Appels du jour</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{dashboard?.appelsDuJour}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Appels du jour</p>
+                <p className="text-3xl font-bold mt-0.5">{dashboard?.appelsDuJour}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <div className="w-11 h-11 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-card rounded-lg border border-border p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Taux conversion</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{dashboard?.tauxConversion}%</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Taux conversion</p>
+                <p className="text-3xl font-bold mt-0.5">{dashboard?.tauxConversion}%</p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              <div className="w-11 h-11 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               </div>
             </div>
           </div>
@@ -169,16 +175,16 @@ export default function AdminDashboard() {
 
         {/* Alertes en cours */}
         {dashboard?.alertes && dashboard.alertes.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-card rounded-lg border border-border p-5">
             <div className="flex items-center gap-2 mb-4">
               <AlertTriangle className="w-5 h-5 text-red-500" />
-              <h2 className="font-semibold text-gray-900 dark:text-white">Alertes en cours</h2>
+              <h2 className="font-semibold">Alertes en cours</h2>
             </div>
             <div className="space-y-2">
               {dashboard.alertes.map((alerte, idx) => (
-                <div key={idx} className={`p-3 rounded-lg ${alerte.type === 'pause' ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
-                  <p className="font-medium text-gray-900 dark:text-white">{alerte.agentNom}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{alerte.message}</p>
+                <div key={idx} className={`p-3 rounded-lg border ${alerte.type === 'pause' ? 'bg-amber-50 dark:bg-amber-500/5 border-amber-200 dark:border-amber-500/20' : 'bg-red-50 dark:bg-red-500/5 border-red-200 dark:border-red-500/20'}`}>
+                  <p className="font-medium text-sm">{alerte.agentNom}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">{alerte.message}</p>
                 </div>
               ))}
             </div>
@@ -186,19 +192,26 @@ export default function AdminDashboard() {
         )}
 
         {/* Graphique Performance horaire */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Performance horaire</h2>
+        <div className="bg-card rounded-lg border border-border p-5">
+          <h3 className="font-semibold mb-4 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-primary" />Performance horaire</h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={dashboard?.performanceHoraire}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="heure" stroke="#6b7280" />
-              <YAxis stroke="#6b7280" />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.5} />
+              <XAxis dataKey="heure" stroke="var(--color-muted-foreground)" tick={{ fontSize: 12 }} />
+              <YAxis stroke="var(--color-muted-foreground)" tick={{ fontSize: 12 }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--color-card)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '8px',
+                  color: 'var(--color-foreground)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                }}
+                labelStyle={{ fontWeight: 600, marginBottom: 4 }}
               />
               <Legend />
-              <Area type="monotone" dataKey="appels" name="Appels" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} />
-              <Area type="monotone" dataKey="conversions" name="Conversions" stroke="#22c55e" fill="#22c55e" fillOpacity={0.1} />
+              <Area type="monotone" dataKey="appels" name="Appels" stroke="#6366f1" fill="#6366f1" fillOpacity={0.1} strokeWidth={2.5} />
+              <Area type="monotone" dataKey="conversions" name="Conversions" stroke="#22c55e" fill="#22c55e" fillOpacity={0.1} strokeWidth={2.5} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
