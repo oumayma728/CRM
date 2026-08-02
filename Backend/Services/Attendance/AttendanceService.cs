@@ -25,6 +25,12 @@ public class AttendanceService : IAttendanceService
     private int WorkEndMinute       => _config.GetValue<int>("WorkSchedule:EndMinute", 0);
     private int LateToleranceMin    => _config.GetValue<int>("WorkSchedule:LateToleranceMinutes", 10);
     private float LatePenaltyAmount => _config.GetValue<float>("WorkSchedule:LatePenaltyPerRetard", 30f);
+    private int OtherRolesEndHour   => _config.GetValue<int>("WorkSchedule:OtherRolesEndHour", 16);
+    private int OtherRolesEndMinute => _config.GetValue<int>("WorkSchedule:OtherRolesEndMinute", 0);
+
+    // Agent roles that get the extended schedule (until 20h) and full break support
+    private static readonly HashSet<string> AgentRoles = new(StringComparer.OrdinalIgnoreCase)
+        { "AGENT", "TECH", "agent", "technique", "ServiceTech" };
 
     /// <summary>Retourne la configuration des horaires de travail.</summary>
     public WorkScheduleDto GetWorkSchedule() => new WorkScheduleDto
@@ -59,22 +65,24 @@ public class AttendanceService : IAttendanceService
 
     // ── Clock-In ─────────────────────────────────────────────────────────────
 
-    public async Task<ClockResultDto> ClockInAsync(long userId)
+    public async Task<ClockResultDto> ClockInAsync(long userId, string? userRole = null)
     {
-        // ── Vérification plage horaire ────────────────────────────────────────
-        var localNow  = DateTime.Now;
-        var dayStart  = localNow.Date.AddHours(WorkStartHour).AddMinutes(WorkStartMinute);
-        var dayEnd    = localNow.Date.AddHours(WorkEndHour).AddMinutes(WorkEndMinute);
+        // ── Vérification plage horaire (agents uniquement) ──────────────────
+        bool isAgentRole = userRole == null || AgentRoles.Contains(userRole);
 
-        if (localNow < dayStart || localNow > dayEnd)
+        if (isAgentRole)
         {
-            var startStr = $"{WorkStartHour:D2}h{WorkStartMinute:D2}";
-            var endStr   = $"{WorkEndHour:D2}h{WorkEndMinute:D2}";
-            return new ClockResultDto
+            var localNow = DateTime.Now;
+            var dayStart = localNow.Date.AddHours(WorkStartHour).AddMinutes(WorkStartMinute);
+            var dayEnd   = localNow.Date.AddHours(WorkEndHour).AddMinutes(WorkEndMinute);
+            if (localNow < dayStart || localNow > dayEnd)
             {
-                Success = false,
-                Message = $"Pointage non autorisé hors horaires de travail ({startStr}–{endStr})."
-            };
+                return new ClockResultDto
+                {
+                    Success = false,
+                    Message = $"Pointage non autorisé hors horaires ({WorkStartHour:D2}h{WorkStartMinute:D2}–{WorkEndHour:D2}h{WorkEndMinute:D2})."
+                };
+            }
         }
 
         var today = DateTime.UtcNow.Date;
@@ -590,4 +598,64 @@ public class AttendanceService : IAttendanceService
             };
         }).ToList();
     }
+    // ── All-roles history (Admin / SuperAdmin) ────────────────────────────────
+
+    public async Task<AllRolesHistoryResultDto> GetAllRolesHistoryAsync(DateTime? date = null, string? role = null)
+    {
+        var targetDate = date.HasValue
+            ? DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc)
+            : DateTime.UtcNow.Date;
+
+        var query = _context.AdvancedAttendances
+            .Include(a => a.User)
+            .Where(a => a.Date == targetDate);
+
+        if (!string.IsNullOrWhiteSpace(role))
+            query = query.Where(a => a.User != null && a.User.Role == role);
+
+        var sessions = await query
+            .OrderByDescending(a => a.ClockIn)
+            .ToListAsync();
+
+        var result = new List<AllRolesSessionDto>();
+        foreach (var s in sessions)
+        {
+            var userName = s.User != null ? $"{s.User.Prenom} {s.User.Nom}" : $"User#{s.UserId}";
+            var userRole = s.User?.Role ?? "INCONNU";
+
+            var (lateMin, isLate, _) = ComputeRetard(s.ClockIn);
+
+            int? durationMin = null;
+            if (s.ClockOut.HasValue)
+                durationMin = (int)(s.ClockOut.Value - s.ClockIn).TotalMinutes;
+
+            result.Add(new AllRolesSessionDto
+            {
+                Id            = s.Id,
+                UserId        = s.UserId,
+                UserName      = userName,
+                UserRole      = userRole,
+                Date          = s.Date,
+                ClockIn       = s.ClockIn.ToLocalTime().ToString("HH:mm"),
+                ClockOut      = s.ClockOut.HasValue ? s.ClockOut.Value.ToLocalTime().ToString("HH:mm") : null,
+                Status        = s.Status,
+                DurationMinutes = durationMin,
+                IsLate        = isLate,
+                LateMinutes   = lateMin,
+            });
+        }
+
+        var countByRole = result
+            .GroupBy(s => s.UserRole)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        return new AllRolesHistoryResultDto
+        {
+            Sessions      = result,
+            TotalPresent  = result.Count,
+            TotalActive   = result.Count(s => s.Status == "active" || s.Status == "break"),
+            CountByRole   = countByRole,
+        };
+    }
+
 }

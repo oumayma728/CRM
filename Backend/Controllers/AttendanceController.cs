@@ -38,7 +38,11 @@ public class AttendanceController : ControllerBase
     [HttpPost("clock-in")]
     public async Task<IActionResult> ClockIn()
     {
-        try { return Ok(await _attendanceService.ClockInAsync(GetUserId())); }
+        try
+        {
+            var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            return Ok(await _attendanceService.ClockInAsync(GetUserId(), role));
+        }
         catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
     }
 
@@ -155,4 +159,20 @@ public class AttendanceController : ControllerBase
         try { return Ok(await _attendanceService.GetMyHistoryAsync(GetUserId(), days)); }
         catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
     }
+    /// <summary>Historique pointage de TOUS les rôles — Admin / SuperAdmin uniquement</summary>
+    [HttpGet("admin/all-history")]
+    public async Task<IActionResult> GetAllRolesHistory([FromQuery] string? date, [FromQuery] string? role)
+    {
+        if (!IsAdminOrQualite()) return Forbid();
+        try
+        {
+            DateTime? parsedDate = null;
+            if (!string.IsNullOrWhiteSpace(date) && DateTime.TryParse(date, out var d))
+                parsedDate = DateTime.SpecifyKind(d.Date, DateTimeKind.Utc);
+
+            return Ok(await _attendanceService.GetAllRolesHistoryAsync(parsedDate, role));
+        }
+        catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
 }

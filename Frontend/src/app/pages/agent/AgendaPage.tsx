@@ -34,13 +34,15 @@ interface AgendaData {
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
 const RDV_STATUT: Record<string, { label: string; color: string; bg: string }> = {
-  CONFIRME:   { label: 'Confirmé',  color: 'text-green-700',  bg: 'bg-green-500' },
-  ANNULE:     { label: 'Annulé',    color: 'text-red-700',    bg: 'bg-red-500'   },
-  REPORTER:   { label: 'Reporté',   color: 'text-yellow-700', bg: 'bg-yellow-500'},
-  BRUT:       { label: 'Brut',      color: 'text-blue-700',   bg: 'bg-blue-500'  },
-  NRP:        { label: 'NRP',       color: 'text-gray-600',   bg: 'bg-gray-400'  },
-  HORS_CIBLE: { label: 'HC',        color: 'text-orange-700', bg: 'bg-orange-500'},
-  SIGNE:      { label: 'Signé',     color: 'text-purple-700', bg: 'bg-purple-500'},
+  CONFIRME:           { label: 'Confirmé',        color: 'text-green-700',   bg: 'bg-green-500'  },
+  ANNULE:             { label: 'Annulé',           color: 'text-red-700',    bg: 'bg-red-500'    },
+  REPORTER:           { label: 'Reporté',          color: 'text-yellow-700', bg: 'bg-yellow-500' },
+  BRUT:               { label: 'Brut',             color: 'text-blue-700',   bg: 'bg-blue-500'   },
+  NRP:                { label: 'NRP',              color: 'text-gray-600',   bg: 'bg-gray-400'   },
+  HORS_CIBLE:         { label: 'HC',               color: 'text-orange-700', bg: 'bg-orange-500' },
+  SIGNE:              { label: 'Signé',            color: 'text-purple-700', bg: 'bg-purple-500' },
+  CONFIRME_CONF_CALL: { label: 'Conf. Conf Call',  color: 'text-indigo-700', bg: 'bg-indigo-500' },
+  CONFIRME_TOTAL:     { label: 'Confirmé Total',   color: 'text-emerald-700',bg: 'bg-emerald-500'},
 };
 
 const REFUS_STATUT: Record<string, { label: string; color: string; bg: string }> = {

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
   X, Phone, PhoneCall, User, MapPin, Calendar, Flame,
-  Home, Zap, Users, Lock, CheckCircle, MessageSquare
+  Home, Zap, Users, Lock, CheckCircle, MessageSquare,
+  ArrowRight, BadgeCheck
 } from 'lucide-react';
 import { api } from '../../services/api';
 
@@ -23,6 +24,7 @@ export interface RdvDetail {
   dateCreation: string;
   dateRendezVous: string;
   statut: string;
+  typeRendezVous?: string;
   commentaireAgent?: string;
   commentaireConfirmation?: string;
   projet?: string;
@@ -78,14 +80,29 @@ interface Props {
 }
 
 const statutColor: Record<string, string> = {
-  CONFIRME: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
-  ANNULE: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
-  REPORTER: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400',
-  BRUT: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
-  NRP: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-  HORS_CIBLE: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400',
-  NON_SIGNE: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400',
-  PORTE: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400',
+  CONFIRME:           'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
+  ANNULE:             'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
+  REPORTER:           'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400',
+  BRUT:               'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
+  NRP:                'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+  HORS_CIBLE:         'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400',
+  NON_SIGNE:          'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400',
+  PORTE:              'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-400',
+  CONFIRME_CONF_CALL: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400',
+  CONFIRME_TOTAL:     'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400',
+};
+
+const statutLabel: Record<string, string> = {
+  CONFIRME:           'Confirmé',
+  CONFIRME_CONF_CALL: 'Conf. Conf Call',
+  CONFIRME_TOTAL:     'Confirmé Totalement',
+  ANNULE:             'Annulé',
+  REPORTER:           'Reporté',
+  BRUT:               'Brut',
+  NRP:                'NRP',
+  HORS_CIBLE:         'Hors Cible',
+  NON_SIGNE:          'Non Signé',
+  PORTE:              'Porté',
 };
 
 export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, returnPath, onClose, onSaved }: Props) {
@@ -134,6 +151,28 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
     }
   };
 
+  const handleWorkflowAction = async (newStatut: string, typeRendezVous?: string) => {
+    setSaving(true);
+    try {
+      await api.put(`${updateEndpoint}/${rdv.id}/statut`, {
+        statut: newStatut,
+        ...(typeRendezVous ? { typeRendezVous } : {}),
+      });
+      setSaved(true);
+      onSaved();
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      alert('Erreur lors de la mise à jour du workflow');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Workflow : conf call EBI → envoyer vers agenda client
+  const isWorkflowConfCall = agendaType === 'EBI' && rdv.statut === 'CONFIRME';
+  // Workflow : conf client EBI → confirmer totalement
+  const isWorkflowConfClient = agendaType === 'EBI' && rdv.statut === 'CONFIRME_CONF_CALL';
+
   const formatDate = (d?: string) => {
     if (!d) return '—';
     return new Date(d).getFullYear().toString();
@@ -149,7 +188,7 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
           </p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statutColor[rdv.statut] || 'bg-gray-100 text-gray-600'}`}>
-              {rdv.statut}
+              {statutLabel[rdv.statut] || rdv.statut}
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400">
               {new Date(rdv.dateRendezVous).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })} à {new Date(rdv.dateRendezVous).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
@@ -278,6 +317,48 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
             {isPastRdv ? <Lock size={12} /> : hasCalled ? <CheckCircle size={12} className="text-primary" /> : <Lock size={12} />}
             Qualification confirmatrice
           </p>
+
+          {/* ── Workflow Conf Call → Agenda Client 1 / Client 2 ── */}
+          {!isPastRdv && isWorkflowConfCall && (
+            <div className="rounded-lg border border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20 p-3 space-y-2">
+              <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 flex items-center gap-1">
+                <ArrowRight size={13} /> Envoyer vers Agenda Client
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleWorkflowAction('CONFIRME_CONF_CALL', 'CLIENT1')}
+                  disabled={saving}
+                  className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition font-medium text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  <ArrowRight size={14} /> Client 1
+                </button>
+                <button
+                  onClick={() => handleWorkflowAction('CONFIRME_CONF_CALL', 'CLIENT2')}
+                  disabled={saving}
+                  className="flex-1 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition font-medium text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  <ArrowRight size={14} /> Client 2
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ── Workflow Conf Client → Confirmation totale ── */}
+          {!isPastRdv && isWorkflowConfClient && (
+            <div className="rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-3 space-y-2">
+              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                <BadgeCheck size={13} /> Action workflow
+              </p>
+              <button
+                onClick={() => handleWorkflowAction('CONFIRME_TOTAL')}
+                disabled={saving}
+                className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <BadgeCheck size={15} />
+                {saved ? 'Confirmé !' : saving ? 'En cours…' : 'Confirmer Totalement'}
+              </button>
+            </div>
+          )}
 
           {isPastRdv ? (
             <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-xs py-2">

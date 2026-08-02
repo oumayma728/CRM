@@ -33,15 +33,19 @@ public class RendezVous
 
 public enum StatutRendezVous
 {
-    BRUT,
-    CONFIRME,
-    ANNULE,
-    REPORTER,
-    HORS_CIBLE,
-    SIGNE,
-    NON_SIGNE,
-    INSTALLE,
-    R2,
-    NRP,
-    PORTE
+    BRUT            = 0,
+    CONFIRME        = 1,
+    ANNULE          = 2,
+    REPORTER        = 3,
+    HORS_CIBLE      = 4,
+    SIGNE           = 5,
+    NON_SIGNE       = 6,
+    INSTALLE        = 7,
+    R2              = 8,
+    NRP             = 9,
+    PORTE           = 10,
+    /// <summary>Confirmé par la Conf Call → en attente de la Conf Client</summary>
+    CONFIRME_CONF_CALL = 11,
+    /// <summary>Confirmé totalement par la Conf Client → retour chez l'agent</summary>
+    CONFIRME_TOTAL     = 12,
 }

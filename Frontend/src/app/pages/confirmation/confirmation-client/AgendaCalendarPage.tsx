@@ -16,14 +16,16 @@ const API_URL = ((import.meta as any).env?.VITE_API_URL || 'http://localhost:524
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
 const STATUT_CONFIG: Record<string, { label: string; color: string }> = {
-  CONFIRME:   { label: 'Confirmé',  color: 'bg-green-500'  },
-  ANNULE:     { label: 'Annulé',    color: 'bg-red-500'    },
-  REPORTER:   { label: 'Reporté',   color: 'bg-yellow-500' },
-  BRUT:       { label: 'Brut',      color: 'bg-blue-500'   },
-  NRP:        { label: 'NRP',       color: 'bg-gray-500'   },
-  HORS_CIBLE: { label: 'HC',        color: 'bg-orange-500' },
-  NON_SIGNE:  { label: 'Pas int.',  color: 'bg-purple-500' },
-  PORTE:      { label: 'Porté',     color: 'bg-cyan-500'   },
+  CONFIRME:           { label: 'Confirmé',         color: 'bg-green-500'   },
+  ANNULE:             { label: 'Annulé',            color: 'bg-red-500'    },
+  REPORTER:           { label: 'Reporté',           color: 'bg-yellow-500' },
+  BRUT:               { label: 'Brut',              color: 'bg-blue-500'   },
+  NRP:                { label: 'NRP',               color: 'bg-gray-500'   },
+  HORS_CIBLE:         { label: 'HC',                color: 'bg-orange-500' },
+  NON_SIGNE:          { label: 'Pas int.',          color: 'bg-purple-500' },
+  PORTE:              { label: 'Porté',             color: 'bg-cyan-500'   },
+  CONFIRME_CONF_CALL: { label: 'Conf. Conf Call',  color: 'bg-indigo-500' },
+  CONFIRME_TOTAL:     { label: 'Confirmé Total',   color: 'bg-emerald-500' },
 };
 
 interface Props {

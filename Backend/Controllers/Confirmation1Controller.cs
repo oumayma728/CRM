@@ -39,6 +39,7 @@ public class Confirmation1Controller : ControllerBase
         DateCreation          = r.DateCreation,
         DateRendezVous        = r.DateRendezVous,
         Statut                = r.Statut.ToString(),
+        TypeRendezVous        = r.TypeRendezVous,
         CommentaireAgent      = r.Commentaire,
         CommentaireConfirmation = r.CommentaireConfirmation,
         CommentaireBanque     = r.CommentaireBanque,
@@ -132,10 +133,11 @@ public class Confirmation1Controller : ControllerBase
     [HttpGet("agenda-ebi")]
     public async Task<IActionResult> GetAgendaEBI()
     {
+        // Agenda EBI : RDVs confirmés par l'agent, en attente de traitement par la conf call
         var rdvs = await _context.RendezVous
             .Include(r => r.Contact)
             .Include(r => r.Agent)
-            .Where(r => r.Statut == StatutRendezVous.CONFIRME || r.Statut == StatutRendezVous.BRUT)
+            .Where(r => r.Statut == StatutRendezVous.CONFIRME)
             .OrderBy(r => r.DateRendezVous)
             .ToListAsync();
 
@@ -145,10 +147,11 @@ public class Confirmation1Controller : ControllerBase
     [HttpGet("agenda-client1")]
     public async Task<IActionResult> GetAgendaClient1()
     {
+        // RDVs envoyés par la conf call vers Agenda Client 1
         var rdvs = await _context.RendezVous
             .Include(r => r.Contact)
             .Include(r => r.Agent)
-            .Where(r => r.Statut == StatutRendezVous.BRUT)
+            .Where(r => r.Statut == StatutRendezVous.CONFIRME_CONF_CALL && r.TypeRendezVous == "CLIENT1")
             .OrderBy(r => r.DateRendezVous)
             .ToListAsync();
 
@@ -158,10 +161,11 @@ public class Confirmation1Controller : ControllerBase
     [HttpGet("agenda-client2")]
     public async Task<IActionResult> GetAgendaClient2()
     {
+        // RDVs envoyés par la conf call vers Agenda Client 2
         var rdvs = await _context.RendezVous
             .Include(r => r.Contact)
             .Include(r => r.Agent)
-            .Where(r => r.Statut == StatutRendezVous.CONFIRME && r.CommercialId == null)
+            .Where(r => r.Statut == StatutRendezVous.CONFIRME_CONF_CALL && r.TypeRendezVous == "CLIENT2")
             .OrderBy(r => r.DateRendezVous)
             .ToListAsync();
 
@@ -271,6 +275,10 @@ public class Confirmation1Controller : ControllerBase
         rdv.Statut = Enum.Parse<StatutRendezVous>(dto.Statut);
         rdv.CommentaireConfirmation = dto.Commentaire;
 
+        // Workflow : envoyer vers Client 1 ou Client 2
+        if (!string.IsNullOrEmpty(dto.TypeRendezVous))
+            rdv.TypeRendezVous = dto.TypeRendezVous;
+
         // Sauvegarder Projet sur le contact si fourni
         if (!string.IsNullOrEmpty(dto.Projet) && rdv.ContactId != 0)
         {
@@ -279,7 +287,7 @@ public class Confirmation1Controller : ControllerBase
         }
 
         await _context.SaveChangesAsync();
-        return Ok(new { message = "Statut mis à jour" });
+        return Ok(new { message = "Statut mis à jour", typeRendezVous = rdv.TypeRendezVous });
     }
 
     // =========================
@@ -429,6 +437,8 @@ public class UpdateRdvStatutDTO
     public string Statut { get; set; } = string.Empty;
     public string? Commentaire { get; set; }
     public string? Projet { get; set; }
+    /// <summary>CLIENT1 | CLIENT2 — fourni lors du passage vers l'agenda client</summary>
+    public string? TypeRendezVous { get; set; }
 }
 
 public class CreateRdvDTO

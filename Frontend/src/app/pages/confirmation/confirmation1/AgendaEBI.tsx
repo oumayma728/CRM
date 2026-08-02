@@ -12,14 +12,16 @@ import FicheContactPanel, { type RdvDetail } from '../../../components/FicheCont
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
 const STATUT_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  CONFIRME:   { label: 'Confirmé',  color: 'bg-green-500',  icon: <CheckCircle size={10} /> },
-  ANNULE:     { label: 'Annulé',    color: 'bg-red-500',    icon: <XCircle size={10} /> },
-  REPORTER:   { label: 'Reporté',   color: 'bg-yellow-500', icon: <Clock size={10} /> },
-  BRUT:       { label: 'Brut',      color: 'bg-blue-500',   icon: <AlertCircle size={10} /> },
-  NRP:        { label: 'NRP',       color: 'bg-gray-500',   icon: <AlertCircle size={10} /> },
-  HORS_CIBLE: { label: 'HC',        color: 'bg-orange-500', icon: <XCircle size={10} /> },
-  NON_SIGNE:  { label: 'Pas int.',  color: 'bg-purple-500', icon: <XCircle size={10} /> },
-  PORTE:      { label: 'Porté',     color: 'bg-cyan-500',   icon: <Clock size={10} /> },
+  CONFIRME:           { label: 'Confirmé',        color: 'bg-green-500',   icon: <CheckCircle size={10} /> },
+  ANNULE:             { label: 'Annulé',           color: 'bg-red-500',    icon: <XCircle size={10} /> },
+  REPORTER:           { label: 'Reporté',          color: 'bg-yellow-500', icon: <Clock size={10} /> },
+  BRUT:               { label: 'Brut',             color: 'bg-blue-500',   icon: <AlertCircle size={10} /> },
+  NRP:                { label: 'NRP',              color: 'bg-gray-500',   icon: <AlertCircle size={10} /> },
+  HORS_CIBLE:         { label: 'HC',               color: 'bg-orange-500', icon: <XCircle size={10} /> },
+  NON_SIGNE:          { label: 'Pas int.',         color: 'bg-purple-500', icon: <XCircle size={10} /> },
+  PORTE:              { label: 'Porté',            color: 'bg-cyan-500',   icon: <Clock size={10} /> },
+  CONFIRME_CONF_CALL: { label: 'Conf. Conf Call', color: 'bg-indigo-500', icon: <CheckCircle size={10} /> },
+  CONFIRME_TOTAL:     { label: 'Confirmé Total',  color: 'bg-emerald-500', icon: <CheckCircle size={10} /> },
 };
 
 export default function AgendaEBI() {

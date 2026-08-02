@@ -4,7 +4,7 @@ namespace Backend.Services.Attendance;
 
 public interface IAttendanceService
 {
-    Task<ClockResultDto> ClockInAsync(long userId);
+    Task<ClockResultDto> ClockInAsync(long userId, string? userRole = null);
     Task<ClockResultDto> ClockOutAsync(long userId);
     Task<ClockResultDto> StartBreakAsync(long userId, string breakType);
     Task<ClockResultDto> EndBreakAsync(long userId);
@@ -16,4 +16,5 @@ public interface IAttendanceService
     Task<PointageDailyDto> GetDailyReportAsync(DateTime date);
     Task<List<AgentAttendanceDayDto>> GetMyHistoryAsync(long userId, int days = 30);
     WorkScheduleDto GetWorkSchedule();
+    Task<AllRolesHistoryResultDto> GetAllRolesHistoryAsync(DateTime? date = null, string? role = null);
 }

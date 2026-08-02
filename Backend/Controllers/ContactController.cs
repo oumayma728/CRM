@@ -325,4 +325,41 @@ public class ContactController : ControllerBase
             .ToListAsync();
         return Ok(contacts);
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CARTE GÉOGRAPHIQUE — statistiques par ville (données réelles)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Statistiques géographiques : appels et conversions par ville</summary>
+    [HttpGet("geo-stats")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> GetGeoStats()
+    {
+        var stats = await _context.Contacts
+            .Where(c => c.Ville != null && c.Ville != "")
+            .GroupBy(c => c.Ville!)
+            .Select(g => new {
+                region   = g.Key,
+                appels   = g.Count(),
+                conversions = g.Count(c =>
+                    c.StatutAgent == "RDV" ||
+                    c.StatutAgent == "VENDU" ||
+                    c.StatutAgent == "CONFIRME"),
+            })
+            .OrderByDescending(x => x.appels)
+            .Take(20)
+            .ToListAsync();
+
+        // Calcul du taux de conversion pour chaque ville
+        var result = stats.Select(s => new {
+            s.region,
+            s.appels,
+            s.conversions,
+            taux = s.appels > 0
+                ? Math.Round((double)s.conversions / s.appels * 100, 1)
+                : 0.0,
+        });
+
+        return Ok(result);
+    }
 }
