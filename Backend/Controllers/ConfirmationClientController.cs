@@ -102,7 +102,8 @@ public class ConfirmationClientController : ControllerBase
     {
         var rdvs = await _context.RendezVous
             .Include(r => r.Contact).Include(r => r.Agent)
-            .Where(r => r.Statut == StatutRendezVous.CONFIRME || r.Statut == StatutRendezVous.BRUT)
+            // Agenda EBI Conf Client : RDVs validés par la Conf Call, en attente de confirmation finale
+            .Where(r => r.Statut == StatutRendezVous.CONFIRME_CONF_CALL)
             .OrderBy(r => r.DateRendezVous).ToListAsync();
         return Ok(rdvs.Select(MapRdv));
     }
@@ -125,6 +126,7 @@ public class ConfirmationClientController : ControllerBase
         DateCreation            = r.DateCreation,
         DateRendezVous          = r.DateRendezVous,
         Statut                  = r.Statut.ToString(),
+        TypeRendezVous          = r.TypeRendezVous,
         CommentaireAgent        = r.Commentaire,
         CommentaireConfirmation = r.CommentaireConfirmation,
         CommentaireBanque       = r.CommentaireBanque,
@@ -237,8 +239,10 @@ public class ConfirmationClientController : ControllerBase
             return NotFound(new { message = "Rendez-vous non trouvé" });
 
         rdv.Statut = Enum.Parse<StatutRendezVous>(dto.Statut);
-        rdv.Commentaire = dto.Commentaire;
-        
+        rdv.CommentaireConfirmation = dto.Commentaire;
+        if (!string.IsNullOrEmpty(dto.TypeRendezVous))
+            rdv.TypeRendezVous = dto.TypeRendezVous;
+
         await _context.SaveChangesAsync();
         return Ok(new { message = "Statut mis à jour" });
     }

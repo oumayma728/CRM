@@ -213,4 +213,12 @@ app.MapControllers();
 // ─── SIGNALR HUB ─────────────────────────────────────────────────────────
 app.MapHub<ChatHub>("/hubs/chat");
 
+// ─── SEED DONNÉES DE TEST (dev uniquement) ────────────────────────────────
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<Backend.Data.ApplicationDbContext>();
+    await Backend.Data.DbSeeder.SeedAsync(db);
+}
+
 app.Run();

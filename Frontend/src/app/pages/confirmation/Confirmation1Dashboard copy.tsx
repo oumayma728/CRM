@@ -1,3 +1,4 @@
+import SessionAttendanceWidget from '../../components/SessionAttendanceWidget';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Calendar, Lock, CheckCircle, XCircle, Clock } from 'lucide-react';
@@ -131,6 +132,9 @@ export default function Confirmation1Dashboard() {
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
+      <div className="mb-4">
+        <SessionAttendanceWidget />
+      </div>
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
     </div>
   );

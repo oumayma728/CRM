@@ -19,6 +19,10 @@ import MonPointagePage from './pages/agent/MonPointagePage';
 import CreateContactPage from './pages/CreateContactPage';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminPointageHistoriquePage from './pages/admin/AdminPointageHistoriquePage';
+import MonHistoriquePointagePage from './pages/shared/MonHistoriquePointagePage';
+import ConfContactsListPage from './pages/shared/ConfContactsListPage';
+import TeamChatPage from './pages/shared/TeamChatPage';
 import ScorecardsPage from './pages/admin/ScorecardsPage';
 import PointagePage from './pages/admin/PointagePage';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
@@ -115,6 +119,8 @@ function AppRoutes() {
       <Route path="/agent/performance" element={<ProtectedRoute><PerformancePage /></ProtectedRoute>} />
       <Route path="/agent/agenda" element={<ProtectedRoute><AgendaPage /></ProtectedRoute>} />
       <Route path="/agent/contacts" element={<ProtectedRoute><ContactsListPage /></ProtectedRoute>} />
+      <Route path="/admin/contacts" element={<ProtectedRoute><ContactsListPage /></ProtectedRoute>} />
+      <Route path="/superadmin/contacts" element={<ProtectedRoute><ContactsListPage /></ProtectedRoute>} />
       <Route path="/agent/pointage" element={<ProtectedRoute><MonPointagePage /></ProtectedRoute>} />
 
       {/* ==================== CONFIRMATRICE 1 ==================== */}
@@ -127,6 +133,8 @@ function AppRoutes() {
         <Route path="evaluation" element={<EvaluationAgents />} />
         <Route path="statistiques" element={<StatistiquesGlobales />} />
         <Route path="fichiers" element={<FichiersContacts />} />
+        <Route path="contacts" element={<ConfContactsListPage />} />
+        <Route path="mon-historique-pointage" element={<MonHistoriquePointagePage />} />
       </Route>
 
       {/* ==================== CONFIRMATRICE 2 ==================== */}
@@ -137,6 +145,8 @@ function AppRoutes() {
         <Route path="evaluation" element={<EvaluationAgents2 />} />
         <Route path="statistiques" element={<StatistiquesGlobales2 />} />
         <Route path="fichiers" element={<FichiersContacts2 />} />
+        <Route path="contacts" element={<ConfContactsListPage />} />
+        <Route path="mon-historique-pointage" element={<MonHistoriquePointagePage />} />
       </Route>
 
       {/* ==================== CONFIRMATRICE CLIENT ==================== */}
@@ -149,11 +159,14 @@ function AppRoutes() {
         <Route path="commerciaux" element={<SuiviCommerciaux />} />
         <Route path="attribution" element={<AttributionRDV />} />
         <Route path="banque" element={<CommentaireBanque />} />
+        <Route path="contacts" element={<ConfContactsListPage />} />
+        <Route path="mon-historique-pointage" element={<MonHistoriquePointagePage />} />
       </Route>
 
       {/* ==================== ADMIN ==================== */}
       <Route path="/admin/import-leads/FichierAcharge" element={<ProtectedRoute><FichierAcharge /></ProtectedRoute>} />
       <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/pointage-historique" element={<ProtectedRoute><AdminPointageHistoriquePage /></ProtectedRoute>} />
       <Route path="/admin/scorecards" element={<ProtectedRoute><ScorecardsPage /></ProtectedRoute>} />
       <Route path="/admin/pointage" element={<ProtectedRoute><PointagePage /></ProtectedRoute>} />
       <Route path="/admin/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
@@ -172,10 +185,13 @@ function AppRoutes() {
       {/* ── New routes from colleague ─────────────────────── */}
       <Route path="/admin/injection" element={<ProtectedRoute><InjectionPage /></ProtectedRoute>} />
       <Route path="/admin/permissions" element={<ProtectedRoute><PermissionPage /></ProtectedRoute>} />
+      <Route path="/admin/mon-historique-pointage" element={<ProtectedRoute><Layout><MonHistoriquePointagePage /></Layout></ProtectedRoute>} />
       {/* ── SuperAdmin routes (toutes en /superadmin/...) ────── */}
       <Route path="/superadmin/dashboard"           element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
       <Route path="/superadmin/permissions"         element={<ProtectedRoute><PermissionPage /></ProtectedRoute>} />
       <Route path="/superadmin/pointage"            element={<ProtectedRoute><PointagePage /></ProtectedRoute>} />
+      <Route path="/superadmin/pointage-historique" element={<ProtectedRoute><AdminPointageHistoriquePage /></ProtectedRoute>} />
+      <Route path="/superadmin/mon-historique-pointage" element={<ProtectedRoute><Layout><MonHistoriquePointagePage /></Layout></ProtectedRoute>} />
       <Route path="/superadmin/scorecards"          element={<ProtectedRoute><ScorecardsPage /></ProtectedRoute>} />
       <Route path="/superadmin/analytics"           element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
       <Route path="/superadmin/map"                 element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
@@ -189,6 +205,7 @@ function AppRoutes() {
       <Route path="/superadmin/leads"               element={<ProtectedRoute><LeadsPage /></ProtectedRoute>} />
       {/* ─────────────────────────────────────────────────── */}
       <Route path="/create-contact" element={<ProtectedRoute><CreateContactPage /></ProtectedRoute>} />
+      <Route path="/chat" element={<ProtectedRoute><Layout><TeamChatPage /></Layout></ProtectedRoute>} />
 
       {/* ==================== MODULES KHALED — avec Layout sidebar ==================== */}
       <Route element={<ProtectedRoute><Layout><Outlet /></Layout></ProtectedRoute>}>
@@ -213,12 +230,14 @@ function AppRoutes() {
         <Route path="stats-appels" element={<StatsAppelsPage />} />
         <Route path="evaluation-manuelle" element={<ManualEvaluationPage />} />
         <Route path="analytics-qualite" element={<QualityAnalyticsPage />} />
+        <Route path="mon-historique-pointage" element={<MonHistoriquePointagePage />} />
       </Route>
 
       {/* ==================== COMMERCIAL ==================== */}
       <Route path="/commercial" element={<Layout><Outlet /></Layout>}>
         <Route path="dashboard" element={<CommercialDashboard />} />
         <Route path="agenda" element={<CommercialAgenda />} />
+        <Route path="mon-historique-pointage" element={<MonHistoriquePointagePage />} />
       </Route>
 
       {/* ==================== SERVICE TECHNIQUE ==================== */}
@@ -228,7 +247,7 @@ function AppRoutes() {
         <Route path="agents" element={<ListeAgents />} />
         <Route path="fichiers" element={<FichierContacts />} />
         <Route path="pointage" element={<PointageTech />} />
-        <Route path="monpointage" element={<MonPointageTech />} />
+        <Route path="monpointage" element={<MonHistoriquePointagePage />} />
         <Route path="acces" element={<GererAcces />} />
         <Route path="calendrier" element={<CompteCalendrier />} />
         <Route path="evaluation" element={<EvaluationTech />} />

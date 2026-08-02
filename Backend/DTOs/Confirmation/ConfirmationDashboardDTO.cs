@@ -29,6 +29,8 @@ public class RdvConfirmationDTO
     public DateTime DateCreation { get; set; }
     public DateTime DateRendezVous { get; set; }
     public string Statut { get; set; } = string.Empty;
+    /// <summary>CLIENT1 | CLIENT2 | EBI | REFUS — utilisé pour le routage workflow</summary>
+    public string? TypeRendezVous { get; set; }
     // Commentaires
     public string? CommentaireAgent { get; set; }       // commentaire de l'agent sur le RDV
     public string? CommentaireConfirmation { get; set; } // commentaire confirmatrice sur le RDV

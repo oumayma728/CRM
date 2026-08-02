@@ -216,7 +216,10 @@ public class DashboardService : IDashboardService
         return new AgendaAgentDTO
         {
             TotalRdv = rdvDto.Count,
-            RdvConfirmes = rdvs.Count(r => r.Statut == StatutRendezVous.CONFIRME),
+            RdvConfirmes = rdvs.Count(r =>
+                r.Statut == StatutRendezVous.CONFIRME ||
+                r.Statut == StatutRendezVous.CONFIRME_CONF_CALL ||
+                r.Statut == StatutRendezVous.CONFIRME_TOTAL),
             TotalRefus = refusDto.Count,
             ARecontacter = refus.Count(a => a.Qualification == TypeQualification.RAPPEL),
             RendezVous = rdvDto,

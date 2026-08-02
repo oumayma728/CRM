@@ -1,5 +1,6 @@
 // frontend/src/app/pages/CreateContactPage.tsx
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { User, Home, Zap, Users, Loader2, Save, RotateCcw, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -51,6 +52,8 @@ const EMPTY_CONTACT = (agentId = 1): NewContact => ({
 export default function CreateContactPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+  const navigate = useNavigate();
+  const userRole = user?.role?.toLowerCase() || 'agent';
   const currentUserId = user?.id || 1;
 
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -126,7 +129,18 @@ export default function CreateContactPage() {
       await api.post('/contact', toPayload());
       setSuccess(true);
       setNewContact(EMPTY_CONTACT(agents[0]?.id || 1));
-      setTimeout(() => setSuccess(false), 4000);
+      // Redirection vers la liste contacts après 1.5s
+      setTimeout(() => {
+        const confType = user?.typeConfirmatrice?.toUpperCase();
+        const dest =
+          userRole === 'admin'        ? '/admin/contacts' :
+          userRole === 'superadmin'   ? '/superadmin/contacts' :
+          userRole === 'confirmatrice' && confType === 'CONF2'       ? '/confirmation2/contacts' :
+          userRole === 'confirmatrice' && confType === 'CONFCLIENT'  ? '/confirmation-client/contacts' :
+          userRole === 'confirmatrice' ? '/confirmation1/contacts' :
+          '/agent/contacts';
+        navigate(dest);
+      }, 1500);
     } catch (err) {
       console.error('Erreur création contact:', err);
       setError('Erreur lors de la création du contact. Vérifiez les données saisies.');

@@ -132,3 +132,29 @@ public class AgentAttendanceDayDto
     public float PenaliteSalaire { get; set; }
     public List<BreakDto> Breaks { get; set; } = new();
 }
+
+// ── All-roles history (Admin / SuperAdmin view) ───────────────────────────────
+
+public class AllRolesSessionDto
+{
+    public long Id { get; set; }
+    public long UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string UserRole { get; set; } = string.Empty;
+    public DateTime Date { get; set; }
+    public string ClockIn { get; set; } = "--";
+    public string? ClockOut { get; set; }
+    public string Status { get; set; } = "active";
+    /// <summary>Duration in minutes, null if session still active</summary>
+    public int? DurationMinutes { get; set; }
+    public bool IsLate { get; set; }
+    public int LateMinutes { get; set; }
+}
+
+public class AllRolesHistoryResultDto
+{
+    public List<AllRolesSessionDto> Sessions { get; set; } = new();
+    public int TotalPresent { get; set; }
+    public int TotalActive { get; set; }
+    public Dictionary<string, int> CountByRole { get; set; } = new();
+}
