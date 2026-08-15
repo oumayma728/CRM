@@ -1,44 +1,54 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Users, Euro, TrendingUp, Trophy, RefreshCw, Download,
-  Eye, Settings, ChevronLeft, ChevronRight, Search,
-  X, Save, Plus, Trash2, Edit3,
-  DollarSign, Award, AlertTriangle, CheckCircle, Zap, Banknote,
-  BarChart3, FileText
+  Users, TrendingUp, Trophy, RefreshCw, Download,
+  Settings, ChevronLeft, ChevronRight, Search, X, Save,
+  DollarSign, Award, CheckCircle, Zap, Banknote,
+  BarChart3, ShieldAlert, Clock, Briefcase, AlertCircle
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../../services/api';
+import { useAuth } from '../../../contexts/AuthContext';
 
-type TabType = 'dashboard' | 'salaries' | 'rules';
+type TabType = 'dashboard' | 'salaries' | 'config';
+
+const DEFAULT_CONFIG = {
+  pT_BaseSalary: 900, pT_PrimeAssiduite: 100, pT_SeuilRdv: 21, pT_Install1: 300, pT_InstallExtra: 100,
+  mT_BaseSalary: 600, mT_PrimeAssiduite: 100, mT_SeuilRdv: 12, mT_Install1: 300, mT_InstallExtra: 150,
+};
 
 export default function SalaryPage() {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role?.toLowerCase() === 'superadmin';
+
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [loading, setLoading] = useState(true);
   const [salaries, setSalaries] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
-  const [rules, setRules] = useState<any[]>([]);
+  const [config, setConfig] = useState<any>(DEFAULT_CONFIG);
+  const [configDraft, setConfigDraft] = useState<any>(DEFAULT_CONFIG);
+  const [configSaving, setConfigSaving] = useState(false);
+  const [configMsg, setConfigMsg] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [calculating, setCalculating] = useState(false);
-  const [editingRule, setEditingRule] = useState<any>(null);
-  const [showRuleModal, setShowRuleModal] = useState(false);
-  const [ruleForm, setRuleForm] = useState({ ruleName: '', ruleType: 'base_salary', amount: 0, role: 'agent', isActive: true });
 
   const itemsPerPage = 10;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [salRes, sumRes, rulesRes] = await Promise.all([
+      const [salRes, sumRes, cfgRes] = await Promise.all([
         api.get(`/salaries?month=${selectedMonth}`),
         api.get(`/salaries/monthly-summary?month=${selectedMonth}`),
-        api.get('/salaries/rules'),
+        api.get('/salaries/config'),
       ]);
       setSalaries(salRes.data);
       setSummary(sumRes.data);
-      setRules(rulesRes.data);
+      setConfig(cfgRes.data);
+      setConfigDraft(cfgRes.data);
     } catch (err) {
       console.error('Salary fetch error:', err);
     } finally {
@@ -63,74 +73,82 @@ export default function SalaryPage() {
     fetchData();
   };
 
-  const handleSaveRule = async () => {
+  const handleSaveConfig = async () => {
+    setConfigSaving(true);
+    setConfigMsg('');
     try {
-      if (editingRule) {
-        await api.put(`/salaries/rules/${editingRule.id}`, ruleForm);
-      } else {
-        await api.post('/salaries/rules', ruleForm);
-      }
-      setShowRuleModal(false);
-      setEditingRule(null);
-      fetchData();
-    } catch (err: any) {
-      alert('Erreur lors de la sauvegarde');
+      await api.put('/salaries/config', configDraft);
+      setConfig(configDraft);
+      setConfigMsg('✓ Paramètres sauvegardés');
+      setTimeout(() => setConfigMsg(''), 3000);
+    } catch {
+      setConfigMsg('✗ Erreur lors de la sauvegarde');
+    } finally {
+      setConfigSaving(false);
     }
   };
 
-  const handleDeleteRule = async (ruleId: number) => {
-    if (!window.confirm('Supprimer cette règle ?')) return;
-    await api.delete(`/salaries/rules/${ruleId}`);
-    fetchData();
-  };
-
-  const openEditRule = (rule: any) => {
-    setEditingRule(rule);
-    setRuleForm({ ruleName: rule.ruleName, ruleType: rule.ruleType, amount: rule.amount, role: rule.role || 'agent', isActive: rule.isActive ?? true });
-    setShowRuleModal(true);
-  };
-
-  const openNewRule = () => {
-    setEditingRule(null);
-    setRuleForm({ ruleName: '', ruleType: 'base_salary', amount: 0, role: 'agent', isActive: true });
-    setShowRuleModal(true);
-  };
-
   const exportCSV = () => {
-    const headers = ['Agent', 'Base', 'RDV', 'Poses', 'Refus', 'Qualité', 'P.RDV', 'P.Pose', 'P.Qual', 'B.Inst', 'Pénalités', 'Total', 'Statut'];
+    const headers = ['Agent', 'Régime', 'Base (DT)', 'RDV', 'Installations', 'Absences', 'P.Assiduité', 'P.Installation', 'Total (DT)', 'Statut'];
     const rows = filteredSalaries.map((s: any) => [
-      s.agentName, s.baseSalary, s.rdvCount, s.poseCount, s.refusCount,
-      s.qualityRate?.toFixed(1), s.rdvBonus, s.poseBonus, s.qualityBonus, s.installationBonus,
-      s.penalties, s.totalSalary, s.paymentStatus
+      s.agentName, s.typeContrat || '', s.baseSalary, s.rdvCount,
+      s.installations ?? s.poseCount, s.absenceCount ?? s.refusCount,
+      s.primeAssiduite ?? s.rdvBonus, s.primeInstallation ?? s.installationBonus,
+      s.totalSalary, s.paymentStatus
     ]);
     const csv = [headers, ...rows].map(r => r.join(';')).join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `salaires_${selectedMonth}.csv`; a.click();
+    const a = document.createElement('a'); a.href = url;
+    a.download = `salaires_${selectedMonth}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
 
   const filteredSalaries = salaries.filter((s: any) => {
     const matchSearch = !searchTerm || (s.agentName || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchStatus = !statusFilter || s.paymentStatus === statusFilter;
-    return matchSearch && matchStatus;
+    const matchType   = !typeFilter  || (s.typeContrat || '') === typeFilter;
+    return matchSearch && matchStatus && matchType;
   });
 
   const totalPages = Math.ceil(filteredSalaries.length / itemsPerPage);
   const paginatedSalaries = filteredSalaries.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-  const fmt = (v: number) => `${(v || 0).toFixed(2)} €`;
+  const fmt = (v: number) => `${(v || 0).toFixed(2)} DT`;
 
   const paymentBadge = (status: string) => {
     const map: Record<string, { bg: string; text: string; label: string }> = {
-      paid: { bg: 'bg-emerald-500/10', text: 'text-emerald-500', label: 'Payé' },
-      pending: { bg: 'bg-yellow-500/10', text: 'text-yellow-500', label: 'En attente' },
-      partial: { bg: 'bg-blue-500/10', text: 'text-blue-500', label: 'Partiel' },
-      cancelled: { bg: 'bg-red-500/10', text: 'text-red-500', label: 'Annulé' },
+      paid:      { bg: 'bg-emerald-500/10', text: 'text-emerald-500', label: 'Payé' },
+      pending:   { bg: 'bg-yellow-500/10',  text: 'text-yellow-500',  label: 'En attente' },
+      partial:   { bg: 'bg-blue-500/10',    text: 'text-blue-500',    label: 'Partiel' },
+      cancelled: { bg: 'bg-red-500/10',     text: 'text-red-400',     label: 'Annulé' },
     };
     const s = map[status] || map.pending;
     return <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${s.bg} ${s.text}`}>{s.label}</span>;
   };
+
+  const typeBadge = (tc: string) => {
+    const isPT = tc === 'PLEIN_TEMPS';
+    return (
+      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isPT ? 'bg-indigo-500/10 text-indigo-400' : 'bg-orange-500/10 text-orange-400'}`}>
+        {isPT ? 'PT' : 'MT'}
+      </span>
+    );
+  };
+
+  // ── Config field helper ────────────────────────────────────────────────────
+  const cfgField = (label: string, key: string, isInt = false, hint?: string) => (
+    <div key={key}>
+      <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block">{label}</label>
+      <input
+        type="number" step={isInt ? '1' : '0.01'} min="0"
+        value={configDraft[key] ?? ''}
+        onChange={e => setConfigDraft((d: any) => ({ ...d, [key]: isInt ? parseInt(e.target.value) || 0 : parseFloat(e.target.value) || 0 }))}
+        disabled={!isSuperAdmin}
+        className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+      />
+      {hint && <p className="text-[9px] text-muted-foreground mt-1">{hint}</p>}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -141,18 +159,19 @@ export default function SalaryPage() {
             Gestion des <span className="text-primary">Salaires</span>
           </h1>
           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
-            Calcul dynamique basé sur les performances réelles
+            Calcul PT/MT · Prime assiduité · Prime installation
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <input
-            type="month" value={selectedMonth}
+          <input type="month" value={selectedMonth}
             onChange={e => setSelectedMonth(e.target.value)}
             className="h-10 px-4 bg-muted border border-border rounded-xl text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <button onClick={handleCalculate} disabled={calculating}
             className="h-10 px-4 bg-primary text-primary-foreground rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50">
-            {calculating ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+            {calculating
+              ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              : <Zap className="w-3.5 h-3.5" />}
             Calculer
           </button>
           <button onClick={fetchData} className="p-2.5 bg-card border border-border rounded-xl hover:bg-muted transition-all text-primary">
@@ -163,11 +182,11 @@ export default function SalaryPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-border pb-1">
-        {[
-          { key: 'dashboard' as TabType, label: 'Dashboard', icon: BarChart3 },
-          { key: 'salaries' as TabType, label: 'Tableau Salaires', icon: Banknote },
-          { key: 'rules' as TabType, label: 'Paramètres', icon: Settings },
-        ].map(tab => (
+        {([
+          { key: 'dashboard' as TabType, label: 'Dashboard',       icon: BarChart3 },
+          { key: 'salaries'  as TabType, label: 'Tableau Salaires', icon: Banknote },
+          { key: 'config'    as TabType, label: 'Paramètres',       icon: Settings },
+        ] as const).map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)}
             className={`flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-t-xl transition-all ${
               activeTab === tab.key ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:bg-muted'
@@ -177,90 +196,121 @@ export default function SalaryPage() {
         ))}
       </div>
 
-      {/* DASHBOARD TAB */}
+      {/* ── DASHBOARD ─────────────────────────────────────────────────────────── */}
       {activeTab === 'dashboard' && (
         <>
+          {/* KPI cards */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {[
-              { label: 'Agents', value: summary?.totalAgents || 0, icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-              { label: 'Masse Salariale', value: fmt(summary?.totalMass || 0), icon: Euro, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-              { label: 'Salaire Moyen', value: fmt(summary?.avgSalary || 0), icon: TrendingUp, color: 'text-purple-400', bg: 'bg-purple-500/10' },
-              { label: 'Meilleur Agent', value: summary?.bestAgent || 'N/A', icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
-              { label: 'Primes Totales', value: fmt(summary?.totalPrimes || 0), icon: Award, color: 'text-orange-400', bg: 'bg-orange-500/10' },
+              { label: 'Agents',         value: summary?.totalAgents || 0,         icon: Users,      color: 'text-blue-400',   bg: 'bg-blue-500/10' },
+              { label: 'Masse Salariale', value: fmt(summary?.totalMass || 0),      icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+              { label: 'Salaire Moyen',  value: fmt(summary?.avgSalary || 0),       icon: TrendingUp, color: 'text-purple-400',  bg: 'bg-purple-500/10' },
+              { label: 'Meilleur Agent', value: summary?.bestAgent || 'N/A',        icon: Trophy,     color: 'text-yellow-400',  bg: 'bg-yellow-500/10' },
+              { label: 'Total Primes',   value: fmt(summary?.totalPrimes || 0),     icon: Award,      color: 'text-orange-400',  bg: 'bg-orange-500/10' },
             ].map((kpi, i) => (
-              <div key={i} className="bg-card border border-border p-5 rounded-2xl shadow-sm relative overflow-hidden group">
+              <div key={i} className="bg-card border border-border p-5 rounded-2xl shadow-sm">
                 <div className={`w-10 h-10 rounded-xl ${kpi.bg} flex items-center justify-center mb-3 ${kpi.color}`}>
                   <kpi.icon className="w-5 h-5" />
                 </div>
-                <div className="text-lg font-black text-foreground">{loading ? '...' : kpi.value}</div>
+                <div className="text-lg font-black text-foreground">{loading ? '…' : kpi.value}</div>
                 <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">{kpi.label}</div>
               </div>
             ))}
           </div>
 
+          {/* Grille règles PT/MT */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-              <h3 className="text-sm font-black uppercase tracking-widest text-foreground mb-4 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-primary" /> Répartition Salaires
-              </h3>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={salaries.slice(0, 10)}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                  <XAxis dataKey="agentName" tick={{ fontSize: 9, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} angle={-30} textAnchor="end" height={60} />
-                  <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '8px', color: 'var(--foreground)' }} />
-                  <Bar dataKey="baseSalary" name="Base" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="rdvBonus" name="Prime RDV" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="poseBonus" name="Prime Pose" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-              <h3 className="text-sm font-black uppercase tracking-widest text-foreground mb-4 flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-emerald-400" /> Statistiques Paiement
-              </h3>
-              <div className="space-y-3 mt-2">
-                {[
-                  { label: 'Masse Salariale', value: fmt(summary?.totalMass || 0), color: 'text-emerald-400' },
-                  { label: 'Primes Totales', value: fmt(summary?.totalPrimes || 0), color: 'text-blue-400' },
-                  { label: 'Pénalités', value: fmt(summary?.totalPenalties || 0), color: 'text-red-400' },
-                  { label: 'Salaire Maximum', value: fmt(summary?.maxSalary || 0), color: 'text-purple-400' },
-                  { label: 'Calculés / Total', value: `${summary?.calculatedAgents || 0} / ${summary?.totalAgents || 0}`, color: 'text-yellow-400' },
-                ].map((item, i) => (
-                  <div key={i} className="flex justify-between items-center p-3 bg-muted/10 rounded-xl">
-                    <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
-                    <span className={`text-sm font-black ${item.color}`}>{item.value}</span>
+            {[
+              {
+                label: 'Plein Temps (PT)', color: 'text-indigo-400', bg: 'bg-indigo-500/10', icon: Briefcase,
+                rows: [
+                  ['Salaire de base', `${config.pT_BaseSalary} DT`],
+                  ['Prime assiduité', `${config.pT_PrimeAssiduite} DT`],
+                  ['Seuil RDV (assiduité)', `≥ ${config.pT_SeuilRdv} RDV`],
+                  ['1ère installation', `${config.pT_Install1} DT`],
+                  ['Installation suppl.', `+${config.pT_InstallExtra} DT/install`],
+                ],
+              },
+              {
+                label: 'Mi-Temps (MT)', color: 'text-orange-400', bg: 'bg-orange-500/10', icon: Clock,
+                rows: [
+                  ['Salaire de base', `${config.mT_BaseSalary} DT`],
+                  ['Prime assiduité', `${config.mT_PrimeAssiduite} DT`],
+                  ['Seuil RDV (assiduité)', `≥ ${config.mT_SeuilRdv} RDV`],
+                  ['1ère installation', `${config.mT_Install1} DT`],
+                  ['Installation suppl.', `+${config.mT_InstallExtra} DT/install`],
+                ],
+              },
+            ].map((regime, idx) => (
+              <div key={idx} className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+                <h3 className={`text-sm font-black uppercase tracking-widest mb-4 flex items-center gap-2 ${regime.color}`}>
+                  <div className={`w-7 h-7 rounded-lg ${regime.bg} flex items-center justify-center`}>
+                    <regime.icon className="w-4 h-4" />
                   </div>
-                ))}
+                  {regime.label}
+                </h3>
+                <div className="space-y-2">
+                  {regime.rows.map(([k, v], i) => (
+                    <div key={i} className="flex justify-between items-center p-3 bg-muted/10 rounded-xl">
+                      <span className="text-xs font-medium text-muted-foreground">{k}</span>
+                      <span className={`text-sm font-black ${regime.color}`}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[9px] text-muted-foreground mt-3 leading-relaxed">
+                  Prime assiduité versée si : 0 absence <strong>ET</strong> ({regime.label === 'Plein Temps (PT)' ? '≥ 21 RDV' : '≥ 12 RDV'} OU ≥ 1 installation)
+                </p>
               </div>
-            </div>
+            ))}
+          </div>
+
+          {/* Chart */}
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground mb-4 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" /> Répartition Salaires (top 10)
+            </h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={salaries.slice(0, 10)}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="agentName" tick={{ fontSize: 9, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} angle={-30} textAnchor="end" height={60} />
+                <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: '8px' }} />
+                <Bar dataKey="baseSalary"        name="Base (DT)"       fill="#6366f1" radius={[4,4,0,0]} />
+                <Bar dataKey="primeAssiduite"    name="P.Assiduité"     fill="#10b981" radius={[4,4,0,0]} />
+                <Bar dataKey="primeInstallation" name="P.Installation"  fill="#f59e0b" radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </>
       )}
 
-      {/* SALARIES TABLE TAB */}
+      {/* ── SALARIES TABLE ─────────────────────────────────────────────────────── */}
       {activeTab === 'salaries' && (
         <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Banknote className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Tableau des Salaires</h3>
+              <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Tableau des Salaires — {selectedMonth}</h3>
             </div>
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-2 flex-wrap">
               <div className="relative">
                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input type="text" placeholder="Rechercher agent..." value={searchTerm}
+                <input type="text" placeholder="Rechercher agent…" value={searchTerm}
                   onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                  className="pl-9 pr-4 py-2 rounded-xl border border-border bg-background text-xs w-48" />
+                  className="pl-9 pr-4 py-2 rounded-xl border border-border bg-background text-xs w-44" />
               </div>
+              <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setCurrentPage(1); }}
+                className="px-3 py-2 rounded-xl border border-border bg-background text-xs">
+                <option value="">Tous régimes</option>
+                <option value="PLEIN_TEMPS">Plein Temps</option>
+                <option value="MI_TEMPS">Mi-Temps</option>
+              </select>
               <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-2 rounded-xl border border-border bg-background text-xs">
+                className="px-3 py-2 rounded-xl border border-border bg-background text-xs">
                 <option value="">Tous statuts</option>
                 <option value="paid">Payé</option>
                 <option value="pending">En attente</option>
                 <option value="partial">Partiel</option>
-                <option value="cancelled">Annulé</option>
               </select>
               <button onClick={exportCSV} className="h-9 px-3 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 flex items-center gap-2">
                 <Download className="w-3.5 h-3.5" /> CSV
@@ -272,33 +322,39 @@ export default function SalaryPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-muted/10 border-b border-border">
-                  {['Agent', 'Base', 'RDV', 'Poses', 'Refus', 'Qualité', 'P.RDV', 'P.Pose', 'P.Qual', 'Pénal.', 'Total', 'Statut', 'Actions'].map(h => (
-                    <th key={h} className="px-3 py-3 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">{h}</th>
+                  {['Agent', 'Régime', 'Base', 'RDV', 'Installs', 'Absences', 'Assiduité', 'P.Assiduité', 'P.Installation', 'Total', 'Statut', 'Actions'].map(h => (
+                    <th key={h} className="px-3 py-3 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {loading ? (
-                  <tr><td colSpan={13} className="px-4 py-12 text-center text-muted-foreground text-xs animate-pulse">Chargement...</td></tr>
+                  <tr><td colSpan={12} className="px-4 py-12 text-center text-muted-foreground text-xs animate-pulse">Chargement…</td></tr>
                 ) : paginatedSalaries.length === 0 ? (
-                  <tr><td colSpan={13} className="px-4 py-12 text-center text-muted-foreground text-xs">Aucun salaire calculé. Cliquez sur "Calculer".</td></tr>
-                ) : (
-                  paginatedSalaries.map((s: any) => (
+                  <tr><td colSpan={12} className="px-4 py-12 text-center text-muted-foreground text-xs">Aucun salaire calculé. Cliquez sur "Calculer".</td></tr>
+                ) : paginatedSalaries.map((s: any) => {
+                  const installs   = s.installations ?? s.poseCount ?? 0;
+                  const absences   = s.absenceCount  ?? s.refusCount ?? 0;
+                  const pAssid     = s.primeAssiduite    ?? s.rdvBonus         ?? 0;
+                  const pInstall   = s.primeInstallation ?? s.installationBonus ?? 0;
+                  const assidOk    = s.assiduiteOk ?? (pAssid > 0);
+                  return (
                     <tr key={s.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="px-3 py-3 font-semibold text-xs">{s.agentName}</td>
+                      <td className="px-3 py-3 font-semibold text-xs whitespace-nowrap">{s.agentName}</td>
+                      <td className="px-3 py-3">{s.typeContrat ? typeBadge(s.typeContrat) : <span className="text-muted-foreground text-xs">—</span>}</td>
                       <td className="px-3 py-3 text-xs font-mono">{fmt(s.baseSalary)}</td>
                       <td className="px-3 py-3 text-center text-xs">{s.rdvCount}</td>
-                      <td className="px-3 py-3 text-center text-xs">{s.poseCount}</td>
-                      <td className="px-3 py-3 text-center text-xs text-red-400">{s.refusCount}</td>
+                      <td className="px-3 py-3 text-center text-xs font-bold text-emerald-400">{installs}</td>
                       <td className="px-3 py-3 text-center text-xs">
-                        <span className={`font-bold ${s.qualityRate >= 90 ? 'text-emerald-400' : s.qualityRate >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
-                          {(s.qualityRate || 0).toFixed(0)}%
-                        </span>
+                        <span className={absences > 0 ? 'text-red-400 font-bold' : 'text-emerald-400'}>{absences}</span>
                       </td>
-                      <td className="px-3 py-3 text-xs font-mono text-emerald-400">{fmt(s.rdvBonus)}</td>
-                      <td className="px-3 py-3 text-xs font-mono text-emerald-400">{fmt(s.poseBonus)}</td>
-                      <td className="px-3 py-3 text-xs font-mono text-purple-400">{fmt(s.qualityBonus)}</td>
-                      <td className="px-3 py-3 text-xs font-mono text-red-400">{fmt(s.penalties)}</td>
+                      <td className="px-3 py-3 text-center">
+                        {assidOk
+                          ? <CheckCircle className="w-4 h-4 text-emerald-400 mx-auto" />
+                          : <X className="w-4 h-4 text-red-400 mx-auto" />}
+                      </td>
+                      <td className="px-3 py-3 text-xs font-mono text-emerald-400">{fmt(pAssid)}</td>
+                      <td className="px-3 py-3 text-xs font-mono text-yellow-400">{fmt(pInstall)}</td>
                       <td className="px-3 py-3 text-xs font-black font-mono">{fmt(s.totalSalary)}</td>
                       <td className="px-3 py-3">{paymentBadge(s.paymentStatus)}</td>
                       <td className="px-3 py-3">
@@ -310,8 +366,8 @@ export default function SalaryPage() {
                         )}
                       </td>
                     </tr>
-                  ))
-                )}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -320,127 +376,106 @@ export default function SalaryPage() {
             <div className="px-6 py-3 border-t border-border flex items-center justify-between">
               <span className="text-[10px] font-bold text-muted-foreground">{filteredSalaries.length} résultats — Page {currentPage}/{totalPages}</span>
               <div className="flex gap-1">
-                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg hover:bg-muted disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
-                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-lg hover:bg-muted disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+                <button onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1} className="p-2 rounded-lg hover:bg-muted disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages} className="p-2 rounded-lg hover:bg-muted disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* RULES TAB */}
-      {activeTab === 'rules' && (
-        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Settings className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Paramètres de Rémunération</h3>
+      {/* ── CONFIG TAB ─────────────────────────────────────────────────────────── */}
+      {activeTab === 'config' && (
+        <div className="space-y-6">
+          {/* SuperAdmin notice */}
+          {!isSuperAdmin && (
+            <div className="flex items-center gap-3 px-5 py-4 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl">
+              <ShieldAlert className="w-5 h-5 text-yellow-400 shrink-0" />
+              <p className="text-xs font-medium text-yellow-400">
+                Lecture seule — seul le <strong>SuperAdmin</strong> peut modifier ces paramètres.
+              </p>
             </div>
-            <button onClick={openNewRule}
-              className="h-9 px-4 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:opacity-90 flex items-center gap-2">
-              <Plus className="w-3.5 h-3.5" /> Ajouter Règle
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/10 border-b border-border">
-                  {['Règle', 'Type', 'Rôle', 'Montant', 'Actif', 'Actions'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {rules.map((r: any) => (
-                  <tr key={r.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-xs">{r.ruleName}</td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase bg-primary/10 text-primary">{r.ruleType}</span>
-                    </td>
-                    <td className="px-4 py-3 text-xs capitalize">{r.role}</td>
-                    <td className={`px-4 py-3 text-xs font-mono font-bold ${r.amount >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {r.amount >= 0 ? '+' : ''}{r.amount} €
-                    </td>
-                    <td className="px-4 py-3">
-                      {r.isActive ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <X className="w-4 h-4 text-red-400" />}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => openEditRule(r)} className="p-1.5 rounded-lg hover:bg-blue-500/10 text-blue-400 transition-all"><Edit3 className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => handleDeleteRule(r.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {rules.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground text-xs">Aucune règle définie. Ajoutez des règles pour calculer les salaires.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Rule Modal */}
-      {showRuleModal && (
-        <div className="fixed inset-0 bg-background/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-border w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-border flex items-center justify-between">
-              <h3 className="text-sm font-black uppercase tracking-widest">{editingRule ? 'Modifier la règle' : 'Nouvelle règle'}</h3>
-              <button onClick={() => setShowRuleModal(false)} className="p-1.5 rounded-lg hover:bg-muted"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block">Nom de la règle</label>
-                <input className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                  placeholder="ex: Prime RDV Confirmé" value={ruleForm.ruleName}
-                  onChange={e => setRuleForm({ ...ruleForm, ruleName: e.target.value })} />
+          {/* Règle de calcul expliquée */}
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground mb-3 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-primary" /> Règle de calcul
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-muted-foreground leading-relaxed">
+              <div className="p-4 bg-indigo-500/5 border border-indigo-500/20 rounded-xl">
+                <p className="font-black text-indigo-400 mb-2 uppercase tracking-widest text-[10px]">Plein Temps (PT)</p>
+                <p>• Salaire = Base + Prime assiduité + Prime installation</p>
+                <p>• Prime assiduité : si <strong>0 absence ET</strong> (≥ seuil RDV <strong>OU</strong> ≥ 1 install)</p>
+                <p>• Prime install : 1ère install = PT_Install1 DT, suivantes = +PT_InstallExtra DT chacune</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block">Type</label>
-                  <select className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl text-sm outline-none" value={ruleForm.ruleType}
-                    onChange={e => setRuleForm({ ...ruleForm, ruleType: e.target.value })}>
-                    <option value="base_salary">Salaire de base</option>
-                    <option value="rdv_bonus">Prime RDV</option>
-                    <option value="pose_bonus">Prime Pose</option>
-                    <option value="quality_bonus">Prime Qualité</option>
-                    <option value="installation_bonus">Bonus Installation</option>
-                    <option value="refus_penalty">Pénalité Refus</option>
-                    <option value="absence_penalty">Pénalité Absence</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block">Rôle</label>
-                  <select className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl text-sm outline-none" value={ruleForm.role}
-                    onChange={e => setRuleForm({ ...ruleForm, role: e.target.value })}>
-                    <option value="agent">Agent</option>
-                    <option value="qualite">Qualité</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block">Montant (€)</label>
-                <input type="number" className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 outline-none"
-                  placeholder="ex: 50 ou -20" value={ruleForm.amount}
-                  onChange={e => setRuleForm({ ...ruleForm, amount: parseFloat(e.target.value) || 0 })} />
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Active</label>
-                <button onClick={() => setRuleForm({ ...ruleForm, isActive: !ruleForm.isActive })}
-                  className={`w-10 h-5 rounded-full transition-all ${ruleForm.isActive ? 'bg-emerald-500' : 'bg-muted'}`}>
-                  <div className={`w-4 h-4 bg-white rounded-full transition-transform mx-0.5 ${ruleForm.isActive ? 'translate-x-5' : ''}`} />
-                </button>
+              <div className="p-4 bg-orange-500/5 border border-orange-500/20 rounded-xl">
+                <p className="font-black text-orange-400 mb-2 uppercase tracking-widest text-[10px]">Mi-Temps (MT)</p>
+                <p>• Salaire = Base + Prime assiduité + Prime installation</p>
+                <p>• Prime assiduité : si <strong>0 absence ET</strong> (≥ seuil RDV <strong>OU</strong> ≥ 1 install)</p>
+                <p>• Prime install : 1ère install = MT_Install1 DT, suivantes = +MT_InstallExtra DT chacune</p>
               </div>
             </div>
-            <div className="p-6 border-t border-border flex justify-end gap-3">
-              <button onClick={() => setShowRuleModal(false)} className="px-5 py-2 text-[10px] font-black uppercase text-muted-foreground hover:bg-muted rounded-xl">Annuler</button>
-              <button onClick={handleSaveRule} className="px-5 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:opacity-90 flex items-center gap-2">
-                <Save className="w-3.5 h-3.5" />{editingRule ? 'Sauvegarder' : 'Créer'}
+          </div>
+
+          {/* Form */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* PT */}
+            <div className="bg-card border border-indigo-500/20 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-black uppercase tracking-widest mb-5 flex items-center gap-2 text-indigo-400">
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                  <Briefcase className="w-4 h-4" />
+                </div>
+                Plein Temps (PT)
+              </h3>
+              <div className="space-y-4">
+                {cfgField('Salaire de base (DT)',          'pT_BaseSalary',     false)}
+                {cfgField('Prime assiduité (DT)',          'pT_PrimeAssiduite', false)}
+                {cfgField('Seuil RDV pour assiduité',     'pT_SeuilRdv',       true, 'Nb de RDV minimum pour déclencher la prime (si 0 absence)')}
+                {cfgField('1ère installation (DT)',        'pT_Install1',       false)}
+                {cfgField('Par installation suppl. (DT)', 'pT_InstallExtra',   false)}
+              </div>
+            </div>
+
+            {/* MT */}
+            <div className="bg-card border border-orange-500/20 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-sm font-black uppercase tracking-widest mb-5 flex items-center gap-2 text-orange-400">
+                <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                  <Clock className="w-4 h-4" />
+                </div>
+                Mi-Temps (MT)
+              </h3>
+              <div className="space-y-4">
+                {cfgField('Salaire de base (DT)',          'mT_BaseSalary',     false)}
+                {cfgField('Prime assiduité (DT)',          'mT_PrimeAssiduite', false)}
+                {cfgField('Seuil RDV pour assiduité',     'mT_SeuilRdv',       true, 'Nb de RDV minimum pour déclencher la prime (si 0 absence)')}
+                {cfgField('1ère installation (DT)',        'mT_Install1',       false)}
+                {cfgField('Par installation suppl. (DT)', 'mT_InstallExtra',   false)}
+              </div>
+            </div>
+          </div>
+
+          {/* Save button + feedback */}
+          {isSuperAdmin && (
+            <div className="flex items-center gap-4 justify-end">
+              {configMsg && (
+                <span className={`text-xs font-bold ${configMsg.startsWith('✓') ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {configMsg}
+                </span>
+              )}
+              <button onClick={() => setConfigDraft(config)}
+                className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted rounded-xl transition-all">
+                Annuler
+              </button>
+              <button onClick={handleSaveConfig} disabled={configSaving}
+                className="px-6 py-2.5 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:opacity-90 flex items-center gap-2 disabled:opacity-50">
+                {configSaving
+                  ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <Save className="w-3.5 h-3.5" />}
+                Sauvegarder
               </button>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
