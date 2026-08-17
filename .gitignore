@@ -1,12 +1,166 @@
-﻿# Windows
+# =============================================================================
+# CRM AI Project - .gitignore
+# =============================================================================
+# This file specifies intentionally untracked files that Git should ignore.
+# Files listed here will not be tracked or committed to the repository.
+# =============================================================================
+
+# ------------------------- Python Cache & Byte Code -------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+*.egg
+*.whl
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ------------------------- Virtual Environments -------------------------------
+venv/
+ENV/
+env/
+.venv/
+venv*/
+env/*
+
+# ------------------------- Environment Variables ------------------------------
+.env
+.env.local
+.env.*.local
+# NOTE: Contains sensitive credentials, API keys, and database passwords
+# If you want to share .env template, create .env.example
+
+# ------------------------- Database Files ---------------------------------
+crm.db
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# ------------------------- RAG Vector Database ----------------------------
+rag_db/
+chroma.sqlite3
+.vectorstore/
+vectors/
+
+# ------------------------- Audio Files ------------------------------------
+audio/
+*.mp3
+*.wav
+*.m4a
+*.ogg
+*.flac
+*.aac
+*.mpeg
+*.mp4
+
+# ------------------------- Streamlit Cache --------------------------------
+.streamlit/
+.streamlit/config.toml
+.streamlit/credentials.toml
+.streamlit/.cache/
+
+# ------------------------- IDE & Editor -----------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
 Thumbs.db
-*.suo
+*.user
+*.userprefs
 
-# Backend
-Backend/bin/
-Backend/obj/
+# ------------------------- Logs & Temporary -----------------------------
+*.log
+*.tmp
+*.temp
+logs/
+tmp/
+temp/
 
-# Frontend
-Frontend/node_modules/
-Frontend/dist/
-Frontend/.env.local
+# ------------------------- Test Files ------------------------------------
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# ------------------------- Build & Distribution -------------------------
+dist/
+build/
+*.egg-info/
+.pyinstaller/
+__build__/
+
+# ------------------------- Jupyter Notebook -----------------------------
+.ipynb_checkpoints/
+*.ipynb
+.ipynb_checkpoints
+
+# ------------------------- Model Files (if downloaded) -----------------
+models/
+!BackendDotNet/**/Models/
+!Backend/src/CrmApi/Models/
+!Backend/src/CrmApi/Models/**
+*.bin
+*.h5
+*.onnx
+*.pkl
+
+# ------------------------- Sensitive Data -------------------------------
+credentials.json
+secrets.yaml
+*password*.txt
+*password*.json
+*secret*.txt
+*secret*.json
+*.key
+
+# ------------------------- OS Generated Files ---------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ------------------------- Project Specific Data -----------------------
+rapport_agents.csv
+*.csv
+*.xlsx
+gap_analysis.md
+
+# ------------------------- Docker / Deploy ----------------------------
+backups/
+ssl/
+*.pid
+
+# ------------------------- Cache & Temporary Data ----------------------
+.cache/
+*.cache
+#-------------------------------- ai Agent ----------------------------------
+agent.md
+.opencode/
+node_modules
+
+# .NET build artifacts
+BackendDotNet/**/bin/
+BackendDotNet/**/obj/
+BackendDotNet/TestResults/
+Backend/**/bin/
+Backend/**/obj/
+Backend/TestResults/
+
+# Frontend test & coverage
+frontend/coverage/
+frontend/test-results/
+frontend/playwright-report/
+
+# Performance tests
+performance-tests/
