@@ -87,9 +87,10 @@ public class QualiteController : ControllerBase
                 Contact = r.Contact == null ? null : new
                 {
                     r.Contact.Id, r.Contact.Nom, r.Contact.Prenom,
-                    r.Contact.Telephone, r.Contact.NumGSM,
+                    r.Contact.Telephone, r.Contact.NumGSM, r.Contact.Projet,
                 },
-                Agent = r.Agent == null ? null : new { r.Agent.Id, r.Agent.Nom, r.Agent.Prenom }
+                Agent = r.Agent == null ? null : new { r.Agent.Id, r.Agent.Nom, r.Agent.Prenom },
+                r.DateCreation
             })
             .ToListAsync();
 
