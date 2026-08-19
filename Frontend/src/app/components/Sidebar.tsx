@@ -79,7 +79,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     ]},
     { sectionLabel: 'IA & AUTOMATISATION', items: [
       { icon: Settings, label: 'Configuration IA', path: '/superadmin/ai-config' },
-      { icon: Brain,    label: 'Scoring IA',       path: '/superadmin/ai-scoring' },
       { icon: Bell,     label: 'Alertes',          path: '/superadmin/alerts-manage' },
       chatbotItem,
     ]},
@@ -118,7 +117,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     ]},
     { sectionLabel: 'IA & AUTOMATISATION', items: [
       { icon: Settings, label: 'Configuration IA', path: '/admin/ai-config' },
-      { icon: Brain,    label: 'Scoring IA',       path: '/admin/ai-scoring' },
       { icon: Bell,     label: 'Alertes',          path: '/admin/alerts-manage' },
       chatbotItem,
     ]},

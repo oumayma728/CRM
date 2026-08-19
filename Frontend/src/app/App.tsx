@@ -52,7 +52,6 @@ import QualityAnalyticsPage from './pages/qualite/QualityAnalyticsPage';
 import QualityCalendarPage from './pages/qualite/QualityCalendarPage';
 // ── MODULES KHALED (Admin) ────────────────────────────────────
 import SalaryPage from './pages/admin/SalaryPage';
-import AiScoringPage from './pages/admin/AiScoringPage';
 import AnalyticsKhaledPage from './pages/admin/AnalyticsKhaledPage';
 import AlertsManagePage from './pages/admin/AlertsManagePage';
 import LeadsKhaledPage from './pages/admin/LeadsKhaledPage';
@@ -213,13 +212,11 @@ function AppRoutes() {
       <Route element={<ProtectedRoute><Layout><Outlet /></Layout></ProtectedRoute>}>
         {/* Admin */}
         <Route path="/admin/salary"                element={<SalaryPage />} />
-        <Route path="/admin/ai-scoring"            element={<AiScoringPage />} />
         <Route path="/admin/analytics-advanced"    element={<AnalyticsKhaledPage />} />
         <Route path="/admin/alerts-manage"         element={<AlertsManagePage />} />
         <Route path="/admin/leads-khaled"          element={<LeadsKhaledPage />} />
         {/* SuperAdmin mirrors */}
         <Route path="/superadmin/salary"           element={<SalaryPage />} />
-        <Route path="/superadmin/ai-scoring"       element={<AiScoringPage />} />
         <Route path="/superadmin/analytics-advanced" element={<AnalyticsKhaledPage />} />
         <Route path="/superadmin/alerts-manage"    element={<AlertsManagePage />} />
         <Route path="/superadmin/leads-khaled"     element={<LeadsKhaledPage />} />
