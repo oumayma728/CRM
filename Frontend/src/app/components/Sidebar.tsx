@@ -62,6 +62,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     ]},
     { sectionLabel: 'UTILISATEURS', items: [
       { icon: Users,   label: 'Utilisateurs',        path: '/superadmin/users' },
+      { icon: Clock,   label: 'Pointage Équipe',     path: '/superadmin/pointage' },
       { icon: Clock,   label: 'Mon Pointage',        path: '/superadmin/mon-historique-pointage' },
       { icon: History, label: 'Historique Pointage', path: '/superadmin/pointage-historique' },
     ]},
@@ -100,6 +101,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     ]},
     { sectionLabel: 'UTILISATEURS', items: [
       { icon: Users,   label: 'Utilisateurs',        path: '/admin/users' },
+      { icon: Clock,   label: 'Pointage Équipe',     path: '/admin/pointage' },
       { icon: Clock,   label: 'Mon Pointage',        path: '/admin/mon-historique-pointage' },
       { icon: History, label: 'Historique Pointage', path: '/admin/pointage-historique' },
     ]},

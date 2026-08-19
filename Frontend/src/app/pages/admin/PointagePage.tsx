@@ -1,9 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Layout } from '../../components/Layout';
 import api from '../../../services/api';
-import { Clock, Coffee, LogIn, Calendar, AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { Clock, Coffee, LogIn, Calendar, AlertCircle, AlertTriangle, Info, UserCheck, UserX, PlayCircle, WifiOff, DoorOpen, Timer, RefreshCw } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+interface TeamAgentLive {
+  userId: number;
+  userName: string;
+  userRole: string;
+  status: string;
+  clockIn?: string;
+  workDurationMinutes?: number;
+  currentBreakType?: string;
+  totalBreakMinutes?: number;
+}
 
 interface PointageDetail {
   agentNom: string;
@@ -47,6 +58,28 @@ const statusDot = (statut: string) => {
   }
 };
 
+const formatLiveTime = (iso?: string) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+};
+
+const formatLiveDuration = (minutes?: number) => {
+  if (minutes == null || minutes <= 0) return '—';
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return h > 0 ? `${h}h ${m.toString().padStart(2, '0')}` : `${m} min`;
+};
+
+const LiveStatusBadge = ({ status }: { status: string }) => {
+  if (status === 'active')
+    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"><PlayCircle className="w-3 h-3" /> En poste</span>;
+  if (status === 'break')
+    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"><Coffee className="w-3 h-3" /> Pause</span>;
+  return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"><WifiOff className="w-3 h-3" /> Hors ligne</span>;
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function PointagePage() {
@@ -54,6 +87,33 @@ export default function PointagePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // ── Pointage en direct (temps réel, auto-refresh 30s) ─────────────────────
+  const [liveAgents, setLiveAgents] = useState<TeamAgentLive[]>([]);
+  const [liveLoading, setLiveLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+
+  const fetchLive = useCallback(async () => {
+    try {
+      const res = await api.get('/attendance/team-detail');
+      setLiveAgents(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Erreur chargement pointage en direct:', err);
+    } finally {
+      setLiveLoading(false);
+      setLastRefresh(new Date());
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLive();
+    const interval = setInterval(fetchLive, 30000);
+    return () => clearInterval(interval);
+  }, [fetchLive]);
+
+  const presentLive = liveAgents.filter(a => a.status === 'active' || a.status === 'break');
+  const onBreakLive = liveAgents.filter(a => a.status === 'break');
+  const absentLive = liveAgents.filter(a => a.status !== 'active' && a.status !== 'break');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -134,6 +194,86 @@ export default function PointagePage() {
           )}
         </div>
 
+        {/* ── Pointage en direct ──────────────────────────────────────────── */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              <h2 className="font-semibold text-gray-900 dark:text-white text-sm">
+                Pointage en direct
+              </h2>
+              <span className="text-xs text-gray-400">
+                · màj {lastRefresh.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+            </div>
+            <button
+              onClick={fetchLive}
+              disabled={liveLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${liveLoading ? 'animate-spin' : ''}`} />
+              Actualiser
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 divide-x divide-gray-200 dark:divide-gray-700 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-4 flex items-center gap-3">
+              <UserCheck className="w-5 h-5 text-emerald-500 shrink-0" />
+              <div>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{presentLive.length}</p>
+                <p className="text-xs text-gray-500">Présents</p>
+              </div>
+            </div>
+            <div className="p-4 flex items-center gap-3">
+              <Coffee className="w-5 h-5 text-amber-500 shrink-0" />
+              <div>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{onBreakLive.length}</p>
+                <p className="text-xs text-gray-500">En pause</p>
+              </div>
+            </div>
+            <div className="p-4 flex items-center gap-3">
+              <UserX className="w-5 h-5 text-slate-400 shrink-0" />
+              <div>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{absentLive.length}</p>
+                <p className="text-xs text-gray-500">Hors ligne</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                  {['Agent', 'Statut', 'Arrivée', 'Durée', 'Pause'].map(h => (
+                    <th key={h} className="text-left p-3 text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {liveLoading && liveAgents.length === 0 ? (
+                  <tr><td colSpan={5} className="p-8 text-center text-gray-400 text-sm">Chargement...</td></tr>
+                ) : liveAgents.length === 0 ? (
+                  <tr><td colSpan={5} className="p-8 text-center text-gray-400 text-sm">Aucune donnée de pointage disponible</td></tr>
+                ) : liveAgents.map(agent => (
+                  <tr key={agent.userId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="p-3 font-medium text-gray-900 dark:text-white text-sm">{agent.userName}</td>
+                    <td className="p-3"><LiveStatusBadge status={agent.status} /></td>
+                    <td className="p-3 text-sm font-mono text-gray-600 dark:text-gray-400">
+                      <span className="inline-flex items-center gap-1"><DoorOpen className="w-3.5 h-3.5" />{formatLiveTime(agent.clockIn)}</span>
+                    </td>
+                    <td className="p-3 text-sm font-mono text-gray-600 dark:text-gray-400">
+                      <span className="inline-flex items-center gap-1"><Timer className="w-3.5 h-3.5" />{formatLiveDuration(agent.workDurationMinutes)}</span>
+                    </td>
+                    <td className="p-3 text-sm font-mono text-amber-600 dark:text-amber-400">
+                      {agent.totalBreakMinutes ? `${agent.totalBreakMinutes} min` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         {/* Date picker */}
         <div className="flex items-center gap-2">
           <Calendar className="w-5 h-5 text-gray-500" />
@@ -145,7 +285,7 @@ export default function PointagePage() {
           />
         </div>
 
-        {/* KPI Cards */}
+        {/* KPI Cards (rapport historique) */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
 
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">

@@ -69,6 +69,7 @@ builder.Services.AddScoped<IEmailService,        EmailService>();
 builder.Services.AddScoped<IConfirmationService, ConfirmationService>();
 builder.Services.AddScoped<IDashboardService,    DashboardService>();
 builder.Services.AddScoped<Backend.Services.Permission.IPermissionService, Backend.Services.Permission.PermissionService>();
+builder.Services.AddScoped<Backend.Services.Ai.IGroqAiService, Backend.Services.Ai.GroqAiService>();
 builder.Services.AddHttpContextAccessor();
 
 // ─── COLLEAGUE'S NEW SERVICES ────────────────────────────────────────────
