@@ -58,12 +58,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const superAdminSections: MenuSection[] = [
     { sectionLabel: 'PRINCIPAL', items: [
       { icon: LayoutDashboard, label: 'Dashboard Live',    path: '/superadmin/dashboard' },
+      { icon: Clock,           label: 'Pointage',          path: '/superadmin/pointage' },
       { icon: ClipboardCheck,  label: 'Scorecards Agents', path: '/superadmin/scorecards' },
       { icon: Shield,          label: 'Permissions',       path: '/superadmin/permissions' },
     ]},
     { sectionLabel: 'UTILISATEURS', items: [
       { icon: Users,   label: 'Utilisateurs',        path: '/superadmin/users' },
-      { icon: Clock,   label: 'Pointage Équipe',     path: '/superadmin/pointage' },
       { icon: Clock,   label: 'Mon Pointage',        path: '/superadmin/mon-historique-pointage' },
       { icon: History, label: 'Historique Pointage', path: '/superadmin/pointage-historique' },
     ]},
@@ -98,11 +98,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const adminSections: MenuSection[] = [
     { sectionLabel: 'PRINCIPAL', items: [
       { icon: LayoutDashboard, label: 'Dashboard Live',    path: '/admin/dashboard' },
+      { icon: Clock,           label: 'Pointage',          path: '/admin/pointage' },
       { icon: ClipboardCheck,  label: 'Scorecards Agents', path: '/admin/scorecards' },
     ]},
     { sectionLabel: 'UTILISATEURS', items: [
       { icon: Users,   label: 'Utilisateurs',        path: '/admin/users' },
-      { icon: Clock,   label: 'Pointage Équipe',     path: '/admin/pointage' },
       { icon: Clock,   label: 'Mon Pointage',        path: '/admin/mon-historique-pointage' },
       { icon: History, label: 'Historique Pointage', path: '/admin/pointage-historique' },
     ]},
