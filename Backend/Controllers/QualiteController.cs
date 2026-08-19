@@ -167,6 +167,74 @@ public class QualiteController : ControllerBase
         }
     }
 
+    // ── PERFORMANCE MENSUELLE D'UN AGENT (courant vs précédent) ───────────
+
+    /// <summary>Rendement mensuel d'un agent — appels/RDV/qualité/assiduité, courant vs mois précédent</summary>
+    [HttpGet("agent-performance/{agentId:long}")]
+    public async Task<IActionResult> GetAgentPerformance(long agentId)
+    {
+        var agent = await _context.Utilisateurs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentId);
+        if (agent == null) return NotFound(new { message = "Agent introuvable" });
+
+        var now = DateTime.UtcNow;
+
+        async Task<object> MonthStats(DateTime start, DateTime end)
+        {
+            var appels = await _context.Appels.AsNoTracking()
+                .Where(a => a.AgentId == agentId && a.DateHeure >= start && a.DateHeure < end)
+                .ToListAsync();
+            var rdvs = await _context.RendezVous.AsNoTracking()
+                .Where(r => r.AgentId == agentId && r.DateCreation >= start && r.DateCreation < end)
+                .ToListAsync();
+            var evals = await _context.Evaluations.AsNoTracking()
+                .Where(e => e.AgentId == agentId && e.DateEvaluation >= start && e.DateEvaluation < end)
+                .ToListAsync();
+            var pointages = await _context.Pointages.AsNoTracking()
+                .Where(p => p.AgentId == agentId && p.Date >= start && p.Date < end)
+                .ToListAsync();
+
+            var confirmed = rdvs.Count(r => r.Statut == StatutRendezVous.CONFIRME || r.Statut == StatutRendezVous.CONFIRME_TOTAL || r.Statut == StatutRendezVous.SIGNE);
+            var effectiveEnd = end < now ? end : now;
+            var workingDays = 0;
+            for (var d = start.Date; d < effectiveEnd.Date; d = d.AddDays(1))
+                if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday) workingDays++;
+            var daysPresent = pointages.Select(p => p.Date.Date).Distinct().Count();
+
+            var daysInMonth = (end - start).Days;
+            var dailyPerformance = new int[daysInMonth];
+            for (int i = 0; i < daysInMonth; i++)
+            {
+                var day = start.AddDays(i);
+                if (day >= now) break;
+                dailyPerformance[i] = rdvs.Count(r => r.DateCreation.Date == day.Date);
+            }
+
+            return new
+            {
+                calls = appels.Count,
+                appointments = rdvs.Count,
+                conversion_rate = appels.Count > 0 ? Math.Round(confirmed * 100.0 / appels.Count, 1) : 0,
+                quality_score = evals.Count > 0 ? Math.Round(Math.Min(evals.Average(e => e.NoteGlobale) * 20, 100), 1) : 0,
+                attendance_rate = workingDays > 0 ? Math.Round(Math.Min(daysPresent * 100.0 / workingDays, 100), 1) : 0,
+                avg_call_duration = appels.Count > 0 ? Math.Round(appels.Average(a => a.DureeSecondes), 0) : 0,
+                daily_performance = dailyPerformance
+            };
+        }
+
+        var curStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var curEnd = curStart.AddMonths(1);
+        var prevStart = curStart.AddMonths(-1);
+        var prevEnd = curStart;
+
+        return Ok(new
+        {
+            agent_id = agentId,
+            agent_name = $"{agent.Prenom} {agent.Nom}",
+            current_month = await MonthStats(curStart, curEnd),
+            previous_month = await MonthStats(prevStart, prevEnd)
+        });
+    }
+
     // ── STATISTIQUES APPELS ───────────────────────────────────────────────
 
     /// <summary>Statistiques d'appels par agent et par jour</summary>

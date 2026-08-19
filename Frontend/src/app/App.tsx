@@ -50,6 +50,10 @@ import StatsAppelsPage from './pages/qualite/StatsAppelsPage';
 import ManualEvaluationPage from './pages/qualite/ManualEvaluationPage';
 import QualityAnalyticsPage from './pages/qualite/QualityAnalyticsPage';
 import QualityCalendarPage from './pages/qualite/QualityCalendarPage';
+import AgentQualityDetail from './pages/qualite/AgentQualityDetail';
+import AgentTrendPage from './pages/qualite/AgentTrendPage';
+import QualityComparison from './pages/qualite/QualityComparison';
+import QualityPerformance from './pages/qualite/QualityPerformance';
 // ── MODULES KHALED (Admin) ────────────────────────────────────
 import SalaryPage from './pages/admin/SalaryPage';
 import AnalyticsKhaledPage from './pages/admin/AnalyticsKhaledPage';
@@ -230,6 +234,10 @@ function AppRoutes() {
         <Route path="evaluation-manuelle" element={<ManualEvaluationPage />} />
         <Route path="analytics-qualite" element={<QualityAnalyticsPage />} />
         <Route path="calendrier" element={<QualityCalendarPage />} />
+        <Route path="agent-detail" element={<AgentQualityDetail />} />
+        <Route path="agent-trend" element={<AgentTrendPage />} />
+        <Route path="comparaison" element={<QualityComparison />} />
+        <Route path="performance-agent" element={<QualityPerformance />} />
         <Route path="mon-historique-pointage" element={<MonHistoriquePointagePage />} />
       </Route>
 

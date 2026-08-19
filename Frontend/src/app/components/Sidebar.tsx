@@ -6,7 +6,7 @@ import {
   Download, Upload, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   CheckSquare, XCircle, Star, Building2, UserCheck, Briefcase,
   Banknote, Database, Shield, Brain, Bell, ContactRound, LineChart, Bot,
-  CalendarDays,
+  CalendarDays, ArrowLeftRight, Zap,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -234,6 +234,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { sectionLabel: 'ANALYSE', items: [
       { icon: BarChart3,  label: 'Stats Appels',       path: '/qualite/stats-appels' },
       { icon: TrendingUp, label: 'Analytique Qualité', path: '/qualite/analytics-qualite' },
+    ]},
+    { sectionLabel: 'AGENTS', items: [
+      { icon: UserCheck,      label: 'Détail Agent',       path: '/qualite/agent-detail' },
+      { icon: Zap,            label: 'Rendement Mensuel',  path: '/qualite/agent-trend' },
+      { icon: ArrowLeftRight, label: 'Comparaison',        path: '/qualite/comparaison' },
+      { icon: TrendingUp,     label: 'Performance Agent',  path: '/qualite/performance-agent' },
     ]},
     { sectionLabel: 'PRÉSENCE', items: [
       { icon: History, label: 'Mon Historique Pointage', path: '/qualite/mon-historique-pointage' },
