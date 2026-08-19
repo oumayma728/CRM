@@ -62,6 +62,55 @@ public class QualiteController : ControllerBase
         return Ok(rdvs);
     }
 
+    // ── CALENDRIER RDV (toute l'équipe, tous statuts) ─────────────────────
+
+    /// <summary>Tous les RDV de l'équipe pour une période, pour la vue calendrier</summary>
+    [HttpGet("rdv-calendrier")]
+    public async Task<IActionResult> GetRdvCalendrier([FromQuery] DateTime? debut, [FromQuery] DateTime? fin)
+    {
+        var debutUtc = debut.HasValue ? DateTime.SpecifyKind(debut.Value, DateTimeKind.Utc) : DateTime.UtcNow.AddMonths(-1);
+        var finUtc = fin.HasValue ? DateTime.SpecifyKind(fin.Value, DateTimeKind.Utc) : DateTime.UtcNow.AddMonths(1);
+
+        var rdvs = await _context.RendezVous
+            .Include(r => r.Contact)
+            .Include(r => r.Agent)
+            .Where(r => r.DateRendezVous >= debutUtc && r.DateRendezVous <= finUtc)
+            .OrderBy(r => r.DateRendezVous)
+            .Select(r => new
+            {
+                r.Id,
+                r.DateRendezVous,
+                r.Statut,
+                r.TypeRendezVous,
+                r.Commentaire,
+                r.CommentaireConfirmation,
+                Contact = r.Contact == null ? null : new
+                {
+                    r.Contact.Id, r.Contact.Nom, r.Contact.Prenom,
+                    r.Contact.Telephone, r.Contact.NumGSM,
+                },
+                Agent = r.Agent == null ? null : new { r.Agent.Id, r.Agent.Nom, r.Agent.Prenom }
+            })
+            .ToListAsync();
+
+        return Ok(rdvs);
+    }
+
+    /// <summary>Changer le statut d'un RDV depuis le calendrier qualité</summary>
+    [HttpPut("rdv-calendrier/{id:long}/statut")]
+    public async Task<IActionResult> UpdateRdvCalendrierStatut(long id, [FromBody] UpdateRdvStatutQualiteDTO dto)
+    {
+        var rdv = await _context.RendezVous.FindAsync(id);
+        if (rdv == null) return NotFound(new { message = "Rendez-vous non trouvé" });
+
+        if (!Enum.TryParse<StatutRendezVous>(dto.Statut, out var statut))
+            return BadRequest(new { message = "Statut invalide" });
+
+        rdv.Statut = statut;
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Statut mis à jour", statut = rdv.Statut.ToString() });
+    }
+
     // ── LISTE AGENTS ──────────────────────────────────────────────────────
 
     /// <summary>Liste des agents avec note d'évaluation</summary>
@@ -200,6 +249,11 @@ public class QualiteController : ControllerBase
 
         return CreatedAtAction(nameof(GetEvaluationsAgent), new { agentId = dto.AgentId }, evaluation);
     }
+}
+
+public class UpdateRdvStatutQualiteDTO
+{
+    public string Statut { get; set; } = string.Empty;
 }
 
 public class CreateEvaluationDTO

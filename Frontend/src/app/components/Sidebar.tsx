@@ -6,6 +6,7 @@ import {
   Download, Upload, ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
   CheckSquare, XCircle, Star, Building2, UserCheck, Briefcase,
   Banknote, Database, Shield, Brain, Bell, ContactRound, LineChart, Bot,
+  CalendarDays,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -230,6 +231,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { sectionLabel: 'GESTION', items: [
       { icon: XCircle,        label: 'Agenda Refus Équipe', path: '/qualite/agenda-refus' },
       { icon: ClipboardCheck, label: 'Éval. Manuelle',      path: '/qualite/evaluation-manuelle' },
+      { icon: CalendarDays,   label: 'Calendrier RDV',      path: '/qualite/calendrier' },
     ]},
     { sectionLabel: 'ANALYSE', items: [
       { icon: BarChart3,  label: 'Stats Appels',       path: '/qualite/stats-appels' },

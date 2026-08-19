@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router';
+import { ToastContainer } from 'react-toastify';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { Layout } from './components/Layout';
@@ -48,6 +49,7 @@ import AgendaRefusEquipe from './pages/qualite/AgendaRefusEquipe';
 import StatsAppelsPage from './pages/qualite/StatsAppelsPage';
 import ManualEvaluationPage from './pages/qualite/ManualEvaluationPage';
 import QualityAnalyticsPage from './pages/qualite/QualityAnalyticsPage';
+import QualityCalendarPage from './pages/qualite/QualityCalendarPage';
 // ── MODULES KHALED (Admin) ────────────────────────────────────
 import SalaryPage from './pages/admin/SalaryPage';
 import AiScoringPage from './pages/admin/AiScoringPage';
@@ -230,6 +232,7 @@ function AppRoutes() {
         <Route path="stats-appels" element={<StatsAppelsPage />} />
         <Route path="evaluation-manuelle" element={<ManualEvaluationPage />} />
         <Route path="analytics-qualite" element={<QualityAnalyticsPage />} />
+        <Route path="calendrier" element={<QualityCalendarPage />} />
         <Route path="mon-historique-pointage" element={<MonHistoriquePointagePage />} />
       </Route>
 
@@ -277,6 +280,7 @@ export default function App() {
       <AuthProvider>
         <ThemeProvider>
           <AppRoutes />
+          <ToastContainer position="top-right" autoClose={4000} theme="colored" />
         </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>

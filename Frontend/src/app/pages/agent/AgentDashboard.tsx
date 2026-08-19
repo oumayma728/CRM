@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Phone, CheckCircle, Clock, TrendingUp,
-  AlertCircle
+  AlertCircle, ArrowUpRight
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar,
@@ -79,31 +79,49 @@ export default function AgentDashboard() {
             <AttendanceWidget />
           </div>
           <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-card rounded-lg border border-border p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-muted-foreground text-sm">Appels du jour</h3>
-                <Phone className="w-4 h-4 text-primary" />
+            <div className="relative overflow-hidden rounded-2xl p-5 group bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 text-white shadow-lg shadow-indigo-600/25 ring-1 ring-white/15 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-600/35">
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-gradient-to-br from-cyan-300/30 to-transparent opacity-70 group-hover:scale-150 transition-transform duration-700 blur-2xl" />
+              <div className="relative flex items-center justify-between mb-3">
+                <div className="p-2.5 bg-white/15 backdrop-blur-md rounded-xl ring-1 ring-white/20">
+                  <Phone className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">Quotidien</span>
               </div>
-              <p className="text-3xl font-medium text-foreground">{dashboard.appelsDuJour}</p>
-              <p className={`text-sm mt-1 ${dashboard.evolutionAppels >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {dashboard.evolutionAppels >= 0 ? '+' : ''}{dashboard.evolutionAppels}% vs hier
+              <h3 className="text-xs font-bold uppercase tracking-wide text-white/85">Appels du jour</h3>
+              <p className="text-3xl font-bold mt-1 text-white tabular-nums">{dashboard.appelsDuJour}</p>
+              <div className={`mt-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/15 ring-1 ring-white/20 text-[10px] font-bold text-white`}>
+                <ArrowUpRight className="w-3 h-3" /> {dashboard.evolutionAppels >= 0 ? '+' : ''}{dashboard.evolutionAppels}% vs hier
+              </div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl p-5 group bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/15 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/35">
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-gradient-to-br from-teal-300/30 to-transparent opacity-70 group-hover:scale-150 transition-transform duration-700 blur-2xl" />
+              <div className="relative flex items-center justify-between mb-3">
+                <div className="p-2.5 bg-white/15 backdrop-blur-md rounded-xl ring-1 ring-white/20">
+                  <CheckCircle className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">Réussite</span>
+              </div>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-white/85">Conversions</h3>
+              <p className="text-3xl font-bold mt-1 text-white tabular-nums">{dashboard.conversionsDuJour}</p>
+              <p className="mt-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/15 ring-1 ring-white/20 text-[10px] font-bold text-white">
+                Taux : {dashboard.tauxConversion}%
               </p>
             </div>
-            <div className="bg-card rounded-lg border border-border p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-muted-foreground text-sm">Conversions</h3>
-                <CheckCircle className="w-4 h-4 text-success" />
+
+            <div className="relative overflow-hidden rounded-2xl p-5 group bg-gradient-to-br from-rose-400 via-rose-500 to-pink-600 text-white shadow-lg shadow-rose-500/25 ring-1 ring-white/15 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-rose-500/35">
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-gradient-to-br from-pink-300/30 to-transparent opacity-70 group-hover:scale-150 transition-transform duration-700 blur-2xl" />
+              <div className="relative flex items-center justify-between mb-3">
+                <div className="p-2.5 bg-white/15 backdrop-blur-md rounded-xl ring-1 ring-white/20">
+                  <TrendingUp className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">Niveau</span>
               </div>
-              <p className="text-3xl font-medium text-foreground">{dashboard.conversionsDuJour}</p>
-              <p className="text-sm text-muted-foreground mt-1">Taux: {dashboard.tauxConversion}%</p>
-            </div>
-            <div className="bg-card rounded-lg border border-border p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-muted-foreground text-sm">Score Qualité</h3>
-                <TrendingUp className="w-4 h-4 text-warning" />
-              </div>
-              <p className="text-3xl font-medium text-foreground">{dashboard.scoreQualite}/100</p>
-              <p className="text-sm text-success mt-1">+5 points</p>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-white/85">Score Qualité</h3>
+              <p className="text-3xl font-bold mt-1 text-white tabular-nums">{dashboard.scoreQualite}/100</p>
+              <p className="mt-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/15 ring-1 ring-white/20 text-[10px] font-bold text-white">
+                +5 points
+              </p>
             </div>
           </div>
         </div>
