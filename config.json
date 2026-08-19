@@ -1,0 +1,62 @@
+{
+  "llm": {
+    "model": "gemma3:4b",
+    "timeout": 120,
+    "temperature": 0.3,
+    "num_predict": 256
+  },
+  "weights": {
+    "accueil": 10,
+    "energie": 15,
+    "voix": 10,
+    "ecoute": 15,
+    "client": 15,
+    "operateur": 15,
+    "efficacite": 10,
+    "conclusion": 10
+  },
+  "alerts": {
+    "min_score": 40,
+    "max_inactivity_minutes": 30,
+    "min_conversion_rate": 10,
+    "alert_email": "admin@crm.local",
+    "alert_enabled": true
+  },
+  "sentiment": {
+    "realtime_analysis_enabled": false,
+    "alert_on_negative": true,
+    "suggest_responses": false
+  },
+  "transcription": {
+    "model": "base",
+    "language": "fr",
+    "realtime_enabled": false,
+    "fallback_enabled": true
+  },
+  "diarization": {
+    "method": "heuristic",
+    "pyannote_enabled": false
+  },
+  "appointments": {
+    "min_confidence": 50,
+    "auto_create": false,
+    "require_validation": true
+  },
+  "rgpd": {
+    "anonymization_enabled": true,
+    "retention_months": 12,
+    "consent_required": true
+  },
+  "qualifications": [
+    "HORS_CIBLE",
+    "RDV1",
+    "RDV2",
+    "RAPPEL",
+    "REFUS_COUPLE",
+    "REFUS_NON_INTERESSE",
+    "REFUS_CONSO",
+    "REFUS_PROJET",
+    "RDV_ANNULE",
+    "REPONDEUR"
+  ]
+}

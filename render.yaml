@@ -1,0 +1,75 @@
+# Render Blueprint - CRM AI Project
+# https://render.com/docs/blueprint-spec
+
+databases:
+  - name: crm-db
+    databaseName: pfe_crm_ia
+    user: crm_user
+    plan: free
+
+services:
+  - type: web
+    name: crm-backend
+    runtime: docker
+    repo: https://github.com/Khaledouertani/CRM_ai_projet
+    branch: feature/khaled1
+    dockerfilePath: ./Backend/Dockerfile
+    dockerContext: ./Backend
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: ASPNETCORE_URLS
+        value: http://0.0.0.0:5000
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: crm-db
+          property: connectionString
+      - key: Jwt__Secret
+        generateValue: true
+      - key: Jwt__Issuer
+        value: crm-api
+      - key: Jwt__Audience
+        value: crm-api-users
+      - key: Jwt__ExpirationHours
+        value: "24"
+      - key: Cors__AllowedOrigins
+        value: "https://crm-frontend.onrender.com"
+
+staticSites:
+  - type: static
+    name: crm-frontend
+    repo: https://github.com/Khaledouertani/CRM_ai_projet
+    branch: feature/khaled1
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    publishPath: dist
+    buildFilter:
+      paths:
+        - frontend/src/**
+        - frontend/public/**
+        - frontend/package.json
+        - frontend/package-lock.json
+        - frontend/vite.config.ts
+        - frontend/tsconfig.json
+        - frontend/index.html
+    headers:
+      - path: /**
+        name: X-Frame-Options
+        value: DENY
+      - path: /**
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /**
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+    routes:
+      - type: rewrite
+        source: /**
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://crm-backend.onrender.com
+      - key: VITE_WS_URL
+        value: wss://crm-backend.onrender.com
