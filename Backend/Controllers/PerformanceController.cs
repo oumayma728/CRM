@@ -105,6 +105,46 @@ public class PerformanceController : ControllerBase
         });
     }
 
+    // ── GET /api/performance/global-comparison ────────────────────────────────
+    /// <summary>Comparaison aujourd'hui/hier, semaine/précédente, mois/précédent (toute l'équipe)</summary>
+    [HttpGet("global-comparison")]
+    public async Task<IActionResult> GetGlobalComparison()
+    {
+        async Task<object> Period(DateTime curStart, DateTime curEnd, DateTime prevStart, DateTime prevEnd)
+        {
+            var curCalls = await _context.CallAttempts.AsNoTracking().Where(a => a.StartedAt >= curStart && a.StartedAt < curEnd).ToListAsync();
+            var prevCalls = await _context.CallAttempts.AsNoTracking().Where(a => a.StartedAt >= prevStart && a.StartedAt < prevEnd).ToListAsync();
+
+            var curTotal = curCalls.Count;
+            var prevTotal = prevCalls.Count;
+            var curScore = curTotal > 0 ? Math.Round(curCalls.Count(IsConversion) * 100.0 / curTotal, 1) : 0;
+            var prevScore = prevTotal > 0 ? Math.Round(prevCalls.Count(IsConversion) * 100.0 / prevTotal, 1) : 0;
+
+            double Evo(double cur, double prev) => prev > 0 ? Math.Round((cur - prev) * 100.0 / prev, 1) : (cur > 0 ? 100 : 0);
+
+            return new
+            {
+                current = new { total = curTotal, avg_score = curScore },
+                previous = new { total = prevTotal, avg_score = prevScore },
+                evolution = Evo(curTotal, prevTotal),
+                score_evol = Evo(curScore, prevScore)
+            };
+        }
+
+        var today = DateTime.UtcNow.Date;
+        var dayResult = await Period(today, today.AddDays(1), today.AddDays(-1), today);
+
+        var dow = (int)today.DayOfWeek == 0 ? 7 : (int)today.DayOfWeek; // Monday=1..Sunday=7
+        var weekStart = today.AddDays(-(dow - 1));
+        var weekResult = await Period(weekStart, weekStart.AddDays(7), weekStart.AddDays(-7), weekStart);
+
+        var (monthStart, monthEnd) = MonthRange(today);
+        var (prevMonthStart, prevMonthEnd) = MonthRange(today.AddMonths(-1));
+        var monthResult = await Period(monthStart, monthEnd, prevMonthStart, prevMonthEnd);
+
+        return Ok(new { day = dayResult, week = weekResult, month = monthResult });
+    }
+
     // ── GET /api/performance/agent/{agentId} ─────────────────────────────────
     [HttpGet("agent/{agentId:int}")]
     public async Task<IActionResult> GetAgentPerformance(int agentId)
