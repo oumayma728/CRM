@@ -1,9 +1,7 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost';
-
 async function login(page, username, password) {
-  await page.goto(`${BASE}/login`);
+  await page.goto('/login');
   await page.fill('#username', username);
   await page.fill('#password', password);
   await page.click('button[type="submit"]');
@@ -11,7 +9,7 @@ async function login(page, username, password) {
 
 test.describe('Authentication Flow', () => {
   test('should display login page', async ({ page }) => {
-    await page.goto(`${BASE}/login`);
+    await page.goto('/login');
     await expect(page.locator('button[type="submit"]')).toBeVisible();
     await expect(page.locator('#password')).toBeVisible();
   });
@@ -37,7 +35,7 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should redirect to login when unauthenticated', async ({ page }) => {
-    await page.goto(`${BASE}/admin/dashboard`);
+    await page.goto('/admin/dashboard');
     await expect(page).toHaveURL(/login/);
   });
 });

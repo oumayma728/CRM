@@ -1,10 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost';
-
 test.describe('Quality Dashboard', () => {
   test('should access quality dashboard as qualite', async ({ page }) => {
-    await page.goto(`${BASE}/login`);
+    await page.goto('/login');
     await page.fill('#username', 'qualite');
     await page.fill('#password', 'qualite');
     await page.click('button[type="submit"]');
@@ -12,7 +10,7 @@ test.describe('Quality Dashboard', () => {
   });
 
   test('should navigate quality pages', async ({ page }) => {
-    await page.goto(`${BASE}/login`);
+    await page.goto('/login');
     await page.fill('#username', 'qualite');
     await page.fill('#password', 'qualite');
     await page.click('button[type="submit"]');

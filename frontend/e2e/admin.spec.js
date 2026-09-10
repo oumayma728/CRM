@@ -1,10 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost';
-
 test.describe('Admin Flow', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE}/login`);
+    await page.goto('/login');
     await page.fill('#username', 'admin');
     await page.fill('#password', 'admin');
     await page.click('button[type="submit"]');

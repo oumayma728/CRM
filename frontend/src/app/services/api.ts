@@ -101,6 +101,15 @@ const request = async (path: string, options: any = {}) => {
 // Auth API
 // ============================================================
 
+export class RateLimitError extends Error {
+  retryAfter: number;
+  constructor(message: string, retryAfter: number) {
+    super(message);
+    this.name = 'RateLimitError';
+    this.retryAfter = retryAfter;
+  }
+}
+
 export const login = async (username: string, password: string): Promise<LoginResponse> => {
   const response = await fetch(`${AUTH_BASE}/login`, {
     method: 'POST',
@@ -111,8 +120,9 @@ export const login = async (username: string, password: string): Promise<LoginRe
   if (!response.ok) {
     let detail = 'Login failed';
     if (response.status === 429) {
-      detail = 'Trop de tentatives. Veuillez patienter une minute avant de réessayer.';
-      throw new Error(detail);
+      const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+      try { const e = await response.json(); detail = e.error || detail; } catch { }
+      throw new RateLimitError(detail, retryAfter);
     }
     try { const e = await response.json(); detail = e.detail || e.error || detail; } catch { }
     throw new Error(detail);

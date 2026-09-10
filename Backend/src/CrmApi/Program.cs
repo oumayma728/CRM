@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Threading.RateLimiting;
 using CrmApi.Services.WebSocket;
 using System.Text.Json.Serialization;
 using CrmApi.Data;
@@ -6,6 +7,7 @@ using CrmApi.Helpers;
 using CrmApi.Middleware;
 using CrmApi.Authorization;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using CrmApi.Models.Entities;
 using CrmApi.Repositories;
 using CrmApi.Services.Agent;
@@ -28,25 +30,60 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowReact",
-        policy =>
-        {
-            policy
-                .AllowAnyOrigin()
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        });
-});
 
 builder.Services.Configure<AppConfig>(builder.Configuration.GetSection("App"));
-
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<OllamaSettings>(builder.Configuration.GetSection("Ollama"));
 builder.Services.Configure<WeightsConfig>(builder.Configuration.GetSection("Weights"));
 builder.Services.Configure<WhisperSettings>(builder.Configuration.GetSection("Whisper"));
 builder.Services.Configure<AlertThresholds>(builder.Configuration.GetSection("Alerts"));
+
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? new[] { "http://localhost:5173", "http://localhost:3000" };
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReact", policy =>
+    {
+        policy
+            .WithOrigins(corsOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("login", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 10;
+        limiterOptions.Window = TimeSpan.FromMinutes(2);
+        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 2;
+    });
+
+    options.AddFixedWindowLimiter("api", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 100;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueLimit = 10;
+    });
+
+    options.OnRejected = async (context, ct) =>
+    {
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue)
+            ? (int)retryAfterValue.TotalSeconds
+            : 60;
+        context.HttpContext.Response.ContentType = "application/json";
+        context.HttpContext.Response.Headers["Retry-After"] = retryAfter.ToString();
+        await context.HttpContext.Response.WriteAsync(
+            JsonSerializer.Serialize(new { error = "Trop de requetes. Veuillez reessayer dans quelques instants.", retryAfter }),
+            ct);
+    };
+});
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -113,7 +150,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -143,10 +179,12 @@ builder.Services.AddHostedService<CrmApi.Services.Followup.FollowupBackgroundSer
 builder.Services.AddHostedService<CrmApi.Services.InactivityAlertService>();
 
 var app = builder.Build();
+
+app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseRateLimiter();
 app.UseWebSockets();
 app.UseCors("AllowReact");
 
-// Register WebSocket endpoint for chat messages
 app.Map("/ws/messages/{userId}", async (Microsoft.AspNetCore.Http.HttpContext context, string userId) =>
 {
     if (!context.WebSockets.IsWebSocketRequest)
@@ -155,14 +193,22 @@ app.Map("/ws/messages/{userId}", async (Microsoft.AspNetCore.Http.HttpContext co
         return;
     }
 
-    var socket = await context.WebSockets.AcceptWebSocketAsync();
-    var manager = context.RequestServices.GetRequiredService<WebSocketConnectionManager>();
-    if (int.TryParse(userId, out var uid))
+    if (!context.User.Identity?.IsAuthenticated ?? true)
     {
-        manager.Add(uid, socket);
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
     }
 
-    // Simple receive loop to keep the connection alive
+    if (!int.TryParse(userId, out var uid))
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        return;
+    }
+
+    var socket = await context.WebSockets.AcceptWebSocketAsync();
+    var manager = context.RequestServices.GetRequiredService<WebSocketConnectionManager>();
+    manager.Add(uid, socket);
+
     var buffer = new byte[1024 * 4];
     var ct = System.Threading.CancellationToken.None;
     try
@@ -181,6 +227,10 @@ app.Map("/ws/messages/{userId}", async (Microsoft.AspNetCore.Http.HttpContext co
     {
         // ignore exceptions in receive loop
     }
+    finally
+    {
+        manager.Remove(uid);
+    }
 });
 
 app.UseMiddleware<ExceptionMiddleware>();
@@ -190,8 +240,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-
 
 app.UseAuthentication();
 app.UseAuthorization();
