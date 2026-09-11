@@ -32,6 +32,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<LeadFolder> LeadFolders => Set<LeadFolder>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

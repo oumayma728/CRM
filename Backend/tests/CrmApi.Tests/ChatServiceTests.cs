@@ -4,6 +4,8 @@ using System.Text.Json;
 using CrmApi.Helpers;
 using CrmApi.Services.Chat;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace CrmApi.Tests;
 
@@ -28,7 +30,8 @@ public class ChatServiceTests
             NumPredict = 512,
             Temperature = 0.3f
         });
-        _sut = new ChatService(options, httpFactory);
+        var logger = new Mock<ILogger<ChatService>>();
+        _sut = new ChatService(options, httpFactory, logger.Object);
     }
 
     [Fact]
@@ -52,17 +55,17 @@ public class ChatServiceTests
 
         var result = await _sut.SendMessageAsync("test", userId: null, role: null, agentName: null);
 
-        result.Response.Should().Be("Je suis un assistant IA. Comment puis-je vous aider ?");
+        result.Response.Should().Contain("service IA");
     }
 
     [Fact]
     public async Task SendMessageAsync_HttpThrows_ReturnsFallback()
     {
-        _handler.Exception = new Exception("Network error");
+        _handler.Exception = new HttpRequestException("Network error");
 
         var result = await _sut.SendMessageAsync("test", userId: null, role: null, agentName: null);
 
-        result.Response.Should().Be("Je suis un assistant IA. Comment puis-je vous aider ?");
+        result.Response.Should().Contain("service IA");
     }
 
     [Fact]

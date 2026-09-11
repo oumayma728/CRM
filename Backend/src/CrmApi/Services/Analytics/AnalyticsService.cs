@@ -28,7 +28,7 @@ public class AnalyticsService : IAnalyticsService
         var monthCalls = calls.Count(c => c.CallDate.HasValue && c.CallDate.Value >= thisMonth);
         var monthAppointments = await _context.CrmAppointments.AsNoTracking()
             .CountAsync(r => r.AppointmentDate >= thisMonth && r.AppointmentDate <= today);
-        var conversionRate = monthCalls > 0 ? Math.Round((double)monthAppointments / monthCalls * 100, 1) : 0;
+        var conversionRate = monthCalls > 0 ? Math.Min(100, Math.Round((double)monthAppointments / monthCalls * 100, 1)) : 0;
 
         var hourly = calls.Where(c => c.CallDate.HasValue).GroupBy(c => c.CallDate!.Value.Hour).Select(g => new HourlyDataDto { Hour = g.Key, Appels = g.Count() }).OrderBy(h => h.Hour).ToList();
 
@@ -134,7 +134,7 @@ public class AnalyticsService : IAnalyticsService
                 ARelancer = followups.Count(f => f.Status == "a_relancer"),
                 RelanceEnCours = followups.Count(f => f.Status == "relance_en_cours"),
                 Convertis = followups.Count(f => f.Status == "converti"),
-                TauxConversion = followups.Count > 0 ? Math.Round((double)followups.Count(f => f.Status == "converti") / followups.Count * 100, 2) : 0
+                TauxConversion = followups.Count > 0 ? Math.Min(100, Math.Round((double)followups.Count(f => f.Status == "converti") / followups.Count * 100, 2)) : 0
             },
             ByStatus = followups.GroupBy(f => f.Status ?? "unknown").Select(g => new StatusCountDto { Status = g.Key, Count = g.Count() }).ToList(),
             ByAgent = followups.GroupBy(f => f.AgentName).Select(g => new AgentRefusalDto { Agent = g.Key, Count = g.Count() }).ToList()

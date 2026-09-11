@@ -10,6 +10,12 @@ public static class QualityScoreCalculator
         WeightsConfig? weights = null)
     {
         weights ??= new WeightsConfig();
+
+        float totalWeight = weights.Accueil + weights.Energie + weights.Voix + weights.Ecoute +
+                            weights.Client + weights.Operateur + weights.Efficacite + weights.Conclusion;
+
+        float effectiveMultiplier = totalWeight > 0 ? 1.0f / totalWeight : 1.0f;
+
         float score = Clamp(scoreAccueil) * weights.Accueil +
                       Clamp(scoreEnergie) * weights.Energie +
                       Clamp(scoreVoix) * weights.Voix +
@@ -18,7 +24,10 @@ public static class QualityScoreCalculator
                       Clamp(scoreOperateur) * weights.Operateur +
                       Clamp(scoreEfficacite) * weights.Efficacite +
                       Clamp(scoreConclusion) * weights.Conclusion;
-        score = (float)Math.Round(score, 2);
+
+        score *= effectiveMultiplier;
+        score = (float)Math.Round(Math.Clamp(score, 0f, 100f), 2);
+
         string performance = score switch
         {
             >= 80 => "Excellent",

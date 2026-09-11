@@ -88,8 +88,11 @@ const request = async (path: string, options: any = {}) => {
       // For now, throw a specific error to be caught by UI components
       throw new Error('Unauthorized: Please log in again.');
     }
+    if (response.status === 429) {
+      throw new Error('Trop de requêtes. Veuillez patienter quelques instants.');
+    }
     const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-    throw new Error(error.detail || 'Request failed');
+    throw new Error(error.detail || error.error || 'Request failed');
   }
   return response.json();
 };
@@ -97,6 +100,15 @@ const request = async (path: string, options: any = {}) => {
 // ============================================================
 // Auth API
 // ============================================================
+
+export class RateLimitError extends Error {
+  retryAfter: number;
+  constructor(message: string, retryAfter: number) {
+    super(message);
+    this.name = 'RateLimitError';
+    this.retryAfter = retryAfter;
+  }
+}
 
 export const login = async (username: string, password: string): Promise<LoginResponse> => {
   const response = await fetch(`${AUTH_BASE}/login`, {
@@ -107,7 +119,12 @@ export const login = async (username: string, password: string): Promise<LoginRe
 
   if (!response.ok) {
     let detail = 'Login failed';
-    try { const e = await response.json(); detail = e.detail || detail; } catch { }
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+      try { const e = await response.json(); detail = e.error || detail; } catch { }
+      throw new RateLimitError(detail, retryAfter);
+    }
+    try { const e = await response.json(); detail = e.detail || e.error || detail; } catch { }
     throw new Error(detail);
   }
 
