@@ -1,0 +1,2 @@
+ALTER TABLE "AttendanceBreaks" ADD COLUMN IF NOT EXISTS "Type" varchar(50) NOT NULL DEFAULT '';
+ALTER TABLE "AttendanceBreaks" ADD COLUMN IF NOT EXISTS "DurationMinutes" int NOT NULL DEFAULT 0;
