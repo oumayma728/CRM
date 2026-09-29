@@ -18,6 +18,7 @@ public class ApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:DefaultConnection", "Host=unused");
+        builder.UseSetting("RateLimiting:LoginPermitLimit", "1000");
         builder.ConfigureServices(services =>
         {
             services.RemoveAll(typeof(DbContextOptions<ApplicationDbContext>));

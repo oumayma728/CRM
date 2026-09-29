@@ -2,6 +2,46 @@
 
 Application de gestion de la relation client (CRM) avec intelligence artificielle pour l'analyse des appels, le scoring et le suivi des performances.
 
+> Branche `final` : fusion de `main`, `integration/khaled-dev-v3` / `dev`, `feature/khaled(1)` et `feature/zied1`
+> dans la structure de `main` avec le design de khaled-dev-v3 — voir **[MERGE_NOTES.md](MERGE_NOTES.md)**.
+
+## Structure
+
+```
+Backend/                 API ASP.NET Core 8 (CRM.API.csproj)
+  Controllers/ Services/<Module>/ Entities/ DTOs/<Module>/ Data/ Helpers/ Migrations/
+  scripts/sql/           scripts SQL (schéma module IA, comptes de test…)
+  tests/CRM.API.Tests/   tests xunit (unitaires + API)
+frontend/                React 18 + Vite + Tailwind (design khaled-dev-v3)
+  src/app/pages/<espace> admin, agent, quality, confirmation, commercial, technique, shared
+  e2e/                   tests Playwright
+```
+
+Rôles : Super Admin, Admin, Agent, Qualité, Confirmatrice 1 / 2 / Client, Commercial, Service technique —
+chacun a son menu et sa page d'accueil.
+
+## Développement local
+
+```bash
+# Base de données (PostgreSQL 16) — schéma généré depuis le modèle EF + un compte par rôle (mot de passe Test1234!)
+cd Backend
+dotnet tool install --global dotnet-ef --version 8.0.11
+dotnet ef dbcontext script -o /tmp/schema.sql
+psql -U postgres -d crm_db -f /tmp/schema.sql
+psql -U postgres -d crm_db -f scripts/sql/seed_e2e_users.sql
+
+# API : http://localhost:5241 (swagger en Development)
+ConnectionStrings__DefaultConnection="Host=localhost;Database=crm_db;Username=postgres;Password=..." dotnet run
+
+# Frontend : http://localhost:5173 (proxy /api, /ws, /hubs → :5241)
+cd ../frontend && npm ci && npm run dev
+```
+
+Tests : `dotnet test Backend/tests/CRM.API.Tests` · `cd frontend && npx vitest run` · `npx playwright test` (stack démarrée).
+
+IA : `Groq__ApiKey` (chatbot, transcription et analyse cloud) et/ou Ollama local (`Ollama__BaseUrl`, modèle `gemma3:4b`)
+et Whisper local (`Whisper__*`, `scripts/transcribe.py`).
+
 ## Architecture
 
 ```
