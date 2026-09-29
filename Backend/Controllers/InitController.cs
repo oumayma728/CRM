@@ -19,7 +19,7 @@ namespace Backend.Controllers
         public async Task<IActionResult> CreateAdmin()
         {
             // Vérifier si l'admin existe déjà
-            var adminExists = _context.Set<Utilisateur>().Any(u => u.Email == "admin@ebi.com");
+            var adminExists = _context.Set<User>().Any(u => u.Email == "admin@ebi.com");
             
             if (adminExists)
                 return Ok(new { message = "Admin already exists", email = "admin@ebi.com" });
@@ -55,7 +55,7 @@ namespace Backend.Controllers
         public async Task<IActionResult> CreateAgent()
         {
             // Vérifier si l'agent existe déjà
-            var agentExists = _context.Set<Utilisateur>().Any(u => u.Email == "agent@ebi.com");
+            var agentExists = _context.Set<User>().Any(u => u.Email == "agent@ebi.com");
             
             if (agentExists)
                 return Ok(new { message = "Agent already exists", email = "agent@ebi.com" });
@@ -90,7 +90,7 @@ namespace Backend.Controllers
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
-            var users = _context.Set<Utilisateur>()
+            var users = _context.Set<User>()
                 .Select(u => new { u.Id, u.Email, u.Nom, u.Prenom, u.Role, u.Actif })
                 .ToList();
             

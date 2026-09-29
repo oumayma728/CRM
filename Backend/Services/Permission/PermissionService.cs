@@ -33,7 +33,7 @@ namespace Backend.Services.Permission
         // ─── DB-based async check ─────────────────────────────────────────────
         public async Task<bool> HasPermissionAsync(int userId, string permission)
         {
-            var user = await _context.Set<Utilisateur>()
+            var user = await _context.Set<User>()
                 .FirstOrDefaultAsync(u => u.Id == userId && u.Actif);
 
             if (user == null) return false;
@@ -65,7 +65,7 @@ namespace Backend.Services.Permission
 
         public async Task<List<string>> GetUserPermissionsAsync(int userId)
         {
-            var user = await _context.Set<Utilisateur>()
+            var user = await _context.Set<User>()
                 .FirstOrDefaultAsync(u => u.Id == userId && u.Actif);
 
             if (user == null) return new List<string>();
@@ -131,7 +131,7 @@ namespace Backend.Services.Permission
 
         public async Task<List<UserPermissionDto>> GetUsersWithPermissionsAsync()
         {
-            var users = await _context.Set<Utilisateur>()
+            var users = await _context.Set<User>()
                 .Where(u => u.Actif)
                 .Take(100)
                 .ToListAsync();
@@ -151,7 +151,7 @@ namespace Backend.Services.Permission
 
         public async Task<List<PermissionTargetUserDto>> GetPermissionTargetUsersAsync()
         {
-            return await _context.Set<Utilisateur>()
+            return await _context.Set<User>()
                 .Where(u => u.Actif)
                 .Take(200)
                 .Select(u => new PermissionTargetUserDto

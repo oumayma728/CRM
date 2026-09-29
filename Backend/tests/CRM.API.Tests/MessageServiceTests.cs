@@ -27,7 +27,7 @@ public class MessageServiceTests
     {
         var sender = new Agent { Id = 1, Prenom = "Alice", Nom = "", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
         var receiver = new Agent { Id = 2, Prenom = "Bob", Nom = "", Email = "b@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.AddRange(sender, receiver);
+        _context.Users.AddRange(sender, receiver);
         await _context.SaveChangesAsync();
 
         var dto = new SendMessageDto { ReceiverId = 2, Content = "Hello Bob!", IsUrgent = true };
@@ -48,7 +48,7 @@ public class MessageServiceTests
         var currentUser = new Agent { Id = 1, Prenom = "Me", Nom = "", Email = "me@b.com", MotDePasse = "hash", Role = "AGENT" };
         var other1 = new Agent { Id = 2, Prenom = "Other", Nom = "1", Email = "o1@b.com", MotDePasse = "hash", Role = "AGENT" };
         var other2 = new Qualite { Id = 3, Prenom = "Other", Nom = "2", Email = "o2@b.com", MotDePasse = "hash", Role = "QUALITE" };
-        _context.Utilisateurs.AddRange(currentUser, other1, other2);
+        _context.Users.AddRange(currentUser, other1, other2);
         _context.Messages.AddRange(
             new Message { SenderId = 2, ReceiverId = 1, Content = "Hello from other1", CreatedAt = DateTime.UtcNow.AddMinutes(-5) },
             new Message { SenderId = 3, ReceiverId = 1, Content = "Hello from other2", CreatedAt = DateTime.UtcNow.AddMinutes(-1) }
@@ -68,7 +68,7 @@ public class MessageServiceTests
     {
         var current = new Agent { Id = 1, Prenom = "U1", Nom = "", Email = "u1@b.com", MotDePasse = "hash", Role = "AGENT" };
         var other = new Agent { Id = 2, Prenom = "U2", Nom = "", Email = "u2@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.AddRange(current, other);
+        _context.Users.AddRange(current, other);
         _context.Messages.AddRange(
             new Message { SenderId = 2, ReceiverId = 1, Content = "Unread 1", IsRead = false, CreatedAt = DateTime.UtcNow.AddMinutes(-10) },
             new Message { SenderId = 2, ReceiverId = 1, Content = "Unread 2", IsRead = false, CreatedAt = DateTime.UtcNow.AddMinutes(-5) }
@@ -86,7 +86,7 @@ public class MessageServiceTests
     {
         var sender = new Agent { Id = 1, Prenom = "Alice", Nom = "", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
         var receiver = new Agent { Id = 2, Prenom = "Bob", Nom = "", Email = "b@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.AddRange(sender, receiver);
+        _context.Users.AddRange(sender, receiver);
         _context.Messages.AddRange(
             new Message { SenderId = 1, ReceiverId = 2, Content = "Msg 1", CreatedAt = DateTime.UtcNow.AddMinutes(-5) },
             new Message { SenderId = 2, ReceiverId = 1, Content = "Reply 1", CreatedAt = DateTime.UtcNow.AddMinutes(-4) },

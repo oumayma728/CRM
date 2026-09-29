@@ -48,7 +48,7 @@ public class AuthController : ControllerBase
     [SnakeCaseJson]
     public async Task<IActionResult> GetAgents()
     {
-        var users = await _context.Utilisateurs.AsNoTracking()
+        var users = await _context.Users.AsNoTracking()
             .Where(u => u.Actif && (u.Role == "AGENT" || u.Role == "QUALITE"))
             .OrderBy(u => u.Nom)
             .ToListAsync();
@@ -71,7 +71,7 @@ public class AuthController : ControllerBase
         var email = !string.IsNullOrWhiteSpace(dto.Email) ? dto.Email! : dto.Username ?? "";
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(dto.Password))
             return BadRequest(new { detail = "Email et mot de passe requis." });
-        if (await _context.Utilisateurs.AnyAsync(u => u.Email == email))
+        if (await _context.Users.AnyAsync(u => u.Email == email))
             return BadRequest(new { detail = "Cet email est déjà utilisé." });
 
         var (prenom, nom) = SplitName(dto.Name);
@@ -87,7 +87,7 @@ public class AuthController : ControllerBase
     [SnakeCaseJson]
     public async Task<IActionResult> UpdateQuickUser(long userId, [FromBody] QuickUserUpdateDto dto)
     {
-        var user = await _context.Utilisateurs.FirstOrDefaultAsync(u => u.Id == userId);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null) return NotFound(new { detail = "Utilisateur introuvable." });
 
         if (!string.IsNullOrWhiteSpace(dto.Name)) (user.Prenom, user.Nom) = SplitName(dto.Name);
@@ -118,7 +118,7 @@ public class AuthController : ControllerBase
         var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
         if (!long.TryParse(idClaim, out var userId)) return Unauthorized(new { message = "Token invalide." });
 
-        var u = await _context.Utilisateurs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == userId && x.Actif);
+        var u = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == userId && x.Actif);
         if (u == null) return Unauthorized(new { message = "Utilisateur introuvable." });
 
         return Ok(new

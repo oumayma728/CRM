@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Backend.Entities;
 
-public class Agent : Utilisateur
+public class Agent : User
 {
     public TypeContrat? TypeContrat { get; set; }
     public int ObjectifMensuel { get; set; }

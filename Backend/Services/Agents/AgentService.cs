@@ -20,7 +20,7 @@ namespace Backend.Services.Agents
 
         public async Task<List<AgentResponseDto>> GetAllAgentsAsync()
         {
-            var agents = await _db.Users
+            var agents = await _db.AppUsers
                 .Include(u => u.Role)
                 .Where(u => u.Role.Name == Roles.Agent)
                 .OrderBy(u => u.FirstName)
@@ -50,7 +50,7 @@ namespace Backend.Services.Agents
                 throw new InvalidOperationException("Agent role not found. Please seed the Agent role first.");
 
             var normalizedEmail = dto.Email.Trim();
-            var emailExists = await _db.Users
+            var emailExists = await _db.AppUsers
                 .IgnoreQueryFilters()
                 .AnyAsync(u => u.Email == normalizedEmail);
 
@@ -62,7 +62,7 @@ namespace Backend.Services.Agents
             try
             {
                 var now = DateTime.UtcNow;
-                var user = new User
+                var user = new AppUser
                 {
                     FirstName = dto.FirstName.Trim(),
                     LastName = dto.LastName.Trim(),
@@ -78,7 +78,7 @@ namespace Backend.Services.Agents
                     UpdatedAt = now
                 };
 
-                _db.Users.Add(user);
+                _db.AppUsers.Add(user);
                 await _db.SaveChangesAsync();
 
                 _db.AgentProfiles.Add(new AgentProfile
@@ -116,7 +116,7 @@ namespace Backend.Services.Agents
             if (!string.IsNullOrWhiteSpace(dto.Email))
             {
                 var normalizedEmail = dto.Email.Trim();
-                var emailExists = await _db.Users
+                var emailExists = await _db.AppUsers
                     .IgnoreQueryFilters()
                     .AnyAsync(u => u.Id != id && u.Email == normalizedEmail);
 
@@ -264,21 +264,21 @@ namespace Backend.Services.Agents
                 .ToListAsync();
         }
 
-        private IQueryable<User> GetAgentUserQuery()
+        private IQueryable<AppUser> GetAgentUserQuery()
         {
-            return _db.Users
+            return _db.AppUsers
                 .Include(u => u.Role)
                 .Include(u => u.AgentProfile)
                 .Where(u => u.Role.Name == Roles.Agent);
         }
 
-        private async Task<AgentResponseDto> MapAgentAsync(User agent)
+        private async Task<AgentResponseDto> MapAgentAsync(AppUser agent)
         {
-            var mapped = await MapAgentsAsync(new List<User> { agent });
+            var mapped = await MapAgentsAsync(new List<AppUser> { agent });
             return mapped[0];
         }
 
-        private async Task<List<AgentResponseDto>> MapAgentsAsync(List<User> agents)
+        private async Task<List<AgentResponseDto>> MapAgentsAsync(List<AppUser> agents)
         {
             var agentIds = agents.Select(a => a.Id).ToList();
             var profiles = await _db.AgentProfiles

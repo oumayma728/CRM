@@ -330,7 +330,7 @@ public class AttendanceService : IAttendanceService
     {
         var today = DateTime.UtcNow.Date;
 
-        var totalAgents = await _context.Utilisateurs
+        var totalAgents = await _context.Users
             .CountAsync(u => u.Role == "AGENT" || u.Role == "TECH");
 
         var todayAttendances = await _context.AdvancedAttendances
@@ -358,7 +358,7 @@ public class AttendanceService : IAttendanceService
     {
         var today = DateTime.UtcNow.Date;
 
-        var totalAgents = await _context.Utilisateurs
+        var totalAgents = await _context.Users
             .CountAsync(u => u.Role == "AGENT" || u.Role == "TECH");
 
         var presentToday = await _context.AdvancedAttendances
@@ -380,7 +380,7 @@ public class AttendanceService : IAttendanceService
     {
         var today = DateTime.UtcNow.Date;
 
-        var agents = await _context.Utilisateurs
+        var agents = await _context.Users
             .Where(u => u.Role == "AGENT" || u.Role == "QUALITE" || u.Role == "ADMIN" || u.Role == "TECH")
             .AsNoTracking()
             .ToListAsync();
@@ -456,7 +456,7 @@ public class AttendanceService : IAttendanceService
         // Force UTC to avoid Npgsql DateTimeKind mismatch
         var targetDate = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
 
-        var allAgents = await _context.Utilisateurs
+        var allAgents = await _context.Users
             .Where(u => u.Role == "AGENT" || u.Role == "TECH")
             .AsNoTracking()
             .ToListAsync();

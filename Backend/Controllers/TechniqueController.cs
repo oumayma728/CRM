@@ -31,7 +31,7 @@ public class TechniqueController : ControllerBase
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboard()
     {
-        var agentsTotal  = await _context.Utilisateurs.Where(u => u.Role == "AGENT" && u.Actif).CountAsync();
+        var agentsTotal  = await _context.Users.Where(u => u.Role == "AGENT" && u.Actif).CountAsync();
         var fichiersTotal = await _context.FichiersImport.CountAsync();
         var evalTotal    = await _context.Evaluations.CountAsync();
         var today        = DateTime.UtcNow.Date;
@@ -72,7 +72,7 @@ public class TechniqueController : ControllerBase
     public async Task<IActionResult> GetAgents()
     {
         // Charger en mémoire puis dédupliquer par email (données DB potentiellement dupliquées)
-        var raw = await _context.Utilisateurs
+        var raw = await _context.Users
             .Where(u => u.Role == "AGENT")
             .OrderBy(u => u.Nom)
             .ToListAsync();
@@ -103,7 +103,7 @@ public class TechniqueController : ControllerBase
     [HttpGet("agents/{agentId:long}/production")]
     public async Task<IActionResult> GetAgentProduction(long agentId)
     {
-        var agent = await _context.Utilisateurs
+        var agent = await _context.Users
             .Where(u => u.Id == agentId && u.Role == "AGENT")
             .Select(u => new { u.Id, u.Nom, u.Prenom })
             .FirstOrDefaultAsync();
@@ -248,7 +248,7 @@ public class TechniqueController : ControllerBase
     [HttpGet("logs")]
     public async Task<IActionResult> GetLogs()
     {
-        var users = await _context.Set<Backend.Entities.Utilisateur>()
+        var users = await _context.Set<Backend.Entities.User>()
             .OrderByDescending(u => u.DateCreation)
             .Select(u => new
             {
@@ -269,7 +269,7 @@ public class TechniqueController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Nom))
             return BadRequest(new { message = "Nom et email requis" });
 
-        var existingUser = await _context.Set<Backend.Entities.Utilisateur>()
+        var existingUser = await _context.Set<Backend.Entities.User>()
             .AnyAsync(u => u.Email == dto.Email);
 
         if (existingUser)

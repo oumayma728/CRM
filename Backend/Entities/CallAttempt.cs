@@ -39,7 +39,7 @@ namespace Backend.Entities
         public int AgentId { get; set; }
 
         [ForeignKey("AgentId")]
-        public User? Agent { get; set; }
+        public AppUser? Agent { get; set; }
 
         [Column("attempt_number")]
         public int AttemptNumber { get; set; }

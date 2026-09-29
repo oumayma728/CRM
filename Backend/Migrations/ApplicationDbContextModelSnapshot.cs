@@ -1814,7 +1814,7 @@ namespace CRM.API.Migrations
                     b.ToTable("suppliers", (string)null);
                 });
 
-            modelBuilder.Entity("Backend.Entities.User", b =>
+            modelBuilder.Entity("Backend.Entities.AppUser", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1951,7 +1951,7 @@ namespace CRM.API.Migrations
                     b.ToTable("user_permissions");
                 });
 
-            modelBuilder.Entity("Backend.Entities.Utilisateur", b =>
+            modelBuilder.Entity("Backend.Entities.User", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -2087,7 +2087,7 @@ namespace CRM.API.Migrations
 
             modelBuilder.Entity("Backend.Entities.Admin", b =>
                 {
-                    b.HasBaseType("Backend.Entities.Utilisateur");
+                    b.HasBaseType("Backend.Entities.User");
 
                     b.Property<string>("Niveau")
                         .HasColumnType("text");
@@ -2097,7 +2097,7 @@ namespace CRM.API.Migrations
 
             modelBuilder.Entity("Backend.Entities.Qualite", b =>
                 {
-                    b.HasBaseType("Backend.Entities.Utilisateur");
+                    b.HasBaseType("Backend.Entities.User");
 
                     b.Property<string>("Service")
                         .HasColumnType("text");
@@ -2107,7 +2107,7 @@ namespace CRM.API.Migrations
 
             modelBuilder.Entity("Backend.Entities.Agent", b =>
                 {
-                    b.HasBaseType("Backend.Entities.Utilisateur");
+                    b.HasBaseType("Backend.Entities.User");
 
                     b.Property<DateTime?>("DateEmbauche")
                         .HasColumnType("timestamp with time zone");
@@ -2133,7 +2133,7 @@ namespace CRM.API.Migrations
 
             modelBuilder.Entity("Backend.Entities.Commercial", b =>
                 {
-                    b.HasBaseType("Backend.Entities.Utilisateur");
+                    b.HasBaseType("Backend.Entities.User");
 
                     b.Property<string>("Matricule")
                         .HasColumnType("text");
@@ -2146,7 +2146,7 @@ namespace CRM.API.Migrations
 
             modelBuilder.Entity("Backend.Entities.Confirmatrice", b =>
                 {
-                    b.HasBaseType("Backend.Entities.Utilisateur");
+                    b.HasBaseType("Backend.Entities.User");
 
                     b.Property<string>("AgendasAccess")
                         .HasColumnType("text");
@@ -2174,7 +2174,7 @@ namespace CRM.API.Migrations
 
             modelBuilder.Entity("Backend.Entities.AgentProfile", b =>
                 {
-                    b.HasOne("Backend.Entities.User", "User")
+                    b.HasOne("Backend.Entities.AppUser", "User")
                         .WithOne("AgentProfile")
                         .HasForeignKey("Backend.Entities.AgentProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2221,7 +2221,7 @@ namespace CRM.API.Migrations
 
             modelBuilder.Entity("Backend.Entities.CallAttempt", b =>
                 {
-                    b.HasOne("Backend.Entities.User", "Agent")
+                    b.HasOne("Backend.Entities.AppUser", "Agent")
                         .WithMany()
                         .HasForeignKey("AgentId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2264,7 +2264,7 @@ namespace CRM.API.Migrations
 
             modelBuilder.Entity("Backend.Entities.Campaign", b =>
                 {
-                    b.HasOne("Backend.Entities.User", "CreatedByUser")
+                    b.HasOne("Backend.Entities.AppUser", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2281,7 +2281,7 @@ namespace CRM.API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Backend.Entities.User", "User")
+                    b.HasOne("Backend.Entities.AppUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2313,7 +2313,7 @@ namespace CRM.API.Migrations
 
             modelBuilder.Entity("Backend.Entities.CampaignFileContact", b =>
                 {
-                    b.HasOne("Backend.Entities.User", "AssignedAgent")
+                    b.HasOne("Backend.Entities.AppUser", "AssignedAgent")
                         .WithMany()
                         .HasForeignKey("AssignedAgentId");
 
@@ -2329,7 +2329,7 @@ namespace CRM.API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Backend.Entities.User", "ConfirmedBy")
+                    b.HasOne("Backend.Entities.AppUser", "ConfirmedBy")
                         .WithMany()
                         .HasForeignKey("ConfirmedByUserId");
 
@@ -2379,7 +2379,7 @@ namespace CRM.API.Migrations
 
             modelBuilder.Entity("Backend.Entities.DistributedContact", b =>
                 {
-                    b.HasOne("Backend.Entities.User", "Agent")
+                    b.HasOne("Backend.Entities.AppUser", "Agent")
                         .WithMany()
                         .HasForeignKey("AgentId");
 
@@ -2418,7 +2418,7 @@ namespace CRM.API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Backend.Entities.User", "UploadedByUser")
+                    b.HasOne("Backend.Entities.AppUser", "UploadedByUser")
                         .WithMany()
                         .HasForeignKey("UploadedByUserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2557,7 +2557,7 @@ namespace CRM.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Backend.Entities.User", "UploadedByUser")
+                    b.HasOne("Backend.Entities.AppUser", "UploadedByUser")
                         .WithMany()
                         .HasForeignKey("UploadedByUserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2607,7 +2607,7 @@ namespace CRM.API.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Backend.Entities.User", "CreatedByUser")
+                    b.HasOne("Backend.Entities.AppUser", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2626,9 +2626,9 @@ namespace CRM.API.Migrations
                     b.Navigation("LeadType");
                 });
 
-            modelBuilder.Entity("Backend.Entities.User", b =>
+            modelBuilder.Entity("Backend.Entities.AppUser", b =>
                 {
-                    b.HasOne("Backend.Entities.User", "PasswordResetBy")
+                    b.HasOne("Backend.Entities.AppUser", "PasswordResetBy")
                         .WithMany()
                         .HasForeignKey("PasswordResetByUserId");
 
@@ -2651,7 +2651,7 @@ namespace CRM.API.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Backend.Entities.User", null)
+                    b.HasOne("Backend.Entities.AppUser", null)
                         .WithMany("UserPermissions")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2715,7 +2715,7 @@ namespace CRM.API.Migrations
                     b.Navigation("SourceFiles");
                 });
 
-            modelBuilder.Entity("Backend.Entities.User", b =>
+            modelBuilder.Entity("Backend.Entities.AppUser", b =>
                 {
                     b.Navigation("AgentProfile");
 

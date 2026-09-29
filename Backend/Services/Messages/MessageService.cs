@@ -12,7 +12,7 @@ public class MessageService : IMessageService
 
     public async Task<List<ConversationDto>> GetConversationsAsync(int userId)
     {
-        var users = await _context.Utilisateurs.AsNoTracking().Where(u => u.Id != userId).ToListAsync();
+        var users = await _context.Users.AsNoTracking().Where(u => u.Id != userId).ToListAsync();
         var result = new List<ConversationDto>();
         foreach (var u in users)
         {

@@ -23,7 +23,7 @@ public class AdvancedAttendance
 
     // Navigation
     [ForeignKey(nameof(UserId))]
-    public virtual Utilisateur? User { get; set; }
+    public virtual User? User { get; set; }
 
     public virtual ICollection<AttendanceBreak> Breaks { get; set; } = new List<AttendanceBreak>();
 }

@@ -9,7 +9,7 @@ public enum TypeConfirmatrice
     CONFCLIENT  
 }
 
-public class Confirmatrice : Utilisateur
+public class Confirmatrice : User
 {
     public TypeConfirmatrice Type { get; set; }
     public string? Specialite { get; set; }

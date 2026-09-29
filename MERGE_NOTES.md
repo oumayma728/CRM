@@ -32,7 +32,7 @@ Main's CI, Dockerfile and `render.yaml` also still pointed at the deleted `Backe
 
 ## 2. Backend: what was rebuilt inside `Backend/`
 
-### From khaled-dev-v3 (re-homed onto main's `Utilisateur` model)
+### From khaled-dev-v3 (re-homed onto main's `User` model, formerly `Utilisateur`)
 
 | Module | Endpoints | Where |
 |---|---|---|
@@ -152,6 +152,17 @@ Also brought in:
   - CI and a fresh local setup use `dotnet ef dbcontext script` instead (see README).
 - Permission-based endpoints (`Clients`, `Suppliers`, `Permissions`, `Agents`) return 403 for `ADMIN` until the role/permission tables are filled; super admin bypasses this. This is existing behaviour.
 - `render.yaml` / `cd.yml` now deploy this repository's `main`. Previously they deployed `Khaledouertani/CRM_ai_projet`. Adjust if that was intended.
+
+## 8. Entity rename: `Utilisateur` → `User`
+
+The login/role entity is now called `User` (`Entities/User.cs`, `DbSet<User> Users`).
+The existing `User` entity of the campaign/permission system was renamed to `AppUser` (`Entities/AppUser.cs`, `DbSet<AppUser> AppUsers`) to make room for it.
+
+- Done with the C# compiler's rename engine (Roslyn), so only real type references changed. `User` as the logged-in `ClaimsPrincipal` in controllers is untouched.
+- **Database unchanged.** The tables stay `Utilisateur` and `users`, and every column is the same: the schema generated from the model is byte-identical to before the rename.
+- The `user_permissions.user_id` foreign key used to be found by EF naming convention from the class name `User`. It is now configured explicitly in `ApplicationDbContext`, so it stays `user_id`.
+- The model snapshot's type names were updated as well, so a future `dotnet ef migrations add` won't see a phantom rename.
+- **Local copies:** if your copy fails to build with `'Utilisateur' could not be found`, it has a partial rename. Check out this branch cleanly.
 
 ## 8. Verification
 

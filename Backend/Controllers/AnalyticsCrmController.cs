@@ -53,7 +53,7 @@ public class AnalyticsCrmController : ControllerBase
     {
         try
         {
-            var agents = (await _context.Utilisateurs
+            var agents = (await _context.Users
                 .Where(u => u.Role == "AGENT")
                 .Select(u => new { u.Id, u.Nom, u.Prenom, u.Email })
                 .AsNoTracking()
@@ -102,7 +102,7 @@ public class AnalyticsCrmController : ControllerBase
         try
         {
             var today = DateTime.UtcNow.Date;
-            var agents = (await _context.Utilisateurs
+            var agents = (await _context.Users
                 .Where(u => u.Role == "AGENT")
                 .Select(u => new { u.Id, u.Nom, u.Prenom, u.Email })
                 .AsNoTracking()
@@ -244,7 +244,7 @@ public class AnalyticsCrmController : ControllerBase
             .Distinct()
             .ToListAsync();
 
-        var agents = await _context.Utilisateurs
+        var agents = await _context.Users
             .Where(u => u.Role == "AGENT" && recentAppels.Contains(u.Id))
             .Select(u => new { u.Id, u.Prenom, u.Nom, u.Email })
             .AsNoTracking()

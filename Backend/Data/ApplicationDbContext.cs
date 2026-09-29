@@ -8,7 +8,7 @@ public class ApplicationDbContext : DbContext
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
     // ─── MY EXISTING DbSets (TPH CRM) ────────────────────────────────────────
-    public DbSet<Utilisateur> Utilisateurs => Set<Utilisateur>();
+    public DbSet<User> Users => Set<User>();
     public DbSet<SuperAdmin> SuperAdmins => Set<SuperAdmin>();
     public DbSet<Agent> Agents => Set<Agent>();
     public DbSet<Commercial> Commerciaux => Set<Commercial>();
@@ -27,7 +27,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     // ─── COLLEAGUE'S DbSets (Supplier/Campaign system) ───────────────────────
-    public DbSet<User> Users { get; set; }
+    public DbSet<AppUser> AppUsers { get; set; }
     public DbSet<Role> Roles { get; set; }
     public DbSet<Permission> Permissions { get; set; }
     public DbSet<RolePermission> RolePermissions { get; set; }
@@ -78,9 +78,9 @@ public class ApplicationDbContext : DbContext
 
         // ─── MY EXISTING: Héritage TPH ────────────────────────────────────────
         // ─── Fix: migration created "Utilisateur" (singular), DbSet name defaults to plural ─
-        modelBuilder.Entity<Utilisateur>().ToTable("Utilisateur");
+        modelBuilder.Entity<User>().ToTable("Utilisateur");
 
-        modelBuilder.Entity<Utilisateur>()
+        modelBuilder.Entity<User>()
             .HasDiscriminator<string>("Role")
             .HasValue<SuperAdmin>("SuperAdmin")
             .HasValue<Agent>("AGENT")
@@ -210,8 +210,8 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ─── USER (colleague's User entity, separate from Utilisateur) ────────
-        modelBuilder.Entity<User>(entity =>
+        // ─── APP USER (colleague's account entity, table "users" — separate from User / "Utilisateur") ─
+        modelBuilder.Entity<AppUser>(entity =>
         {
             entity.ToTable("users");
             entity.HasKey(e => e.Id);
@@ -219,6 +219,11 @@ public class ApplicationDbContext : DbContext
                 .WithMany(r => r.Users)
                 .HasForeignKey(u => u.RoleId)
                 .OnDelete(DeleteBehavior.Restrict);
+            // explicit: the FK was previously found by convention from the class name "User"
+            entity.HasMany(u => u.UserPermissions)
+                .WithOne()
+                .HasForeignKey(up => up.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // ─── AGENT PROFILE ────────────────────────────────────────────────────

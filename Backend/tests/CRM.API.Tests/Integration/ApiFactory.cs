@@ -29,7 +29,7 @@ public class ApiFactory : WebApplicationFactory<Program>
             using var scope = services.BuildServiceProvider().CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var hash = BCrypt.Net.BCrypt.HashPassword(Password);
-            db.Utilisateurs.AddRange(
+            db.Users.AddRange(
                 new Admin { Id = 1, Prenom = "Alice", Nom = "Admin", Email = "admin@test.com", MotDePasse = hash, Role = "ADMIN" },
                 new Agent { Id = 2, Prenom = "Karim", Nom = "Agent", Email = "agent@test.com", MotDePasse = hash, Role = "AGENT" },
                 new Qualite { Id = 3, Prenom = "Quentin", Nom = "Qualite", Email = "qualite@test.com", MotDePasse = hash, Role = "QUALITE" });

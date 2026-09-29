@@ -15,7 +15,7 @@ namespace Backend.Entities
         public int UserId { get; set; }
 
         [ForeignKey("UserId")]
-        public User User { get; set; } = null!;
+        public AppUser User { get; set; } = null!;
 
         // ==================== CONTRACT & BASIC INFO ====================
         [Column("hire_date")]

@@ -16,7 +16,7 @@ public class Followup
     public long? AgentId { get; set; }
 
     [ForeignKey(nameof(AgentId))]
-    public virtual Utilisateur? Agent { get; set; }
+    public virtual User? Agent { get; set; }
 
     [MaxLength(50)]
     public string Status { get; set; } = "a_relancer";

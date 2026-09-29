@@ -50,12 +50,12 @@ public class QualityServiceTests
     [Fact]
     public async Task GetAllEvaluationsAsync_ReturnsAllEvaluations()
     {
-        var users = new List<Utilisateur>
+        var users = new List<User>
         {
             new Agent { Id = 1, Prenom = "Agent", Nom = "1", Email = "u1@test.com", MotDePasse = "hash", Role = "AGENT" },
             new Qualite { Id = 2, Prenom = "Eval", Nom = "1", Email = "u2@test.com", MotDePasse = "hash", Role = "QUALITE" }
         };
-        _context.Utilisateurs.AddRange(users);
+        _context.Users.AddRange(users);
 
         var evals = new List<ManualEvaluation>
         {
@@ -82,13 +82,13 @@ public class QualityServiceTests
     [Fact]
     public async Task GetAgentEvaluationsAsync_ReturnsFiltered()
     {
-        var users = new List<Utilisateur>
+        var users = new List<User>
         {
             new Agent { Id = 1, Prenom = "Agent", Nom = "1", Email = "u1@test.com", MotDePasse = "hash", Role = "AGENT" },
             new Agent { Id = 2, Prenom = "Agent", Nom = "2", Email = "u2@test.com", MotDePasse = "hash", Role = "AGENT" },
             new Qualite { Id = 3, Prenom = "Eval", Nom = "1", Email = "u3@test.com", MotDePasse = "hash", Role = "QUALITE" }
         };
-        _context.Utilisateurs.AddRange(users);
+        _context.Users.AddRange(users);
 
         var evals = new List<ManualEvaluation>
         {

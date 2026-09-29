@@ -58,5 +58,5 @@ public class SalaireAgent
 
     // Navigation
     [ForeignKey(nameof(AgentId))]
-    public virtual Utilisateur? Agent { get; set; }
+    public virtual User? Agent { get; set; }
 }

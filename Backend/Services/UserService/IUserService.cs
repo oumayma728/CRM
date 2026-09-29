@@ -4,8 +4,8 @@ namespace Backend.Services.UserService
 {
     public interface IUserService
     {
-        Task<User?> GetByIdAsync(int id);
-        Task<List<User>> GetAllAsync();
-        Task<User?> GetByEmailAsync(string email);
+        Task<AppUser?> GetByIdAsync(int id);
+        Task<List<AppUser>> GetAllAsync();
+        Task<AppUser?> GetByEmailAsync(string email);
     }
 }

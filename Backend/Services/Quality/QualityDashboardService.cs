@@ -14,7 +14,7 @@ public class QualityDashboardService : IQualityDashboardService
     public async Task<TeamStatusCardDto> GetTeamStatusAsync()
     {
         var today = DateTime.UtcNow.Date;
-        var agents = await _context.Utilisateurs.AsNoTracking()
+        var agents = await _context.Users.AsNoTracking()
             .Where(u => u.Role == "AGENT")
             .ToListAsync();
 
@@ -75,7 +75,7 @@ public class QualityDashboardService : IQualityDashboardService
     public async Task<List<AgentStateRowDto>> GetAgentsStateAsync()
     {
         var today = DateTime.UtcNow.Date;
-        var agents = await _context.Utilisateurs.AsNoTracking()
+        var agents = await _context.Users.AsNoTracking()
             .Where(u => u.Role == "AGENT")
             .ToListAsync();
 
@@ -129,7 +129,7 @@ public class QualityDashboardService : IQualityDashboardService
         var today = DateTime.UtcNow.Date;
         var weekStart = today.AddDays(-6);
 
-        var agents = await _context.Utilisateurs.AsNoTracking()
+        var agents = await _context.Users.AsNoTracking()
             .Where(u => u.Role == "AGENT")
             .ToListAsync();
         var agentIds = agents.Select(a => a.Id).ToList();
@@ -276,7 +276,7 @@ public class QualityDashboardService : IQualityDashboardService
             }
         }
 
-        var activeAgents = await _context.Utilisateurs.AsNoTracking()
+        var activeAgents = await _context.Users.AsNoTracking()
             .Where(u => u.Role == "AGENT")
             .Select(u => (u.Prenom + " " + u.Nom).Trim())
             .ToListAsync();
@@ -364,7 +364,7 @@ public class QualityDashboardService : IQualityDashboardService
 
     public async Task<AgentDetailDto> GetAgentDetailAsync(int agentId)
     {
-        var agent = await _context.Utilisateurs.AsNoTracking()
+        var agent = await _context.Users.AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == agentId && u.Role == "AGENT");
         if (agent == null) throw new KeyNotFoundException($"Agent {agentId} not found");
 
@@ -562,7 +562,7 @@ public class QualityDashboardService : IQualityDashboardService
     public async Task<RdvJourDto> GetRdvJourAsync()
     {
         var today = DateTime.UtcNow.Date;
-        var agents = await _context.Utilisateurs.AsNoTracking()
+        var agents = await _context.Users.AsNoTracking()
             .Where(u => u.Role == "AGENT")
             .ToListAsync();
 

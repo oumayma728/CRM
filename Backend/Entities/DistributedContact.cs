@@ -72,6 +72,6 @@ namespace Backend.Entities  // or Backend.Entities - wherever this belongs
         public virtual SourceFileContact? SourceFileContact { get; set; }
 
         [ForeignKey(nameof(AgentId))]
-        public virtual User? Agent { get; set; }
+        public virtual AppUser? Agent { get; set; }
     }
 }

@@ -28,7 +28,7 @@ public class CallService : ICallService
 
         if (role == "agent")
         {
-            var user = await _context.Utilisateurs.FindAsync((long)userId);
+            var user = await _context.Users.FindAsync((long)userId);
             query = query.Where(c => c.AgentName == (user!.Prenom + " " + user!.Nom).Trim());
         }
         if (!string.IsNullOrEmpty(agentName))
@@ -55,7 +55,7 @@ public class CallService : ICallService
         if (call == null) return null;
         if (role == "agent")
         {
-            var user = await _context.Utilisateurs.FindAsync((long)userId);
+            var user = await _context.Users.FindAsync((long)userId);
             if (user != null && call.AgentName != (user.Prenom + " " + user.Nom).Trim()) return null;
         }
         return MapToListDto(call);
@@ -66,7 +66,7 @@ public class CallService : ICallService
         var query = _context.Calls.AsNoTracking().AsQueryable();
         if (role == "agent")
         {
-            var user = await _context.Utilisateurs.FindAsync((long)userId);
+            var user = await _context.Users.FindAsync((long)userId);
             query = query.Where(c => c.AgentName == (user!.Prenom + " " + user!.Nom).Trim());
         }
         if (!string.IsNullOrEmpty(agentName))
@@ -102,7 +102,7 @@ public class CallService : ICallService
 
     public async Task<(bool success, int callId, string message)> SaveCallAsync(int userId, CallSaveDto dto)
     {
-        var user = await _context.Utilisateurs.FindAsync((long)userId);
+        var user = await _context.Users.FindAsync((long)userId);
         var anonymizedNotes = dto.Notes;
         if (!string.IsNullOrEmpty(anonymizedNotes))
         {

@@ -1,7 +1,7 @@
 namespace Backend.Entities;
 
 /// <summary>Utilisateur du service technique (support / IT)</summary>
-public class Technique : Utilisateur
+public class Technique : User
 {
     public Technique()
     {

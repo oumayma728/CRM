@@ -122,7 +122,7 @@ public class QualityCrmController : ControllerBase
     [HttpGet("dashboard/global-stats")]
     public async Task<IActionResult> GetGlobalStats()
     {
-        var totalAgents = await _context.Utilisateurs.CountAsync(u => u.Role == "AGENT");
+        var totalAgents = await _context.Users.CountAsync(u => u.Role == "AGENT");
         var evals = await _context.ManualEvaluations.AsNoTracking().ToListAsync();
         var rdvs = await _context.RendezVous.AsNoTracking().ToListAsync();
         var appels = await _context.Appels.AsNoTracking().ToListAsync();
@@ -173,7 +173,7 @@ public class QualityCrmController : ControllerBase
     [HttpGet("dashboard/agent-detail/{agentId}")]
     public async Task<IActionResult> GetAgentDetail(long agentId)
     {
-        var agent = await _context.Utilisateurs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentId);
+        var agent = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentId);
         if (agent == null) return NotFound(new { error = "Agent introuvable" });
 
         var evals = await _context.ManualEvaluations.AsNoTracking()
@@ -210,7 +210,7 @@ public class QualityCrmController : ControllerBase
     [HttpGet("dashboard/comparison")]
     public async Task<IActionResult> GetComparison()
     {
-        var agents = (await _context.Utilisateurs
+        var agents = (await _context.Users
             .Where(u => u.Role == "AGENT")
             .Select(u => new { u.Id, u.Nom, u.Prenom, u.Email })
             .AsNoTracking()

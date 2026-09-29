@@ -26,7 +26,7 @@ public class QualityDashboardServiceTests
     {
         var agent1 = new Agent { Id = 1, Prenom = "Agent", Nom = "1", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
         var agent2 = new Agent { Id = 2, Prenom = "Agent", Nom = "2", Email = "b@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.AddRange(agent1, agent2);
+        _context.Users.AddRange(agent1, agent2);
         _context.AdvancedAttendances.AddRange(
             new AdvancedAttendance { UserId = 1, Date = DateTime.UtcNow.Date, ClockIn = DateTime.UtcNow.AddHours(-2), Status = "active", CreatedAt = DateTime.UtcNow.AddHours(-2) },
             new AdvancedAttendance { UserId = 2, Date = DateTime.UtcNow.Date, ClockIn = DateTime.UtcNow.AddHours(-3), Status = "active", CreatedAt = DateTime.UtcNow.AddHours(-3) }
@@ -45,7 +45,7 @@ public class QualityDashboardServiceTests
     public async Task GetTeamStatusAsync_WithOfflineAgents_ReturnsOffline()
     {
         var agent = new Agent { Id = 1, Prenom = "Offline", Nom = "", Email = "o@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(agent);
+        _context.Users.Add(agent);
         await _context.SaveChangesAsync();
 
         var result = await _sut.GetTeamStatusAsync();
@@ -59,7 +59,7 @@ public class QualityDashboardServiceTests
     public async Task GetTeamStatusAsync_WithBreakAgents_ReturnsBreakCount()
     {
         var agent = new Agent { Id = 1, Prenom = "Break", Nom = "Agent", Email = "br@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(agent);
+        _context.Users.Add(agent);
         var att = new AdvancedAttendance { UserId = 1, Date = DateTime.UtcNow.Date, ClockIn = DateTime.UtcNow.AddHours(-4), Status = "break", CreatedAt = DateTime.UtcNow.AddHours(-4) };
         _context.AdvancedAttendances.Add(att);
         _context.AttendanceBreaks.Add(new AttendanceBreak { AttendanceId = 1, Type = "dejeuner", StartTime = DateTime.UtcNow.AddMinutes(-30), EndTime = null, DurationMinutes = 0 });
@@ -76,7 +76,7 @@ public class QualityDashboardServiceTests
     public async Task GetGlobalStatsAsync_ReturnsStats()
     {
         var agent = new Agent { Id = 1, Prenom = "Stats", Nom = "Agent", Email = "s@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(agent);
+        _context.Users.Add(agent);
         _context.Calls.AddRange(
             new Call { AgentName = "Stats Agent", CallDate = DateTime.UtcNow, ScorePercentage = 85 },
             new Call { AgentName = "Stats Agent", CallDate = DateTime.UtcNow.AddDays(-1), ScorePercentage = 65 }
@@ -99,7 +99,7 @@ public class QualityDashboardServiceTests
     public async Task GetAgentsStateAsync_ReturnsAllAgentsWithState()
     {
         var agent1 = new Agent { Id = 1, Prenom = "State", Nom = "1", Email = "st1@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(agent1);
+        _context.Users.Add(agent1);
         _context.AdvancedAttendances.Add(new AdvancedAttendance { UserId = 1, Date = DateTime.UtcNow.Date, ClockIn = DateTime.UtcNow.AddHours(-5), Status = "active", CreatedAt = DateTime.UtcNow.AddHours(-5) });
         await _context.SaveChangesAsync();
 
@@ -114,7 +114,7 @@ public class QualityDashboardServiceTests
     public async Task GetAgentsStateAsync_WithCompletedShift_ShowsOffline()
     {
         var agent = new Agent { Id = 1, Prenom = "Done", Nom = "Agent", Email = "d@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(agent);
+        _context.Users.Add(agent);
         _context.AdvancedAttendances.Add(new AdvancedAttendance { UserId = 1, Date = DateTime.UtcNow.Date, ClockIn = DateTime.UtcNow.AddHours(-8), ClockOut = DateTime.UtcNow.AddHours(-1), Status = "completed", CreatedAt = DateTime.UtcNow.AddHours(-8) });
         await _context.SaveChangesAsync();
 
@@ -130,7 +130,7 @@ public class QualityDashboardServiceTests
     {
         var agent1 = new Agent { Id = 1, Prenom = "Rdv", Nom = "Agent 1", Email = "r1@b.com", MotDePasse = "hash", Role = "AGENT" };
         var agent2 = new Agent { Id = 2, Prenom = "Rdv", Nom = "Agent 2", Email = "r2@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.AddRange(agent1, agent2);
+        _context.Users.AddRange(agent1, agent2);
         _context.CrmAppointments.AddRange(
             new CrmAppointment { AgentId = 1, AppointmentDate = DateTime.UtcNow },
             new CrmAppointment { AgentId = 1, AppointmentDate = DateTime.UtcNow },
@@ -150,7 +150,7 @@ public class QualityDashboardServiceTests
     public async Task GetAgentDetailAsync_ExistingAgent_ReturnsDetail()
     {
         var agent = new Agent { Id = 1, Prenom = "Detail", Nom = "Agent", Email = "det@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(agent);
+        _context.Users.Add(agent);
         _context.Calls.AddRange(
             new Call { AgentName = "Detail Agent", CallDate = DateTime.UtcNow, ScorePercentage = 80, Qualification = "RDV" },
             new Call { AgentName = "Detail Agent", CallDate = DateTime.UtcNow.AddDays(-5), ScorePercentage = 70, Qualification = "REFUS" }
@@ -177,7 +177,7 @@ public class QualityDashboardServiceTests
     {
         var agent = new Agent { Id = 1, Prenom = "Agent", Nom = "", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
         var evaluator = new Qualite { Id = 2, Prenom = "Evaluator", Nom = "", Email = "e@b.com", MotDePasse = "hash", Role = "QUALITE" };
-        _context.Utilisateurs.AddRange(agent, evaluator);
+        _context.Users.AddRange(agent, evaluator);
         for (int i = 0; i < 5; i++)
         {
             _context.ManualEvaluations.Add(new ManualEvaluation { AgentId = 1, EvaluatorId = 2, GlobalScore = 70 + i, CallRef = $"C{i}" });

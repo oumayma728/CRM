@@ -12,7 +12,7 @@ public class CrmAppointment
     public long AgentId { get; set; }
 
     [ForeignKey("AgentId")]
-    public Utilisateur? Agent { get; set; }
+    public User? Agent { get; set; }
     public DateTime AppointmentDate { get; set; }
     [MaxLength(10)]
     public string AppointmentTime { get; set; } = string.Empty;

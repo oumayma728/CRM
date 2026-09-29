@@ -27,7 +27,7 @@ namespace Backend.Entities
         public int? ConfirmedByUserId { get; set; }
 
         [ForeignKey("ConfirmedByUserId")]
-        public User? ConfirmedBy { get; set; }
+        public AppUser? ConfirmedBy { get; set; }
 
         [Column("confirmed_at")]
         public DateTime? ConfirmedAt { get; set; }
@@ -47,7 +47,7 @@ namespace Backend.Entities
         public int? AssignedAgentId { get; set; }
 
         [ForeignKey("AssignedAgentId")]
-        public User? AssignedAgent { get; set; }
+        public AppUser? AssignedAgent { get; set; }
 
         // Call status tracking
         [Column("call_status")]

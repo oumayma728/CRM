@@ -20,7 +20,7 @@ public class JwtTokenGenerator
                 _db = db;
     }
 
-    public async Task<string> GenerateAccessToken(User user)
+    public async Task<string> GenerateAccessToken(AppUser user)
     {
         var rolePermissions = await _db.RolePermissions
              .Where(rp => rp.RoleId == user.RoleId)

@@ -71,7 +71,7 @@ public class AiScoringController : ControllerBase
     [HttpGet("insights/{agentId}")]
     public async Task<IActionResult> GetInsights(long agentId)
     {
-        var agent = await _context.Utilisateurs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentId);
+        var agent = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentId);
         if (agent == null) return NotFound(new { error = "Agent introuvable" });
 
         var rdvs = await _context.RendezVous.AsNoTracking().Where(r => r.AgentId == agentId).ToListAsync();

@@ -50,7 +50,7 @@ namespace Backend.Entities
         public int UploadedByUserId { get; set; }
 
         [ForeignKey("UploadedByUserId")]
-        public User? UploadedByUser { get; set; }
+        public AppUser? UploadedByUser { get; set; }
 
         [Column("original_file_name")]
         [MaxLength(255)]

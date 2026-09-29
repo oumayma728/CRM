@@ -17,13 +17,13 @@ public class AgentWorkspaceService : IAgentWorkspaceService
 
     public async Task<List<AgentSimpleDto>> GetAgentsAsync()
     {
-        var users = await _context.Utilisateurs.AsNoTracking().Where(u => u.Role == "AGENT").ToListAsync();
+        var users = await _context.Users.AsNoTracking().Where(u => u.Role == "AGENT").ToListAsync();
         return users.Select(u => new AgentSimpleDto { AgentId = u.Id, AgentName = (u.Prenom + " " + u.Nom).Trim() }).ToList();
     }
 
     public async Task<AgentPerformanceDetailDto> GetAgentPerformanceAsync(string agentId)
     {
-        var user = (long.TryParse(agentId, out var agentKey) ? await _context.Utilisateurs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentKey) : null) ?? throw new KeyNotFoundException("Agent not found");
+        var user = (long.TryParse(agentId, out var agentKey) ? await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentKey) : null) ?? throw new KeyNotFoundException("Agent not found");
         
         var today = DateTime.UtcNow.Date;
         var currentMonthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);

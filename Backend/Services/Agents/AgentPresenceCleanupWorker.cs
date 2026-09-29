@@ -50,7 +50,7 @@ namespace Backend.Services.Agents
             var now = DateTime.UtcNow;
             var staleBefore = now.Subtract(_heartbeatTimeout);
 
-            var staleAgentIds = await db.Users
+            var staleAgentIds = await db.AppUsers
                 .Where(u => !u.IsDeleted
                          && u.IsOnline
                          && (u.LastHeartbeatAt == null || u.LastHeartbeatAt < staleBefore))
@@ -59,7 +59,7 @@ namespace Backend.Services.Agents
 
             if (staleAgentIds.Count > 0)
             {
-                await db.Users
+                await db.AppUsers
                     .Where(u => staleAgentIds.Contains(u.Id))
                     .ExecuteUpdateAsync(s => s
                         .SetProperty(u => u.IsOnline, false)
@@ -124,7 +124,7 @@ namespace Backend.Services.Agents
 
             if (affectedOnlineAgentIds.Count > 0)
             {
-                await db.Users
+                await db.AppUsers
                     .Where(u => affectedOnlineAgentIds.Contains(u.Id)
                              && u.IsOnline
                              && u.PresenceStatus == AgentPresenceStatus.OnCall)

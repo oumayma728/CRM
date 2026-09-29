@@ -1,5 +1,5 @@
 namespace Backend.Entities;
 
-public class SuperAdmin : Utilisateur
+public class SuperAdmin : User
 {
 }
