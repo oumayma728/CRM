@@ -81,13 +81,15 @@ if (string.IsNullOrEmpty(connectionString))
 builder.Services.AddDbContext<Backend.Data.ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Rate limiting on authentication endpoints (feature/khaled1): 10 attempts / 2 min per client
+// Rate limiting on authentication endpoints (feature/khaled1): 10 attempts / 2 min per client IP
+// (RateLimiting:LoginPermitLimit overrides the limit, e.g. for the E2E suite)
+var loginPermitLimit = builder.Configuration.GetValue("RateLimiting:LoginPermitLimit", 10);
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("login", httpContext => RateLimitPartition.GetFixedWindowLimiter(
         httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(2), QueueLimit = 0 }));
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = loginPermitLimit, Window = TimeSpan.FromMinutes(2), QueueLimit = 0 }));
     options.OnRejected = async (context, ct) =>
     {
         var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue)
@@ -324,3 +326,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+// Exposed for WebApplicationFactory-based integration tests (tests/CRM.API.Tests)
+public partial class Program { }

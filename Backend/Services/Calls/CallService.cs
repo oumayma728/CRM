@@ -29,7 +29,7 @@ public class CallService : ICallService
         if (role == "agent")
         {
             var user = await _context.Utilisateurs.FindAsync((long)userId);
-            query = query.Where(c => c.AgentName == (user!.Prenom + " " + user!.Nom));
+            query = query.Where(c => c.AgentName == (user!.Prenom + " " + user!.Nom).Trim());
         }
         if (!string.IsNullOrEmpty(agentName))
             query = query.Where(c => c.AgentName == agentName);
@@ -56,7 +56,7 @@ public class CallService : ICallService
         if (role == "agent")
         {
             var user = await _context.Utilisateurs.FindAsync((long)userId);
-            if (user != null && call.AgentName != (user.Prenom + " " + user.Nom)) return null;
+            if (user != null && call.AgentName != (user.Prenom + " " + user.Nom).Trim()) return null;
         }
         return MapToListDto(call);
     }
@@ -67,7 +67,7 @@ public class CallService : ICallService
         if (role == "agent")
         {
             var user = await _context.Utilisateurs.FindAsync((long)userId);
-            query = query.Where(c => c.AgentName == (user!.Prenom + " " + user!.Nom));
+            query = query.Where(c => c.AgentName == (user!.Prenom + " " + user!.Nom).Trim());
         }
         if (!string.IsNullOrEmpty(agentName))
             query = query.Where(c => c.AgentName == agentName);
@@ -112,7 +112,7 @@ public class CallService : ICallService
         var call = new Backend.Entities.Call
         {
             AgentId = userId.ToString(),
-            AgentName = (user != null ? user.Prenom + " " + user.Nom : null) ?? "Unknown",
+            AgentName = (user != null ? (user.Prenom + " " + user.Nom).Trim() : null) ?? "Unknown",
             CallType = dto.Besoin,
             Problem = dto.Budget,
             CustomerIntent = dto.Interet,

@@ -8,5 +8,5 @@ public interface IQualityService
     Task<List<EvaluationDto>> GetAgentEvaluationsAsync(int agentId);
     Task<List<EvaluationDto>> GetAllEvaluationsAsync();
     Task<QualityStatsDto> GetStatsAsync();
-    Task<bool> DeleteEvaluationAsync(int evalId);
+    Task<bool> DeleteEvaluationAsync(long evalId);
 }

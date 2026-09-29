@@ -2,7 +2,7 @@ name: CI Pipeline
 
 "on":
   push:
-    branches: [main, develop, feature/*]
+    branches: [main, final, develop, feature/*]
   pull_request:
     branches: [main]
 
@@ -28,25 +28,22 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore Backend
-        run: dotnet restore Backend/CrmApi.sln
+        run: dotnet restore Backend/CRM.API.sln
 
-      - name: Build main project
-        run: dotnet build Backend/src/CrmApi/CrmApi.csproj --configuration Release --no-restore
+      - name: Build API
+        run: dotnet build Backend/CRM.API.csproj --configuration Release --no-restore
 
       - name: Build test project
-        run: dotnet build Backend/tests/CrmApi.Tests/CrmApi.Tests.csproj --configuration Release --no-restore
+        run: dotnet build Backend/tests/CRM.API.Tests/CRM.API.Tests.csproj --configuration Release --no-restore
 
-      - name: Run Unit Tests
-        run: dotnet test Backend/tests/CrmApi.Tests/CrmApi.Tests.csproj --configuration Release --no-build --verbosity minimal
-
-      - name: Collect Code Coverage
-        run: dotnet test Backend/tests/CrmApi.Tests/CrmApi.Tests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --settings Backend/coverlet.runsettings
+      - name: Run Unit & Integration Tests
+        run: dotnet test Backend/tests/CRM.API.Tests/CRM.API.Tests.csproj --configuration Release --no-build --verbosity minimal --collect:"XPlat Code Coverage" --settings Backend/coverlet.runsettings
 
       - name: Upload Coverage
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
-          path: Backend/tests/CrmApi.Tests/TestResults/**/coverage.cobertura.xml
+          path: Backend/tests/CRM.API.Tests/TestResults/**/coverage.cobertura.xml
           if-no-files-found: warn
 
   frontend-build:
@@ -131,19 +128,34 @@ jobs:
       - name: Restore & build backend
         working-directory: ./Backend
         run: |
-          dotnet restore CrmApi.sln
-          dotnet build src/CrmApi/CrmApi.csproj --configuration Release --no-restore
+          dotnet restore CRM.API.csproj
+          dotnet build CRM.API.csproj --configuration Release --no-restore
 
-      - name: Start backend
-        working-directory: ./Backend/src/CrmApi
+      - name: Create schema and seed E2E accounts
+        working-directory: ./Backend
         env:
           ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=pfe_crm_ia;Username=postgres;Password=postgres"
-          ASPNETCORE_URLS: "http://0.0.0.0:5190"
+          PGPASSWORD: postgres
         run: |
-          nohup dotnet run --configuration Release --no-build --project CrmApi.csproj > /tmp/backend.log 2>&1 &
+          dotnet tool install --global dotnet-ef --version 8.0.11
+          # schema generated from the current EF model (the historical migration chain
+          # cannot bootstrap an empty database — see MERGE_NOTES.md)
+          dotnet ef dbcontext script --configuration Release --no-build -o /tmp/schema.sql
+          psql -h localhost -U postgres -d pfe_crm_ia -v ON_ERROR_STOP=1 -q -f /tmp/schema.sql
+          psql -h localhost -U postgres -d pfe_crm_ia -v ON_ERROR_STOP=1 -f scripts/sql/seed_e2e_users.sql
+
+      - name: Start backend
+        working-directory: ./Backend
+        env:
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=pfe_crm_ia;Username=postgres;Password=postgres"
+          ASPNETCORE_URLS: "http://0.0.0.0:5241"
+          ASPNETCORE_ENVIRONMENT: Development
+          RateLimiting__LoginPermitLimit: "1000"
+        run: |
+          nohup dotnet run --configuration Release --no-build --no-launch-profile --project CRM.API.csproj > /tmp/backend.log 2>&1 &
           echo "Backend PID: $!"
           for i in $(seq 1 60); do
-            if curl -s http://localhost:5190/api/health > /dev/null 2>&1; then
+            if curl -s http://localhost:5241/api/health > /dev/null 2>&1; then
               echo "Backend is healthy!"
               exit 0
             fi
@@ -213,7 +225,7 @@ jobs:
         continue-on-error: true
         run: |
           dotnet tool install --global security-scan
-          dotnet security-scan Backend/src/CrmApi/CrmApi.csproj
+          dotnet security-scan Backend/CRM.API.csproj
 
   dependency-scan:
     name: Dependency Scan
@@ -229,7 +241,9 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Check NuGet vulnerabilities
-        run: dotnet list Backend/src/CrmApi/CrmApi.csproj package --vulnerable
+        run: |
+          dotnet restore Backend/CRM.API.csproj
+          dotnet list Backend/CRM.API.csproj package --vulnerable
 
       - name: Check npm vulnerabilities
         run: |

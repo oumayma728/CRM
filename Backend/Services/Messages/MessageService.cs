@@ -18,7 +18,7 @@ public class MessageService : IMessageService
         {
             var lastMsg = await _context.Messages.AsNoTracking().Where(m => (m.SenderId == userId && m.ReceiverId == u.Id) || (m.SenderId == u.Id && m.ReceiverId == userId)).OrderByDescending(m => m.CreatedAt).FirstOrDefaultAsync();
             var unread = await _context.Messages.AsNoTracking().CountAsync(m => m.SenderId == u.Id && m.ReceiverId == userId && !m.IsRead);
-            result.Add(new ConversationDto { UserId = u.Id, UserName = (u.Prenom + " " + u.Nom), UserRole = u.Role.ToLower(), LastMessage = lastMsg?.Content, LastMessageTime = lastMsg?.CreatedAt, UnreadCount = unread });
+            result.Add(new ConversationDto { UserId = u.Id, UserName = (u.Prenom + " " + u.Nom).Trim(), UserRole = u.Role.ToLower(), LastMessage = lastMsg?.Content, LastMessageTime = lastMsg?.CreatedAt, UnreadCount = unread });
         }
         return result.OrderByDescending(c => c.LastMessageTime).ToList();
     }
@@ -28,7 +28,7 @@ public class MessageService : IMessageService
         return await _context.Messages.AsNoTracking().Include(m => m.Sender).Include(m => m.Receiver)
             .Where(m => (m.SenderId == userId && m.ReceiverId == otherUserId) || (m.SenderId == otherUserId && m.ReceiverId == userId))
             .OrderBy(m => m.CreatedAt)
-            .Select(m => new MessageDto { Id = m.Id, SenderId = m.SenderId, SenderName = m.Sender != null ? (m.Sender.Prenom + " " + m.Sender.Nom) : "", ReceiverId = m.ReceiverId, ReceiverName = m.Receiver != null ? (m.Receiver.Prenom + " " + m.Receiver.Nom) : "", Content = m.Content, IsUrgent = m.IsUrgent, IsRead = m.IsRead, CreatedAt = m.CreatedAt, ReadAt = m.ReadAt })
+            .Select(m => new MessageDto { Id = m.Id, SenderId = m.SenderId, SenderName = m.Sender != null ? (m.Sender.Prenom + " " + m.Sender.Nom).Trim() : "", ReceiverId = m.ReceiverId, ReceiverName = m.Receiver != null ? (m.Receiver.Prenom + " " + m.Receiver.Nom).Trim() : "", Content = m.Content, IsUrgent = m.IsUrgent, IsRead = m.IsRead, CreatedAt = m.CreatedAt, ReadAt = m.ReadAt })
             .ToListAsync();
     }
 
@@ -38,7 +38,7 @@ public class MessageService : IMessageService
         _context.Messages.Add(msg);
         await _context.SaveChangesAsync();
         var saved = await _context.Messages.AsNoTracking().Include(m => m.Sender).Include(m => m.Receiver).FirstAsync(m => m.Id == msg.Id);
-        return new MessageDto { Id = saved.Id, SenderId = saved.SenderId, SenderName = (saved.Sender != null ? saved.Sender.Prenom + " " + saved.Sender.Nom : null) ?? "", ReceiverId = saved.ReceiverId, ReceiverName = (saved.Receiver != null ? saved.Receiver.Prenom + " " + saved.Receiver.Nom : null) ?? "", Content = saved.Content, IsUrgent = saved.IsUrgent, IsRead = saved.IsRead, CreatedAt = saved.CreatedAt, ReadAt = saved.ReadAt };
+        return new MessageDto { Id = saved.Id, SenderId = saved.SenderId, SenderName = (saved.Sender != null ? (saved.Sender.Prenom + " " + saved.Sender.Nom).Trim() : null) ?? "", ReceiverId = saved.ReceiverId, ReceiverName = (saved.Receiver != null ? (saved.Receiver.Prenom + " " + saved.Receiver.Nom).Trim() : null) ?? "", Content = saved.Content, IsUrgent = saved.IsUrgent, IsRead = saved.IsRead, CreatedAt = saved.CreatedAt, ReadAt = saved.ReadAt };
     }
 
     public async Task<bool> MarkAsReadAsync(int messageId, int userId)

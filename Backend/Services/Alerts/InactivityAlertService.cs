@@ -55,8 +55,8 @@ public class InactivityAlertService : BackgroundService
             {
                 type = "inactivity_alert",
                 userId = attendance.UserId,
-                userName = (attendance.User != null ? attendance.User.Prenom + " " + attendance.User.Nom : null) ?? "Unknown",
-                message = $"Inactivité détectée : {(attendance.User != null ? attendance.User.Prenom + " " + attendance.User.Nom : null)} est pointé depuis {inactiveMinutes} minutes sans activité",
+                userName = (attendance.User != null ? (attendance.User.Prenom + " " + attendance.User.Nom).Trim() : null) ?? "Unknown",
+                message = $"Inactivité détectée : {(attendance.User != null ? (attendance.User.Prenom + " " + attendance.User.Nom).Trim() : null)} est pointé depuis {inactiveMinutes} minutes sans activité",
                 inactiveMinutes,
                 timestamp = DateTime.UtcNow
             };

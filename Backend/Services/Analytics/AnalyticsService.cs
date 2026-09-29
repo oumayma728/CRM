@@ -213,7 +213,7 @@ public class AnalyticsService : IAnalyticsService
         return calls.GroupBy(c => c.AgentName).Select(g =>
         {
             var agentName = g.Key;
-            var attendance = attendances.FirstOrDefault(a => (a.User != null ? a.User.Prenom + " " + a.User.Nom : null) == agentName);
+            var attendance = attendances.FirstOrDefault(a => (a.User != null ? (a.User.Prenom + " " + a.User.Nom).Trim() : null) == agentName);
             return (object)new
             {
                 agent = agentName,
@@ -267,7 +267,7 @@ public class AnalyticsService : IAnalyticsService
         {
             var att = latestByUser.FirstOrDefault(a => a.UserId == u.Id);
             var openBreak = att?.Breaks?.Where(b => b.EndTime == null).OrderByDescending(b => b.Id).FirstOrDefault();
-            var callData = agentCallCounts.FirstOrDefault(c => c.Name == (u.Prenom + " " + u.Nom));
+            var callData = agentCallCounts.FirstOrDefault(c => c.Name == (u.Prenom + " " + u.Nom).Trim());
             var quality = qualityScores.FirstOrDefault(q => q.AgentId == u.Id);
             var project = agentProjects.FirstOrDefault(p => p.UserId == u.Id);
 
@@ -290,7 +290,7 @@ public class AnalyticsService : IAnalyticsService
             return (object)new
             {
                 id = u.Id,
-                name = (u.Prenom + " " + u.Nom),
+                name = (u.Prenom + " " + u.Nom).Trim(),
                 status = att?.Status ?? "offline",
                 calls = callData?.Count ?? 0,
                 idleTime = 0,

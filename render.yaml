@@ -11,8 +11,8 @@ services:
   - type: web
     name: crm-backend
     runtime: docker
-    repo: https://github.com/Khaledouertani/CRM_ai_projet
-    branch: feature/khaled1
+    repo: https://github.com/oumayma728/CRM
+    branch: main
     dockerfilePath: ./Backend/Dockerfile
     dockerContext: ./Backend
     plan: free
@@ -31,17 +31,17 @@ services:
       - key: Jwt__Issuer
         value: crm-api
       - key: Jwt__Audience
-        value: crm-api-users
-      - key: Jwt__ExpirationHours
-        value: "24"
-      - key: Cors__AllowedOrigins
+        value: crm-client
+      - key: Cors__AllowedOrigins__0
         value: "https://crm-frontend.onrender.com"
+      - key: Groq__ApiKey
+        sync: false
 
 staticSites:
   - type: static
     name: crm-frontend
-    repo: https://github.com/Khaledouertani/CRM_ai_projet
-    branch: feature/khaled1
+    repo: https://github.com/oumayma728/CRM
+    branch: main
     rootDir: frontend
     buildCommand: npm ci && npm run build
     publishPath: dist

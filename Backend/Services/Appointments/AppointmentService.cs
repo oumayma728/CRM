@@ -31,7 +31,7 @@ public class AppointmentService : IAppointmentService
 
         return await query.OrderByDescending(a => a.AppointmentDate).Select(a => new AppointmentListDto
         {
-            Id = a.Id, AgentId = a.AgentId, AgentName = a.Agent != null ? (a.Agent.Prenom + " " + a.Agent.Nom) : "", ClientName = a.ClientName, ClientPhone = a.ClientPhone, ClientEmail = a.ClientEmail,
+            Id = a.Id, AgentId = a.AgentId, AgentName = a.Agent != null ? (a.Agent.Prenom + " " + a.Agent.Nom).Trim() : "", ClientName = a.ClientName, ClientPhone = a.ClientPhone, ClientEmail = a.ClientEmail,
             ProjectType = a.ProjectType, AppointmentDate = a.AppointmentDate, AppointmentTime = a.AppointmentTime, QualityScore = a.QualityScore, FinancingStatus = a.FinancingStatus,
             Status = a.Status, Revenus = a.Revenus, Chauffage = a.Chauffage, Toiture = a.Toiture, Isolation = a.Isolation, Consommation = a.Consommation,
             CreditScore = a.CreditScore, SituationBancaire = a.SituationBancaire, Notes = a.Notes, CreatedAt = a.CreatedAt
@@ -44,7 +44,7 @@ public class AppointmentService : IAppointmentService
         if (a == null) return null;
         return new AppointmentDetailDto
         {
-            Id = a.Id, AgentId = a.AgentId, AgentName = (a.Agent != null ? a.Agent.Prenom + " " + a.Agent.Nom : null) ?? "", AgentUsername = a.Agent?.Email, ClientName = a.ClientName, ClientPhone = a.ClientPhone,
+            Id = a.Id, AgentId = a.AgentId, AgentName = (a.Agent != null ? (a.Agent.Prenom + " " + a.Agent.Nom).Trim() : null) ?? "", AgentUsername = a.Agent?.Email, ClientName = a.ClientName, ClientPhone = a.ClientPhone,
             ClientEmail = a.ClientEmail, ProjectType = a.ProjectType, AppointmentDate = a.AppointmentDate, AppointmentTime = a.AppointmentTime, QualityScore = a.QualityScore,
             FinancingStatus = a.FinancingStatus, Status = a.Status, Revenus = a.Revenus, Chauffage = a.Chauffage, Toiture = a.Toiture, Isolation = a.Isolation,
             Consommation = a.Consommation, CreditScore = a.CreditScore, SituationBancaire = a.SituationBancaire, Notes = a.Notes, CreatedAt = a.CreatedAt,

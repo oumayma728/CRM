@@ -18,7 +18,7 @@ jobs:
     name: Deploy to Render
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'feature/khaled' || github.event.workflow_run.head_branch == 'feature/khaled1')) }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
 
     steps:
       - name: Trigger backend deploy

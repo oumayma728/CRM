@@ -63,7 +63,7 @@ public class QualityController : ControllerBase
     }
 
     [HttpDelete("evaluations/{evalId}")]
-    public async Task<IActionResult> DeleteEvaluation(int evalId)
+    public async Task<IActionResult> DeleteEvaluation(long evalId)
     {
         if (!UserContextHelper.IsAdminOrQualite(User)) return Forbid();
         try

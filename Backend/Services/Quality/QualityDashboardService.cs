@@ -52,7 +52,7 @@ public class QualityDashboardService : IQualityDashboardService
             memberCards.Add(new TeamMemberCardDto
             {
                 UserId = agent.Id,
-                Name = (agent.Prenom + " " + agent.Nom),
+                Name = (agent.Prenom + " " + agent.Nom).Trim(),
                 Status = isOnBreak ? "break" : att.Status,
                 BreakType = currentBreak?.Type,
                 ClockIn = att.ClockIn,
@@ -110,7 +110,7 @@ public class QualityDashboardService : IQualityDashboardService
             result.Add(new AgentStateRowDto
             {
                 UserId = agent.Id,
-                Name = (agent.Prenom + " " + agent.Nom),
+                Name = (agent.Prenom + " " + agent.Nom).Trim(),
                 Status = att == null ? "offline" : (att.Status == "break" ? "break" : att.Status),
                 ClockIn = att?.ClockIn,
                 ClockOut = att?.ClockOut,
@@ -133,7 +133,7 @@ public class QualityDashboardService : IQualityDashboardService
             .Where(u => u.Role == "AGENT")
             .ToListAsync();
         var agentIds = agents.Select(a => a.Id).ToList();
-        var agentNames = agents.Select(a => (a.Prenom + " " + a.Nom)).ToList();
+        var agentNames = agents.Select(a => (a.Prenom + " " + a.Nom).Trim()).ToList();
 
         var callsToday = await _context.Calls.AsNoTracking()
             .Where(c => c.CallDate.HasValue && c.CallDate!.Value.Date == today && agentNames.Contains(c.AgentName))
@@ -247,7 +247,7 @@ public class QualityDashboardService : IQualityDashboardService
                 {
                     Id = (int)(-(att.Id * 10 + longBreak.Id)),
                     Type = "warning",
-                    Agent = (att.User != null ? att.User.Prenom + " " + att.User.Nom : null) ?? "Unknown",
+                    Agent = (att.User != null ? (att.User.Prenom + " " + att.User.Nom).Trim() : null) ?? "Unknown",
                     Message = $"Pause déjeuner dépassée de {longBreak.DurationMinutes - 60} minutes",
                     Category = "pointage",
                     CreatedAt = longBreak.StartTime
@@ -267,7 +267,7 @@ public class QualityDashboardService : IQualityDashboardService
                     {
                         Id = (int)(-(att.Id * 100)),
                         Type = "warning",
-                        Agent = (att.User != null ? att.User.Prenom + " " + att.User.Nom : null) ?? "Unknown",
+                        Agent = (att.User != null ? (att.User.Prenom + " " + att.User.Nom).Trim() : null) ?? "Unknown",
                         Message = $"Pause en cours depuis {Math.Round(breakMinutes)} minutes (seuil: {threshold}min)",
                         Category = "pointage",
                         CreatedAt = activeBreak.StartTime
@@ -278,7 +278,7 @@ public class QualityDashboardService : IQualityDashboardService
 
         var activeAgents = await _context.Utilisateurs.AsNoTracking()
             .Where(u => u.Role == "AGENT")
-            .Select(u => (u.Prenom + " " + u.Nom))
+            .Select(u => (u.Prenom + " " + u.Nom).Trim())
             .ToListAsync();
 
         var inactiveThreshold = 45;
@@ -294,14 +294,14 @@ public class QualityDashboardService : IQualityDashboardService
 
         var presentAgentNames = todayAttendances
             .Where(a => a.Status == "active" || a.Status == "break")
-            .Select(a => (a.User != null ? a.User.Prenom + " " + a.User.Nom : null))
+            .Select(a => (a.User != null ? (a.User.Prenom + " " + a.User.Nom).Trim() : null))
             .Where(n => n != null)
             .ToHashSet();
         foreach (var agentName in presentAgentNames)
         {
             if (!recentCalls.Any(r => r.AgentName == agentName))
             {
-                var att = todayAttendances.FirstOrDefault(a => (a.User != null ? a.User.Prenom + " " + a.User.Nom : null) == agentName);
+                var att = todayAttendances.FirstOrDefault(a => (a.User != null ? (a.User.Prenom + " " + a.User.Nom).Trim() : null) == agentName);
                 if (att != null)
                 {
                     var inactiveMin = (DateTime.UtcNow - att.ClockIn).TotalMinutes;
@@ -327,7 +327,7 @@ public class QualityDashboardService : IQualityDashboardService
                 {
                     alerts.Add(new QualityAlertItemDto
                     {
-                        Id = (int)(-(todayAttendances.First(a => (a.User != null ? a.User.Prenom + " " + a.User.Nom : null) == agentName).Id * 10000)),
+                        Id = (int)(-(todayAttendances.First(a => (a.User != null ? (a.User.Prenom + " " + a.User.Nom).Trim() : null) == agentName).Id * 10000)),
                         Type = "warning",
                         Agent = agentName ?? "Unknown",
                         Message = $"Aucun appel depuis {Math.Round(minSinceLastCall)} minutes (inactivité)",
@@ -353,11 +353,11 @@ public class QualityDashboardService : IQualityDashboardService
             {
                 Id = e.Id,
                 Date = e.EvaluationDate,
-                Agent = e.Agent != null ? (e.Agent.Prenom + " " + e.Agent.Nom) : "Unknown",
+                Agent = e.Agent != null ? (e.Agent.Prenom + " " + e.Agent.Nom).Trim() : "Unknown",
                 Type = e.CallRef != null ? "Évaluation IA" : "Évaluation manuelle",
                 Score = e.GlobalScore,
                 Decision = e.Decision,
-                Evaluator = e.Evaluator != null ? (e.Evaluator.Prenom + " " + e.Evaluator.Nom) : "Système"
+                Evaluator = e.Evaluator != null ? (e.Evaluator.Prenom + " " + e.Evaluator.Nom).Trim() : "Système"
             })
             .ToListAsync();
     }
@@ -381,7 +381,7 @@ public class QualityDashboardService : IQualityDashboardService
         var lastMonthEnd = monthStart.AddDays(-1);
 
         var allCalls = await _context.Calls.AsNoTracking()
-            .Where(c => c.AgentName == (agent.Prenom + " " + agent.Nom))
+            .Where(c => c.AgentName == (agent.Prenom + " " + agent.Nom).Trim())
             .ToListAsync();
 
         var monthCalls = allCalls.Where(c => c.CallDate.HasValue && c.CallDate!.Value >= monthStart && c.CallDate!.Value <= today).ToList();
@@ -414,11 +414,11 @@ public class QualityDashboardService : IQualityDashboardService
             {
                 Id = e.Id,
                 Date = e.EvaluationDate,
-                Agent = (agent.Prenom + " " + agent.Nom),
+                Agent = (agent.Prenom + " " + agent.Nom).Trim(),
                 Type = e.CallRef != null ? "Évaluation IA" : "Évaluation manuelle",
                 Score = e.GlobalScore,
                 Decision = e.Decision,
-                Evaluator = e.Evaluator != null ? (e.Evaluator.Prenom + " " + e.Evaluator.Nom) : "Système"
+                Evaluator = e.Evaluator != null ? (e.Evaluator.Prenom + " " + e.Evaluator.Nom).Trim() : "Système"
             })
             .ToListAsync();
 
@@ -546,7 +546,7 @@ public class QualityDashboardService : IQualityDashboardService
         return new AgentDetailDto
         {
             UserId = agentId,
-            Name = (agent.Prenom + " " + agent.Nom),
+            Name = (agent.Prenom + " " + agent.Nom).Trim(),
             AvgQualityScore = avgScore,
             TotalCalls = allCalls.Count,
             AvgCallScore = avgCallScore,
@@ -579,7 +579,7 @@ public class QualityDashboardService : IQualityDashboardService
             byAgent.Add(new RdvAgentDto
             {
                 AgentId = agent.Id,
-                Name = (agent.Prenom + " " + agent.Nom),
+                Name = (agent.Prenom + " " + agent.Nom).Trim(),
                 RdvCount = count,
                 Objectif = objectif,
                 Taux = Math.Round((double)count / objectif * 100, 1)

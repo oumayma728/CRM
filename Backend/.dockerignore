@@ -1,0 +1,8 @@
+bin
+obj
+tests
+**/bin
+**/obj
+TestResults
+*.user
+.vs

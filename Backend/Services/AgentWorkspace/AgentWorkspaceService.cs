@@ -18,7 +18,7 @@ public class AgentWorkspaceService : IAgentWorkspaceService
     public async Task<List<AgentSimpleDto>> GetAgentsAsync()
     {
         var users = await _context.Utilisateurs.AsNoTracking().Where(u => u.Role == "AGENT").ToListAsync();
-        return users.Select(u => new AgentSimpleDto { AgentId = u.Id, AgentName = (u.Prenom + " " + u.Nom) }).ToList();
+        return users.Select(u => new AgentSimpleDto { AgentId = u.Id, AgentName = (u.Prenom + " " + u.Nom).Trim() }).ToList();
     }
 
     public async Task<AgentPerformanceDetailDto> GetAgentPerformanceAsync(string agentId)
@@ -32,13 +32,13 @@ public class AgentWorkspaceService : IAgentWorkspaceService
         var previousMonthStart = currentMonthStart.AddMonths(-1);
         var previousMonthEnd = currentMonthStart.AddDays(-1);
 
-        var currentMonthPerformance = await CalculatePeriodPerformanceAsync(user.Id, (user.Prenom + " " + user.Nom), currentMonthStart, currentMonthEnd);
-        var previousMonthPerformance = await CalculatePeriodPerformanceAsync(user.Id, (user.Prenom + " " + user.Nom), previousMonthStart, previousMonthEnd);
+        var currentMonthPerformance = await CalculatePeriodPerformanceAsync(user.Id, (user.Prenom + " " + user.Nom).Trim(), currentMonthStart, currentMonthEnd);
+        var previousMonthPerformance = await CalculatePeriodPerformanceAsync(user.Id, (user.Prenom + " " + user.Nom).Trim(), previousMonthStart, previousMonthEnd);
 
         return new AgentPerformanceDetailDto
         {
             AgentId = user.Id,
-            AgentName = (user.Prenom + " " + user.Nom),
+            AgentName = (user.Prenom + " " + user.Nom).Trim(),
             CurrentMonth = currentMonthPerformance,
             PreviousMonth = previousMonthPerformance
         };

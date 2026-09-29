@@ -274,7 +274,7 @@ public class CallPerformanceController : ControllerBase
             var result = new
             {
                 agent_id = id,
-                agent_name = (agent.Prenom + " " + agent.Nom),
+                agent_name = (agent.Prenom + " " + agent.Nom).Trim(),
                 current_month = new
                 {
                     calls = currentCalls.Count,
