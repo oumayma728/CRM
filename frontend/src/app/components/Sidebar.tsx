@@ -126,6 +126,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       items: [
         { icon: LayoutDashboard, label: 'Tableau de bord', path: '/agent/dashboard', accent: 'blue' },
         { icon: TrendingUp, label: 'Performance', path: '/agent/performance', accent: 'green' },
+        { icon: BarChart3, label: 'Performance CRM', path: '/agent/performance-crm' },
         { icon: Clock, label: 'Mon Pointage', path: '/agent/pointage', accent: 'orange' },
       ],
     },
@@ -143,6 +144,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       items: [
         { icon: Users, label: 'Contacts', path: '/agent/contacts' },
         { icon: Calendar, label: 'Agenda', path: '/agent/agenda' },
+        { icon: CalendarDays, label: 'Mes RDV (pipeline)', path: '/agent/mes-rdv' },
         createContact,
       ],
     },

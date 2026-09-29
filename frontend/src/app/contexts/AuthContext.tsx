@@ -7,7 +7,7 @@
  * lowercased on `user.role`; `homePathFor` gives each role its landing page.
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api, { getToken, setToken, removeToken, API_BASE, getAuthHeaders } from '../services/api';
 
 export type UserRole =
@@ -109,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loginInProgress = useRef(false);
 
   // Restore the session from the stored token
   useEffect(() => {
@@ -129,6 +130,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
+    if (loginInProgress.current) throw new Error('Connexion déjà en cours.');
+    loginInProgress.current = true;
     setIsLoading(true);
     setError(null);
     try {
@@ -143,6 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setError(message);
       throw err;
     } finally {
+      loginInProgress.current = false;
       setIsLoading(false);
     }
   }, []);

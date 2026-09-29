@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, User, Lock, TrendingUp, Users, BarChart3, Sparkles, Shield, Zap, ChevronRight, Brain } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, TrendingUp, Users, BarChart3, Sparkles, Shield, Zap, ChevronRight, Brain, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Label } from '../components/ui/label';
 import { toast } from 'react-hot-toast';
+import { RateLimitError } from '../services/api';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -13,11 +14,22 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const submittingRef = useRef(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // countdown after a 429 from the login rate limiter
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => setCooldown((prev) => (prev <= 1 ? 0 : prev - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (cooldown > 0 || loading || submittingRef.current) return;
+    submittingRef.current = true;
     setError('');
     setLoading(true);
 
@@ -37,7 +49,10 @@ export default function LoginPage() {
       });
       navigate('/');
     } catch (err: any) {
-      const msg = err.message || 'Identifiants incorrects';
+      if (err instanceof RateLimitError) setCooldown(err.retryAfter);
+      const msg = err instanceof RateLimitError
+        ? `Trop de tentatives. Réessayez dans ${err.retryAfter} secondes.`
+        : err.message || 'Identifiants incorrects';
       setError(msg);
       toast.error(msg, {
         style: {
@@ -48,6 +63,7 @@ export default function LoginPage() {
       });
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
@@ -62,7 +78,7 @@ export default function LoginPage() {
         <div className="absolute top-[30%] right-[20%] w-[30%] h-[30%] bg-purple-600/20 rounded-full blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: '8s' }} />
         
         {/* Premium Noise Overlay */}
-        <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: 'url("https://grainy-gradients.vercel.app/noise.svg")' }}></div>
+        <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: 'url("/noise.svg")' }}></div>
         
         {/* Subtle Grid */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,black,transparent)] opacity-50" />
@@ -226,13 +242,22 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  disabled={loading}
-                  className="w-full h-16 mt-4 relative overflow-hidden bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all text-sm font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 group border-0 shadow-lg shadow-emerald-500/20"
+                  disabled={loading || cooldown > 0}
+                  className={`w-full h-16 mt-4 relative overflow-hidden rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all text-sm font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 group border-0 ${
+                    cooldown > 0
+                      ? 'bg-gray-500 cursor-not-allowed text-white/70 shadow-lg shadow-gray-500/20'
+                      : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                  }`}
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                   
                   {loading ? (
                     <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : cooldown > 0 ? (
+                    <>
+                      <Clock className="w-5 h-5" />
+                      Réessayez dans {cooldown}s
+                    </>
                   ) : (
                     <>
                       Lancer la session <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

@@ -24,6 +24,8 @@ import CallLogPage from './pages/agent/CallLogPage';
 import DialerPage from './pages/agent/DialerPage';
 import HistoryPage from './pages/agent/HistoryPage';
 import MonPointagePage from './pages/agent/MonPointagePage';
+import MesRdvPage from './pages/agent/MesRdvPage';
+import PerformanceCrmPage from './pages/agent/PerformanceCrmPage';
 
 // Admin - Modernized Pages
 import DashboardPage from './pages/admin/DashboardPage';
@@ -199,6 +201,8 @@ function AppRoutes() {
         <Route path="/agent/dialer" element={<DialerPage />} />
         <Route path="/agent/history" element={<HistoryPage />} />
         <Route path="/agent/pointage" element={<MonPointagePage />} />
+        <Route path="/agent/mes-rdv" element={<MesRdvPage />} />
+        <Route path="/agent/performance-crm" element={<PerformanceCrmPage />} />
 
         {/* Shared (every role) */}
         <Route path="/chat" element={<TeamChatPage />} />

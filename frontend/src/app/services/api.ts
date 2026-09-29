@@ -105,6 +105,9 @@ const request = async (path: string, options: any = {}) => {
       // For now, throw a specific error to be caught by UI components
       throw new Error('Unauthorized: Please log in again.');
     }
+    if (response.status === 429) {
+      throw new Error('Trop de requêtes. Veuillez patienter quelques instants.');
+    }
     const error = await response.json().catch(() => ({ detail: 'Request failed' }));
     throw new Error(error.detail || error.message || error.error || 'Request failed');
   }
@@ -115,23 +118,56 @@ const request = async (path: string, options: any = {}) => {
 // Auth API
 // ============================================================
 
-export const login = async (email: string, password: string): Promise<LoginResponse> => {
-  const response = await fetch(`${AUTH_BASE}/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, motDePasse: password, identifiantMachine: null }),
-  });
+// ============================================================
+// Rate Limit Error (429 on the auth endpoints)
+// ============================================================
 
-  if (!response.ok) {
-    let detail = 'Login failed';
-    try { const e = await response.json(); detail = e.detail || e.message || e.error || detail; } catch { }
-    throw new Error(detail);
+export class RateLimitError extends Error {
+  retryAfter: number;
+  constructor(message: string, retryAfter: number) {
+    super(message);
+    this.name = 'RateLimitError';
+    this.retryAfter = retryAfter;
   }
+}
 
-  const result = await response.json();
-  // Store JWT token for subsequent authenticated requests
-  setToken(result.token);
-  return result;
+// A new login aborts the previous in-flight one (prevents duplicate requests → 429)
+let loginAbortController: AbortController | null = null;
+
+export const login = async (email: string, password: string): Promise<LoginResponse> => {
+  if (loginAbortController) loginAbortController.abort();
+  loginAbortController = new AbortController();
+
+  try {
+    const response = await fetch(`${AUTH_BASE}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, motDePasse: password, identifiantMachine: null }),
+      signal: loginAbortController.signal,
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+        throw new RateLimitError('Trop de tentatives. Veuillez patienter une minute avant de réessayer.', retryAfter);
+      }
+      let detail = 'Login failed';
+      try { const e = await response.json(); detail = e.detail || e.message || e.error || detail; } catch { }
+      throw new Error(detail);
+    }
+
+    const result = await response.json();
+    // Store JWT token for subsequent authenticated requests
+    setToken(result.token);
+    return result;
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw new Error('Login annulé — une autre requête est déjà en cours.');
+    }
+    throw err;
+  } finally {
+    loginAbortController = null;
+  }
 };
 
 export const getMe = async (): Promise<MeResponse> => {

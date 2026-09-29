@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { SalaryConfigPanel } from '../../components/SalaryConfigPanel';
 import { useChartTheme } from '../../hooks/useChartTheme';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -688,6 +689,9 @@ export default function SalaryPage() {
           </div>
         </div>
       )}
+
+      {/* Paramètres de rémunération (feature/zied1) */}
+      <SalaryConfigPanel editable={isSuperAdmin} />
 
       {showRuleModal && (
         <div className="fixed inset-0 bg-slate-800/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">

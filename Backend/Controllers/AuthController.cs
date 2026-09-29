@@ -7,6 +7,7 @@ using Backend.Data;
 using Backend.Entities;
 using Backend.Helpers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 using Backend.Attributes;
 using Backend.DTOs.Admin;
 using Backend.Services.Admin;
@@ -145,6 +146,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Connexion — retourne un JWT + refresh token</summary>
     [HttpPost("login")]
+    [EnableRateLimiting("login")]
     [ProducesResponseType(typeof(LoginResponseDTO), 200)]
     [ProducesResponseType(401)]
     public async Task<IActionResult> Login([FromBody] LoginDTO dto)
@@ -163,6 +165,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Première connexion — activation du compte</summary>
     [HttpPost("first-login")]
+    [EnableRateLimiting("login")]
     [ProducesResponseType(typeof(LoginResponseDTO), 200)]
     public async Task<IActionResult> FirstLogin([FromBody] FirstLoginDTO dto)
     {
@@ -184,6 +187,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Demande de réinitialisation du mot de passe (envoie un email)</summary>
     [HttpPost("forgot-password")]
+    [EnableRateLimiting("login")]
     [ProducesResponseType(200)]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
     {
@@ -195,6 +199,7 @@ public class AuthController : ControllerBase
 
     /// <summary>Réinitialisation du mot de passe via token reçu par email</summary>
     [HttpPost("reset-password")]
+    [EnableRateLimiting("login")]
     [ProducesResponseType(200)]
     [ProducesResponseType(400)]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)

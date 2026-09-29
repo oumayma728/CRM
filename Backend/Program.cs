@@ -26,6 +26,8 @@ using Backend.Hubs;
 using Backend.Config;
 using Backend.Services.WebSocket;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,9 +64,41 @@ builder.Services.AddControllers(options =>
         new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
-// Database
+// Database — ConnectionStrings:DefaultConnection, or DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD
+// (container / Render deployments, from feature/khaled)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString))
+{
+    var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+    var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+    var dbUser = Environment.GetEnvironmentVariable("DB_USER");
+    var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+    if (string.IsNullOrEmpty(dbHost) || string.IsNullOrEmpty(dbName) || string.IsNullOrEmpty(dbUser) || string.IsNullOrEmpty(dbPassword))
+        throw new InvalidOperationException("ConnectionStrings:DefaultConnection is missing and DB_HOST, DB_NAME, DB_USER, DB_PASSWORD are not set.");
+    var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
+    connectionString = $"Host={dbHost};Port={(string.IsNullOrEmpty(dbPort) ? "5432" : dbPort)};Database={dbName};Username={dbUser};Password={dbPassword};";
+}
 builder.Services.AddDbContext<Backend.Data.ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
+
+// Rate limiting on authentication endpoints (feature/khaled1): 10 attempts / 2 min per client
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("login", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(2), QueueLimit = 0 }));
+    options.OnRejected = async (context, ct) =>
+    {
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue)
+            ? (int)retryAfterValue.TotalSeconds
+            : 60;
+        context.HttpContext.Response.ContentType = "application/json";
+        context.HttpContext.Response.Headers["Retry-After"] = retryAfter.ToString();
+        await context.HttpContext.Response.WriteAsync(
+            System.Text.Json.JsonSerializer.Serialize(new { error = "Trop de requêtes. Veuillez réessayer dans quelques instants.", retryAfter }), ct);
+    };
+});
 
 // ─── MY EXISTING SERVICES ─────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService,         AuthService>();
@@ -267,6 +301,7 @@ app.Map("/ws/messages/{userId}", async (HttpContext context, string userId) =>
     finally { if (long.TryParse(userId, out var id)) manager.Remove(id); }
 });
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
