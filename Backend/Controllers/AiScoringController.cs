@@ -1,3 +1,4 @@
+using Backend.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ using Backend.Helpers;
 
 namespace Backend.Controllers;
 
+[SnakeCaseJson]
 [ApiController]
 [Route("api/ai")]
 [Authorize]

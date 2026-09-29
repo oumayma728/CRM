@@ -1,3 +1,4 @@
+using Backend.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ using Backend.Entities;
 
 namespace Backend.Controllers;
 
+[SnakeCaseJson]
 [ApiController]
 [Route("api/alerts")]
 [Authorize]

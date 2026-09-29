@@ -23,6 +23,8 @@ using Backend.Services.Clients;
 using Backend.Services.Attendance;
 using Backend.Filters;
 using Backend.Hubs;
+using Backend.Config;
+using Backend.Services.WebSocket;
 using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,6 +52,9 @@ if (string.IsNullOrEmpty(jwtConfig.Audience))
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<PermissionFilter>();
+    // snake_case contract for the modules ported from khaled-dev-v3 (see SnakeCaseJsonAttribute)
+    options.InputFormatters.Insert(0, new Backend.Formatters.SnakeCaseJsonInputFormatter());
+    options.OutputFormatters.Insert(0, new Backend.Formatters.SnakeCaseJsonOutputFormatter());
 })
 .AddJsonOptions(options =>
 {
@@ -96,6 +101,28 @@ builder.Services.AddSignalR();
 // ─── HTTP CLIENT (pour appels microservice IA Python) ────────────────────
 builder.Services.AddHttpClient();
 
+// ─── MODULE ANALYSE D'APPELS IA (khaled-dev-v3) ──────────────────────────
+// Appels analysés, RDV CRM, relances, messagerie interne, leads, config IA.
+builder.Services.Configure<OllamaSettings>(builder.Configuration.GetSection("Ollama"));
+builder.Services.Configure<WeightsConfig>(builder.Configuration.GetSection("Weights"));
+builder.Services.Configure<WhisperSettings>(builder.Configuration.GetSection("Whisper"));
+builder.Services.Configure<AlertThresholds>(builder.Configuration.GetSection("Alerts"));
+builder.Services.AddHttpClient("Ollama");
+builder.Services.AddScoped<Backend.Services.Ai.ILlmCompletionService, Backend.Services.Ai.LlmCompletionService>();
+builder.Services.AddScoped<Backend.Services.Ai.IAiService, Backend.Services.Ai.AiService>();
+builder.Services.AddScoped<Backend.Services.Ai.ITranscriptionService, Backend.Services.Ai.TranscriptionService>();
+builder.Services.AddScoped<Backend.Services.Calls.ICallService, Backend.Services.Calls.CallService>();
+builder.Services.AddScoped<Backend.Services.Appointments.IAppointmentService, Backend.Services.Appointments.AppointmentService>();
+builder.Services.AddScoped<Backend.Services.Messages.IMessageService, Backend.Services.Messages.MessageService>();
+builder.Services.AddScoped<Backend.Services.Analytics.IAnalyticsService, Backend.Services.Analytics.AnalyticsService>();
+builder.Services.AddScoped<Backend.Services.Quality.IQualityService, Backend.Services.Quality.QualityService>();
+builder.Services.AddScoped<Backend.Services.Quality.IQualityDashboardService, Backend.Services.Quality.QualityDashboardService>();
+builder.Services.AddScoped<Backend.Services.Leads.ILeadService, Backend.Services.Leads.LeadService>();
+builder.Services.AddScoped<Backend.Services.AgentWorkspace.IAgentWorkspaceService, Backend.Services.AgentWorkspace.AgentWorkspaceService>();
+builder.Services.AddSingleton<WebSocketConnectionManager>();
+builder.Services.AddHostedService<Backend.Services.Followups.FollowupBackgroundService>();
+builder.Services.AddHostedService<Backend.Services.Alerts.InactivityAlertService>();
+
 // API Documentation
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -139,7 +166,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5174")
+        var origins = new[] { "http://localhost:5173", "http://localhost:3000", "http://localhost:5174" }
+            .Concat(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>())
+            .ToArray();
+        policy.WithOrigins(origins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); // Required for SignalR WebSocket
@@ -206,6 +236,36 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
+app.UseWebSockets();
+
+// ─── WebSocket messagerie interne + alertes d'inactivité (khaled-dev-v3) ────
+app.Map("/ws/messages/{userId}", async (HttpContext context, string userId) =>
+{
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        return;
+    }
+    using var socket = await context.WebSockets.AcceptWebSocketAsync();
+    var manager = context.RequestServices.GetRequiredService<WebSocketConnectionManager>();
+    if (long.TryParse(userId, out var uid)) manager.Add(uid, socket);
+
+    var buffer = new byte[1024 * 4];
+    try
+    {
+        while (socket.State == System.Net.WebSockets.WebSocketState.Open)
+        {
+            var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+            if (result.MessageType == System.Net.WebSockets.WebSocketMessageType.Close)
+            {
+                await socket.CloseAsync(System.Net.WebSockets.WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
+                break;
+            }
+        }
+    }
+    catch { /* client disconnected */ }
+    finally { if (long.TryParse(userId, out var id)) manager.Remove(id); }
+});
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -213,6 +273,12 @@ app.MapControllers();
 
 // ─── SIGNALR HUB ─────────────────────────────────────────────────────────
 app.MapHub<ChatHub>("/hubs/chat");
+
+app.MapGet("/api/health", async (Backend.Data.ApplicationDbContext db) =>
+{
+    var dbOk = await db.Database.CanConnectAsync();
+    return Results.Ok(new { status = dbOk ? "healthy" : "degraded", database = dbOk ? "connected" : "unreachable" });
+});
 
 // ─── SEED DONNÉES DE TEST (dev uniquement) ────────────────────────────────
 if (app.Environment.IsDevelopment())

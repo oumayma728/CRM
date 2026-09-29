@@ -7,12 +7,12 @@ using Backend.Entities;
 namespace Backend.Controllers;
 
 [ApiController]
-[Route("api/performance")]
+[Route("api/performance/crm")]
 [Authorize]
-public class PerformanceController : ControllerBase
+public class PerformanceCrmController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
-    public PerformanceController(ApplicationDbContext context) => _context = context;
+    public PerformanceCrmController(ApplicationDbContext context) => _context = context;
 
     private static bool IsConversion(CallAttempt a) => a.QualificationStatus != null && a.QualificationStatus.StartsWith("rdv");
     private static bool IsRefusal(CallAttempt a) => a.QualificationStatus == "refus";

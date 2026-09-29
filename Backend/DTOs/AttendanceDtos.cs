@@ -158,3 +158,9 @@ public class AllRolesHistoryResultDto
     public int TotalActive { get; set; }
     public Dictionary<string, int> CountByRole { get; set; } = new();
 }
+
+public class UpdateAttendanceStatusDto
+{
+    /// <summary>active | break | completed</summary>
+    public string? Status { get; set; }
+}

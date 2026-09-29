@@ -7,6 +7,9 @@ using System.Text.RegularExpressions;
 namespace Backend.Controllers;
 
 /// <summary>
+/// Contrôles IA unitaires (refus, qualification) sur une transcription.
+/// L'analyse complète d'appel (audio / transcript, 8 critères) est dans CallAnalysisController ;
+/// Groq Whisper y sert de repli de transcription.
 /// Analyse IA des transcriptions d'appel — diarisation, détection refus,
 /// qualification, sentiment, résumé automatique, extraction code postal.
 /// Le résumé et le scoring de script utilisent Groq (LLM) quand disponible,
@@ -28,99 +31,6 @@ public class AnalysisController : ControllerBase
     {
         _groqAi = groqAi;
         _logger = logger;
-    }
-
-    // ── POST /api/analyze/transcript ─────────────────────────────────────────
-    /// <summary>Analyse complète d'une transcription texte.</summary>
-    [HttpPost("transcript")]
-    public async Task<IActionResult> AnalyzeTranscript([FromBody] TranscriptAnalysisRequestDto dto)
-    {
-        if (string.IsNullOrWhiteSpace(dto.Transcript))
-            return BadRequest(new { error = "Transcript requis" });
-
-        var result = await BuildAnalysisAsync(dto.Transcript, dto.Qualification ?? "PV", dto.CallDuration, dto.AgentName);
-        return Ok(result);
-    }
-
-    // ── POST /api/analyze/call ────────────────────────────────────────────────
-    /// <summary>Transcrit un enregistrement audio (Groq Whisper) puis lance l'analyse complète.</summary>
-    [HttpPost("call")]
-    [RequestSizeLimit(50_000_000)]
-    public async Task<IActionResult> AnalyzeCall(IFormFile file, [FromForm] string? agentName, [FromForm] string? qualification)
-    {
-        if (file == null || file.Length == 0)
-            return BadRequest(new { error = "Fichier audio requis" });
-
-        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!AudioExtensions.Contains(ext))
-            return BadRequest(new { error = $"Format audio non supporté ({ext}). Formats acceptés : {string.Join(", ", AudioExtensions)}" });
-
-        await using var stream = file.OpenReadStream();
-        var transcription = await _groqAi.TranscribeAsync(stream, file.FileName, file.ContentType);
-
-        if (!transcription.Success || string.IsNullOrWhiteSpace(transcription.Text))
-        {
-            _logger.LogWarning("Transcription Groq échouée pour {FileName} : {Error}", file.FileName, transcription.Error);
-            return UnprocessableEntity(new { error = "Transcription impossible", details = transcription.Error });
-        }
-
-        var callDuration = transcription.Duration.HasValue ? (int)Math.Round(transcription.Duration.Value) : (int?)null;
-        var result = await BuildAnalysisAsync(transcription.Text, qualification ?? "PV", callDuration, agentName);
-        result["transcription"] = transcription.Text;
-        result["transcription_language"] = transcription.Language;
-
-        return Ok(result);
-    }
-
-    // ── Pipeline d'analyse partagé (texte ou audio transcrit) ─────────────────
-    private async Task<Dictionary<string, object?>> BuildAnalysisAsync(string transcript, string qualification, int? callDuration, string? agentName)
-    {
-        var diarization = Diarize(transcript, callDuration);
-        var refusal = DetectRefusal(transcript);
-        var qualCheck = CheckQualification(qualification, transcript);
-        var appointment = DetectAppointment(transcript);
-        var inactivity = AnalyzeInactivity(callDuration, transcript);
-        var postalCode = ExtractPostalCode(transcript);
-
-        var script = await _groqAi.AnalyzeScriptAsync(transcript, qualification, refusal.RefusalDetected)
-                     ?? AnalyzeScript(transcript, qualification, refusal);
-        var summary = await _groqAi.SummarizeAsync(transcript, agentName)
-                      ?? Summarize(transcript, agentName, script);
-
-        return new Dictionary<string, object?>
-        {
-            ["sentiment"] = script.Sentiment,
-            ["sentiment_score"] = script.SentimentScore,
-            ["score_percentage"] = script.ScorePercentage,
-            ["performance"] = script.Performance,
-            ["summary"] = summary.Summary,
-            ["keywords"] = summary.Keywords.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList(),
-            ["score_ecoute"] = script.ScoreEcoute,
-            ["score_persuasion"] = script.ScorePersuasion,
-            ["score_empathie"] = script.ScoreEmpathie,
-            ["score_argumentation"] = script.ScoreArgumentation,
-            ["score_refus"] = script.ScoreRefus,
-            ["score_vente"] = script.ScoreVente,
-            ["agent_talk_ratio"] = diarization.AgentTalkRatio,
-            ["client_talk_ratio"] = diarization.ClientTalkRatio,
-            ["labeled_transcript"] = diarization.LabeledTranscript,
-            ["script_respected"] = script.ScriptRespected,
-            ["objections_handled"] = script.ObjectionsHandled,
-            ["customer_intent"] = script.CustomerIntent,
-            ["next_steps"] = script.NextSteps,
-            ["refusal_detected"] = refusal.RefusalDetected,
-            ["refusal_motive"] = refusal.PrimaryMotive,
-            ["refusal_keywords"] = refusal.RefusalKeywords,
-            ["suggested_response"] = refusal.SuggestedResponse,
-            ["inactivity_detected"] = inactivity.InactivityDetected,
-            ["inactivity_reason"] = inactivity.Reason,
-            ["appointment_detected"] = appointment.Detected,
-            ["appointment_confidence"] = appointment.Confidence,
-            ["qualification_coherent"] = qualCheck.Coherent,
-            ["qualification_details"] = qualCheck.Details,
-            ["postal_code"] = postalCode.PostalCode,
-            ["postal_region"] = postalCode.Region
-        };
     }
 
     // ── POST /api/analyze/check-refusal ──────────────────────────────────────

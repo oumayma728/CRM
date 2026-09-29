@@ -658,4 +658,16 @@ public class AttendanceService : IAttendanceService
         };
     }
 
+    public async Task<bool> UpdateAttendanceStatusAsync(long userId, string? status)
+    {
+        var attendance = await _context.AdvancedAttendances
+            .Where(a => a.UserId == userId)
+            .OrderByDescending(a => a.Id)
+            .FirstOrDefaultAsync();
+        if (attendance == null) return false;
+
+        if (status != null) attendance.Status = status;
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }

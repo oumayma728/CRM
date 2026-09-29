@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using Backend.DTOs.Agent;
 using Backend.Services.Auth;
+using Backend.Data;
+using Backend.Entities;
+using Backend.Helpers;
+using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Controllers;
 
@@ -12,11 +16,47 @@ namespace Backend.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly ApplicationDbContext _context;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, ApplicationDbContext context)
     {
         _authService = authService;
+        _context = context;
     }
+
+    /// <summary>Profil de l'utilisateur connecté (restauration de session côté frontend)</summary>
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<IActionResult> Me()
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+        if (!long.TryParse(idClaim, out var userId)) return Unauthorized(new { message = "Token invalide." });
+
+        var u = await _context.Utilisateurs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == userId && x.Actif);
+        if (u == null) return Unauthorized(new { message = "Utilisateur introuvable." });
+
+        return Ok(new
+        {
+            id = u.Id,
+            userId = u.Id,
+            username = u.Email,
+            email = u.Email,
+            nom = u.Nom,
+            prenom = u.Prenom,
+            name = $"{u.Prenom} {u.Nom}".Trim(),
+            role = u.Role,
+            typeConfirmatrice = u is Confirmatrice c ? c.Type.ToString() : null,
+        });
+    }
+
+    /// <summary>Rôle normalisé + permissions (claims JWT) de l'utilisateur connecté</summary>
+    [HttpGet("permissions")]
+    [Authorize]
+    public IActionResult MyPermissions() => Ok(new
+    {
+        role = UserContextHelper.GetRole(User),
+        permissions = User.FindAll("permission").Select(c => c.Value).Distinct().ToList(),
+    });
 
     /// <summary>Connexion — retourne un JWT + refresh token</summary>
     [HttpPost("login")]
