@@ -22,7 +22,12 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(username, password);
+      const result = await login(username, password);
+      if (result === 'pending_first_login' || result === 'must_change_password') {
+        // account activation or admin password reset: set a new password from the temporary one
+        navigate(`/first-login?email=${encodeURIComponent(username)}`);
+        return;
+      }
       toast.success('Connexion réussie !', {
         style: {
           background: '#1e293b',
@@ -143,7 +148,7 @@ export default function LoginPage() {
                 {/* Form fields */}
                 <div className="space-y-3">
                   <Label htmlFor="username" className="text-muted-foreground text-[11px] font-bold uppercase tracking-[0.15em] ml-2">
-                    Identifiant / Email
+                    Email
                   </Label>
                   <div className="relative group/input">
                     <User className={`absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors duration-300 ${error ? 'text-red-400' : 'text-muted-foreground/60 group-focus-within/input:text-primary'}`} />
@@ -256,4 +261,4 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
       <polyline points="20 6 9 17 4 12" />
     </svg>
   )
-}
+}

@@ -1,927 +1,997 @@
-import React, { useState, useEffect, useRef, ReactNode } from "react";
+import { API_BASE, getToken } from '../../services/api';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { agentService, type Contact, type CreateAppelDTO } from '../../services/agentService';
+import { useAuth } from '../../contexts/AuthContext';
+import { toast } from '../../services/toast';
 import {
   Phone, PhoneOff, Mic, MicOff, Pause, Play,
-  PhoneCall, Bot, Sparkles, Save, Activity, Signal,
-  Coffee, Calendar, MessageCircle, Award,
-  FileText, Check, Download, Bell, ArrowLeft,
-  Zap, RefreshCw, Send, Plus,
-  XCircle, Radio, Wifi, Battery, ChevronDown, Clock,
-  TrendingUp, Users, MapPin, Mail, User,
-  LogOut, Settings, HelpCircle, Moon, Sun,
-} from "lucide-react";
-import api from '../../services/api';
-import { LucideIcon } from "lucide-react";
-import { useCallContext } from '../../contexts/CallContext';
-import { useTheme } from '../../contexts/ThemeContext';
-import { PhoneKeypad } from '../../components/call/PhoneKeypad';
+  ArrowLeft, Send, CheckCircle, XCircle, RotateCcw,
+  MapPin, Mail, Home, Zap, BarChart2,
+  Clock, Coffee, UtensilsCrossed, BookOpen, User,
+  AlertTriangle, MessageSquare, ChevronRight, CheckSquare,
+} from 'lucide-react';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-type ColorKey = "green" | "red" | "blue" | "purple" | "amber" | "orange" | "slate";
-
-interface TranscriptLine {
-  id: number;
-  speaker: string;
-  text: string;
-  t: number;
-  sentiment: string;
+// ── Types ──────────────────────────────────────────────────────────────────────
+interface AiAnalysis {
+  sentiment: string; sentiment_score: number; score_percentage: number;
+  performance: string; summary: string; keywords: string[];
+  score_ecoute: number; score_persuasion: number; score_empathie: number;
+  score_argumentation: number; score_refus: number; score_vente: number;
+  agent_talk_ratio: number; client_talk_ratio: number; labeled_transcript: string;
+  script_respected: boolean; objections_handled: boolean;
+  customer_intent: string | null; next_steps: string | null;
+  refusal_detected: boolean; refusal_motive: string; refusal_keywords: string[];
+  suggested_response: string; inactivity_detected: boolean;
+  appointment_detected: boolean; qualification_coherent: boolean;
+  qualification_details: string; postal_code: string | null; postal_region: string | null;
 }
 
-interface StatusOption {
-  value: string;
-  label: string;
-  color: ColorKey;
-}
+interface TranscriptLine { role: 'agent' | 'client'; text: string; ts: number; }
 
-interface FormData {
-  nom: string; gsm: string; proprietaire: string; depuis: string;
-  nbPersonnes: string; chauffage: string; consommation: string; ageChaudiere: string;
-  equipePV: string; equipePAC: string; toiture: string; isolation: string; surface: string;
-  profMr: string; profMme: string; revenus: string; credits: string;
-  fichage: string; budget: string; interet: string; urgence: string;
-}
+type PauseType = 'inter_appel' | 'coaching' | 'cafe' | 'dejeuner' | 'wc';
+type AppPhase = 'calling' | 'inter_call';
+interface PauseOption { id: PauseType; label: string; icon: React.ReactNode; color: string; bg: string; }
 
-interface NoteItem {
-  id: number;
-  text: string;
-  author: string;
-  time: string;
-}
-
-interface AiScore {
-  lead: number;
-  conversion: number;
-}
-
-interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-const SCRIPT: TranscriptLine[] = [
-  { id: 1, speaker: "Agent", text: "Bonjour, je suis Sarah de EBI. Puis-je parler à M. Dupont ?", t: 2, sentiment: "neutral" },
-  { id: 2, speaker: "Client", text: "Oui, c'est moi.", t: 6, sentiment: "neutral" },
-  { id: 3, speaker: "Agent", text: "Je vous appelle pour nos solutions de rénovation énergétique éligibles aux aides d'état.", t: 12, sentiment: "positive" },
-  { id: 4, speaker: "Client", text: "Intéressant — je veux remplacer ma vieille chaudière fioul.", t: 18, sentiment: "positive" },
-  { id: 5, speaker: "Agent", text: "Vous êtes bien propriétaire de votre logement ?", t: 24, sentiment: "neutral" },
-  { id: 6, speaker: "Client", text: "Oui, depuis 2010. Maison individuelle de 120 m².", t: 28, sentiment: "positive" },
-  { id: 7, speaker: "Agent", text: "Combien de personnes dans le foyer, et vos revenus annuels approximativement ?", t: 34, sentiment: "neutral" },
-  { id: 8, speaker: "Client", text: "4 personnes. Environ 38 000 € par an.", t: 40, sentiment: "positive" },
-  { id: 9, speaker: "Agent", text: "Quel âge a votre chaudière ?", t: 46, sentiment: "neutral" },
-  { id: 10, speaker: "Client", text: "12 ans — elle commence à faire des siennes.", t: 52, sentiment: "positive" },
-  { id: 11, speaker: "Agent", text: "Je vous propose un rendez-vous gratuit avec notre technicien — mardi 10 h ?", t: 60, sentiment: "positive" },
-  { id: 12, speaker: "Client", text: "Oui, mardi à 10 h c'est parfait.", t: 66, sentiment: "positive" },
+// ── Constants ──────────────────────────────────────────────────────────────────
+const PAUSE_OPTIONS: PauseOption[] = [
+  { id: 'inter_appel', label: 'Entre appels',  icon: <Clock size={14}/>,           color: 'var(--color-chart-1)', bg: '#EEF2FF' },
+  { id: 'coaching',   label: 'Coaching',       icon: <BookOpen size={14}/>,         color: 'var(--color-chart-2)', bg: '#E0F2FE' },
+  { id: 'cafe',       label: 'Café',           icon: <Coffee size={14}/>,           color: 'var(--color-chart-3)', bg: '#FEF3C7' },
+  { id: 'dejeuner',   label: 'Déjeuner',       icon: <UtensilsCrossed size={14}/>,  color: 'var(--color-chart-4)', bg: '#DCFCE7' },
+  { id: 'wc',         label: 'WC',             icon: <User size={14}/>,             color: '#9333EA', bg: '#F3E8FF' },
 ];
 
-const STATUS_OPTIONS: StatusOption[] = [
-  { value: "NRP", label: "NRP", color: "amber" },
-  { value: "HC Logement", label: "HC Logement", color: "slate" },
-  { value: "HC Langue", label: "HC Langue", color: "slate" },
-  { value: "Refus", label: "Pas Intéressé", color: "red" },
-  { value: "À Rappeler", label: "À Rappeler", color: "blue" },
-  { value: "RDV Client 1", label: "RDV Client 1", color: "purple" },
-  { value: "RDV Client 2", label: "RDV Client 2", color: "purple" },
-  { value: "RDV Confirmé", label: "RDV Confirmé ✓", color: "green" },
-  { value: "RDV Annulé", label: "RDV Annulé", color: "red" },
-  { value: "Lead Chaud", label: "Lead Chaud 🔥", color: "orange" },
-  { value: "Converti", label: "Converti ✓", color: "green" },
-];
-
-const PAUSE_TYPES = ["☕ Café", "🍽️ Déjeuner", "🕌 Prière", "🔧 Technique", "💭 Personnelle"] as const;
-
-// Colors compatible light/dark mode
-const getColors = (isDark: boolean) => ({
-  green: { bg: isDark ? "#0D2818" : "#E8F5E9", text: "#2DCF7F", border: isDark ? "#2DCF7F40" : "#2DCF7F20", darkText: "#2DCF7F" },
-  red: { bg: isDark ? "#2E1515" : "#FFEBEE", text: "#F87171", border: isDark ? "#F8717140" : "#F8717120", darkText: "#F87171" },
-  blue: { bg: isDark ? "#0F1B2A" : "#E3F2FD", text: "#5D9BFF", border: isDark ? "#5D9BFF40" : "#5D9BFF20", darkText: "#5D9BFF" },
-  purple: { bg: isDark ? "#1E1B3A" : "#F3E5F5", text: "#8B7EF5", border: isDark ? "#8B7EF540" : "#8B7EF520", darkText: "#8B7EF5" },
-  amber: { bg: isDark ? "#2A2410" : "#FFF8E1", text: "#F0B34B", border: isDark ? "#F0B34B40" : "#F0B34B20", darkText: "#F0B34B" },
-  orange: { bg: isDark ? "#2E1A10" : "#FFF3E0", text: "#FB923C", border: isDark ? "#FB923C40" : "#FB923C20", darkText: "#FB923C" },
-  slate: { bg: isDark ? "#1A1F2A" : "#F1F5F9", text: "#9AA9B9", border: isDark ? "#9AA9B940" : "#9AA9B920", darkText: "#9AA9B9" },
-});
-
-// ─── Components ────────────────────────────────────────────────────────────────
-interface BadgeProps { color?: ColorKey; children: ReactNode; size?: "sm" | "md"; isDark?: boolean }
-const Badge: React.FC<BadgeProps> = ({ color = "slate", children, size = "sm", isDark = true }) => {
-  const colors = getColors(isDark);
-  const c = colors[color];
- 
-  return (
-    <span style={{
-      background: c.bg, color: c.text, border: `1px solid ${c.border}`,
-      padding: size === "sm" ? "3px 10px" : "5px 14px",
-      borderRadius: 20, fontSize: size === "sm" ? 11 : 12,
-      fontWeight: 500, display: "inline-block", whiteSpace: "nowrap" as const,
-    }}>{children}</span>
-  );
+const ACTION_LABELS: Record<string, string> = {
+  converti: 'RDV Pris', rappel: 'Rappel planifié', refuse: 'Refus', nrp: 'NRP',
+};
+const ACTION_COLORS: Record<string, string> = {
+  converti: 'text-success bg-success/10 border-success/30',
+  rappel:   'text-primary bg-primary/10 border-primary/30',
+  refuse:   'text-destructive bg-destructive/10 border-destructive/30',
+  nrp:      'text-warning bg-warning/10 border-warning/30',
 };
 
-interface SectionProps {
-  title: string;
-  icon?: LucideIcon;
-  iconColor?: string;
-  children: ReactNode;
-  action?: ReactNode;
-  isDark?: boolean;
+const fmt = (s: number) =>
+  `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+
+async function runAiAnalysis(transcript: string, callDuration: number, qualification?: string): Promise<AiAnalysis> {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/analyze/transcript`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ transcript, callDuration, qualification }),
+  });
+  if (!res.ok) throw new Error();
+  return res.json();
 }
-const Section: React.FC<SectionProps> = ({ title, icon: Icon, iconColor, children, action, isDark = true }) => (
-  <div style={{
-    background: isDark ? "#0B0F17" : "#FFFFFF",
-    border: `1px solid ${isDark ? "#252E3A" : "#E2E8F0"}`,
-    borderRadius: 20, overflow: "hidden",
-  }}>
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "14px 20px", borderBottom: `1px solid ${isDark ? "#252E3A" : "#E2E8F0"}`,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {Icon && <Icon size={16} style={{ color: iconColor ?? (isDark ? "#9AA9B9" : "#64748B") }} />}
-        <span style={{ fontSize: 14, fontWeight: 600, color: isDark ? "#F1F5F9" : "#0F172A" }}>{title}</span>
-      </div>
-      {action && <div>{action}</div>}
-    </div>
-    <div style={{ padding: "18px 20px" }}>{children}</div>
-  </div>
-);
 
-interface FieldProps { label: string; children: ReactNode; isDark?: boolean }
-const Field: React.FC<FieldProps> = ({ label, children, isDark = true }) => (
-  <div style={{ marginBottom: 12 }}>
-    <div style={{
-      fontSize: 10, color: isDark ? "#5A6C7E" : "#94A3B8", fontWeight: 600,
-      marginBottom: 5, textTransform: "uppercase" as const, letterSpacing: "0.06em",
-    }}>{label}</div>
-    {children}
-  </div>
-);
-
-const inputStyle = (isDark: boolean): React.CSSProperties => ({
-  width: "100%", padding: "10px 14px", fontSize: 13, boxSizing: "border-box",
-  border: `1px solid ${isDark ? "#252E3A" : "#E2E8F0"}`,
-  borderRadius: 12, background: isDark ? "#11161F" : "#F8FAFC",
-  color: isDark ? "#F1F5F9" : "#0F172A", outline: "none", transition: "all 0.2s",
-});
-
-interface FSelectProps {
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  options: (string | { value: string; label: string })[];
-  isDark?: boolean;
-}
-const FSelect: React.FC<FSelectProps> = ({ value, onChange, options, isDark = true }) => (
-  <select value={value} onChange={onChange} style={{ ...inputStyle(isDark), cursor: "pointer" }}>
-    {options.map((o) => {
-      const val = typeof o === "string" ? o : o.value;
-      const lbl = typeof o === "string" ? o : o.label;
-      return <option key={val} value={val}>{lbl}</option>;
-    })}
-  </select>
-);
-
-interface CircleScoreProps { value: number; label: string; color?: string; isDark?: boolean }
-const CircleScore: React.FC<CircleScoreProps> = ({ value, label, color = "#8B7EF5", isDark = true }) => {
-  const r = 28; const circ = 2 * Math.PI * r;
-  const offset = circ - (circ * value) / 100;
+// ── CircleScore ────────────────────────────────────────────────────────────────
+const CircleScore: React.FC<{ value: number; label: string; color?: string; size?: number }> = ({
+  value, label, color = '#8B7EF5', size = 60,
+}) => {
+  const r = (size - 8) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (circ * Math.min(value, 100)) / 100;
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-      <svg width={72} height={72} viewBox="0 0 72 72">
-        <circle cx={36} cy={36} r={r} fill="none" stroke={isDark ? "#252E3A" : "#E2E8F0"} strokeWidth={4} />
-        <circle cx={36} cy={36} r={r} fill="none" stroke={color} strokeWidth={4}
+    <div className="flex flex-col items-center gap-1">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--border)" strokeWidth={4}/>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={4}
           strokeDasharray={circ} strokeDashoffset={offset}
-          strokeLinecap="round" transform="rotate(-90 36 36)" />
-        <text x={36} y={41} textAnchor="middle"
-          style={{ fontSize: 13, fontWeight: 700, fill: isDark ? "#F1F5F9" : "#0F172A" }}>
-          {value}%
-        </text>
+          strokeLinecap="round" transform={`rotate(-90 ${size/2} ${size/2})`}/>
+        <text x={size/2} y={size/2+5} textAnchor="middle"
+          style={{ fontSize: size*0.22, fontWeight: 700, fill: 'currentColor' }}
+          className="fill-foreground">{Math.round(value)}%</text>
       </svg>
-      <span style={{ fontSize: 10, color: isDark ? "#9AA9B9" : "#64748B" }}>{label}</span>
+      <span className="text-xs text-muted-foreground text-center">{label}</span>
     </div>
   );
 };
 
-const Div: React.FC<{ isDark?: boolean }> = ({ isDark = true }) => (
-  <div style={{ height: "1px", background: isDark ? "#252E3A" : "#E2E8F0", margin: "14px 0" }} />
+const ScoreBar: React.FC<{ label: string; value: number; max?: number; color?: string }> = ({
+  label, value, max = 10, color = '#8B7EF5',
+}) => (
+  <div className="flex items-center gap-2 mb-1.5">
+    <span className="text-xs text-muted-foreground w-28 shrink-0">{label}</span>
+    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+      <div className="h-full rounded-full transition-all" style={{ width: `${(value/max)*100}%`, background: color }}/>
+    </div>
+    <span className="text-xs font-medium w-5 text-right">{value}</span>
+  </div>
 );
 
-// ─── Main Component ──────────────────────────────────────────────────────────
-const ContactPage: React.FC = () => {
-  const contact = {
-    contact: "Jean Dupont", company: "Habitat Rénov+", role: "Propriétaire",
-    phone: "+33 6 12 34 56 78", email: "jean.dupont@mail.fr", city: "Lyon, 69000",
-  };
+// ══════════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ══════════════════════════════════════════════════════════════════════════════
+export default function ContactPage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  // ── Call state from context ─────────────────────────────────────────────────
-  const {
-    callState, callDuration, cooldownRemaining,
-    startCall: ctxStartCall, endCall: ctxEndCall, skipCooldown,
-    isMuted, isOnHold, toggleMute, toggleHold,
-  } = useCallContext();
+  // ── Mode & list state ──────────────────────────────────────────────────────
+  const [isDirectMode, setIsDirectMode] = useState(false);
+  const [allContacts, setAllContacts]   = useState<Contact[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [calledToday, setCalledToday]   = useState(0);   // from backend (daily, resets at midnight)
+  const [phase, setPhase]               = useState<AppPhase>('calling');
+  const [lastAction, setLastAction]     = useState<string>('');
 
-  const [campaign, setCampaign] = useState("PAC");
-  const [callQuality, setCallQuality] = useState<number>(97);
-  const [messages, setMessages] = useState<TranscriptLine[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  // ── Contact ────────────────────────────────────────────────────────────────
+  const [contact, setContact]     = useState<Contact | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [contactId, setContactId] = useState<string | null>(null);
+  const [returnTo, setReturnTo]   = useState<string | null>(null);
+  const [rdvId, setRdvId]         = useState<string | null>(null);
+  const [appelDone, setAppelDone] = useState(false);
 
-  // ── Agent status ─────────────────────────────────────────────────────────────
-  const [agentStatus, setAgentStatus] = useState<"online" | "break" | "offline">("online");
-  const [activePause, setActivePause] = useState<string>("");
-  const [pauseSeconds, setPauseSeconds] = useState<number>(0);
-  const [showPauseMenu, setShowPauseMenu] = useState<boolean>(false);
-  const [showNotifications, setShowNotifications] = useState<boolean>(false);
-  const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
+  // ── Call ───────────────────────────────────────────────────────────────────
+  const [enAppel, setEnAppel]   = useState(false);
+  const [duree, setDuree]       = useState(0);
+  const [isMuted, setIsMuted]   = useState(false);
+  const [isOnHold, setIsOnHold] = useState(false);
+  const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Notifications ────────────────────────────────────────────────────────────
-  const [notifications, setNotifications] = useState<Notification[]>([
-    { id: 1, title: "Nouveau lead", message: "Un nouveau prospect a été assigné", time: "Il y a 5 min", read: false },
-    { id: 2, title: "RDV confirmé", message: "RDV avec M. Martin confirmé pour demain", time: "Il y a 30 min", read: false },
-    { id: 3, title: "Rappel", message: "Appel programmé dans 10 minutes", time: "Il y a 1h", read: true },
-  ]);
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // ── Pause ──────────────────────────────────────────────────────────────────
+  const [activePause, setActivePause]       = useState<PauseType | null>(null);
+  const [pauseSeconds, setPauseSeconds]     = useState(0);
+  const [pauseStartTime, setPauseStartTime] = useState<Date | null>(null);
+  const pauseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── CRM ──────────────────────────────────────────────────────────────────────
-  const [crmStatus, setCrmStatus] = useState<string>("À Rappeler");
-  const [agentNote, setAgentNote] = useState<string>("Client ouvert et disponible à la discussion.");
-  const [newNote, setNewNote] = useState<string>("");
-  const [notes, setNotes] = useState<NoteItem[]>([
-    { id: 1, text: "A déjà eu un devis concurrent à 18k€.", author: "Sarah", time: "10 min ago" },
-  ]);
+  // ── Live transcript ────────────────────────────────────────────────────────
+  const [transcript, setTranscript]           = useState<TranscriptLine[]>([]);
+  const [transcriptInput, setTranscriptInput] = useState('');
+  const [inputRole, setInputRole]             = useState<'agent' | 'client'>('client');
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
 
-  // ── Qualification form ───────────────────────────────────────────────────────
-  const [form, setForm] = useState<FormData>({
-    nom: "Jean Dupont", gsm: "+33 6 12 34 56 78", proprietaire: "Oui", depuis: "2010",
-    nbPersonnes: "4", chauffage: "Fioul", consommation: "2 400 €", ageChaudiere: "12 ans",
-    equipePV: "Non", equipePAC: "Non", toiture: "Bon état", isolation: "Moyenne", surface: "120 m²",
-    profMr: "Salarié CDI", profMme: "Infirmière", revenus: "38 000 €/an", credits: "Non",
-    fichage: "Sain", budget: "15 000 €", interet: "Élevé", urgence: "Avant hiver",
-  });
-  const setF = (k: keyof FormData, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+  // ── Qualification ──────────────────────────────────────────────────────────
+  const [besoin, setBesoin]               = useState('');
+  const [budget, setBudget]               = useState('');
+  const [niveauInteret, setNiveauInteret] = useState('');
+  const [notes, setNotes]                 = useState('');
+  const [dateRappel, setDateRappel]       = useState('');
+  const [submitting, setSubmitting]       = useState(false);
 
-  // ── AI state ─────────────────────────────────────────────────────────────────
-  const [aiSummary, setAiSummary] = useState<string>("L'IA analysera la conversation en temps réel...");
-  const [aiScore, setAiScore] = useState<AiScore>({ lead: 85, conversion: 78 });
-  const [objections, setObjections] = useState<string[]>(["Délai de pose", "Financement à confirmer"]);
-  const [aiLoading, setAiLoading] = useState<boolean>(false);
+  // ── AI ─────────────────────────────────────────────────────────────────────
+  const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
+  const [aiLoading, setAiLoading]   = useState(false);
+  const [aiTab, setAiTab]           = useState<'scores' | 'analysis' | 'transcript' | 'refusal'>('scores');
 
-  // ── RDV ──────────────────────────────────────────────────────────────────────
-  const [rdvDate, setRdvDate] = useState<string>("2026-06-03");
-  const [rdvTime, setRdvTime] = useState<string>("10:00");
-  const [rdvCommercial, setRdvCommercial] = useState<string>("Michel Martin");
-
-  // ── Active tab ────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<"qualification" | "rdv" | "statut" | "notes">("qualification");
-
-  // ── Highlighted fields ───────────────────────────────────────────────────────
-  const [highlighted, setHighlighted] = useState<Set<keyof FormData>>(new Set());
-  const flash = (keys: (keyof FormData)[]) => {
-    setHighlighted(new Set(keys));
-    setTimeout(() => setHighlighted(new Set()), 2000);
-  };
-
-  // ── AUTOMATIC CALL START ON LOAD ─────────────────────────────────────────────
-  // ── Call quality fluctuation ─────────────────────────────────────────────────
+  // ── Load contacts ──────────────────────────────────────────────────────────
   useEffect(() => {
-    let t: ReturnType<typeof setInterval> | undefined;
-    if (callState === 'calling' && !isOnHold) {
-      t = setInterval(() => {
-        setCallQuality(q => Math.max(88, Math.min(100, q + (Math.random() - 0.5) * 1.5)));
-      }, 2000);
-    }
-    return () => { if (t !== undefined) clearInterval(t); };
-  }, [callState, isOnHold]);
+    const params = new URLSearchParams(window.location.search);
+    const id  = params.get('id');
+    const rt  = params.get('returnTo');
+    const rid = params.get('rdvId');
+    setReturnTo(rt);
+    setRdvId(rid);
 
-  // ── Pause timer ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    let t: ReturnType<typeof setInterval> | undefined;
-    if (agentStatus === "break") {
-      t = setInterval(() => setPauseSeconds(s => s + 1), 1000);
+    if (id) {
+      // Mode liste : contact spécifique
+      setIsDirectMode(false);
+      setContactId(id);
+      agentService.getContactById(parseInt(id))
+        .then(data => setContact(data))
+        .catch(() => toast.error('Impossible de charger le contact'))
+        .finally(() => setLoading(false));
     } else {
-      setPauseSeconds(0);
+      // Mode "Appel en direct" : charge toute la liste via l'endpoint dialer
+      setIsDirectMode(true);
+      agentService.getDialerContacts()
+        .then(({ contacts, calledToday: ct }) => {
+          setAllContacts(contacts);
+          setCalledToday(ct);
+          const idx = contacts.findIndex(c => c.statut === 'A_APPELER' || c.statut === 'EN_COURS');
+          const startIdx = idx >= 0 ? idx : 0;
+          setCurrentIndex(0);  // always start from first remaining contact
+          const premier = contacts[startIdx] ?? contacts[0];
+          if (premier) { setContactId(String(premier.id)); setContact(premier); }
+        })
+        .catch(() => toast.error('Impossible de charger les contacts'))
+        .finally(() => setLoading(false));
     }
-    return () => { if (t !== undefined) clearInterval(t); };
-  }, [agentStatus]);
+  }, [user?.id]);
 
-  // ── Transcription + auto-fill ────────────────────────────────────────────────
+  // ── Call timer ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (callState !== 'calling' || isOnHold) return;
-    const msg = SCRIPT.find(m => m.t === callDuration);
-    if (!msg) return;
-
-    setMessages(prev => [...prev, msg]);
-    setTimeout(() => {
-      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }, 80);
-
-    triggerAI();
-
-    if (msg.t === 18) { setF("chauffage", "Fioul"); flash(["chauffage"]); }
-    if (msg.t === 28) { setF("depuis", "2010"); flash(["depuis"]); }
-    if (msg.t === 40) { setF("nbPersonnes", "4"); setF("revenus", "38 000 €/an"); flash(["nbPersonnes", "revenus"]); }
-    if (msg.t === 52) { setF("ageChaudiere", "12 ans"); flash(["ageChaudiere"]); }
-    if (msg.t === 66) {
-      setAiScore({ lead: 85, conversion: 78 });
-      setObjections(["Délai de pose", "Financement à confirmer"]);
-      setCrmStatus("RDV Client 1");
-      const newNotif: Notification = {
-        id: Date.now(),
-        title: "Analyse IA complétée",
-        message: "Lead qualifié avec un score de 85%",
-        time: "À l'instant",
-        read: false,
-      };
-      setNotifications(prev => [newNotif, ...prev]);
+    if (enAppel && !isOnHold) {
+      callTimerRef.current = setInterval(() => setDuree(d => d + 1), 1000);
+    } else {
+      if (callTimerRef.current) { clearInterval(callTimerRef.current); callTimerRef.current = null; }
     }
-  }, [callDuration, callState, isOnHold]);
+    return () => { if (callTimerRef.current) clearInterval(callTimerRef.current); };
+  }, [enAppel, isOnHold]);
 
-  const triggerAI = () => { setAiLoading(true); setTimeout(() => setAiLoading(false), 900); };
-  // ── Generate AI summary when call ends ──────────────────────────────────────
+  // ── Pause timer ────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (callState === 'cooldown') {
-      setAiSummary("Prospect qualifié automatiquement. Analyse IA terminée.");
-      setAiScore({ lead: 85, conversion: 78 });
-      setObjections(["Délai de pose", "Financement à confirmer"]);
+    if (activePause) {
+      pauseTimerRef.current = setInterval(() => setPauseSeconds(s => s + 1), 1000);
+    } else {
+      if (pauseTimerRef.current) { clearInterval(pauseTimerRef.current); pauseTimerRef.current = null; }
     }
-  }, [callState]);
+    return () => { if (pauseTimerRef.current) clearInterval(pauseTimerRef.current); };
+  }, [activePause]);
 
-  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  // Auto-scroll transcript
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcript]);
 
-  const startCall = async () => {
-    ctxStartCall();
-    setMessages([]);
-    setCallQuality(97);
+  // ── Pause actions ──────────────────────────────────────────────────────────
+  const handleStartPause = (type: PauseType) => {
+    setActivePause(type);
+    setPauseSeconds(0);
+    setPauseStartTime(new Date());
   };
-  const endCall = async () => {
-    ctxEndCall();
+
+  const handleEndPause = useCallback(async () => {
+    if (!activePause || !pauseStartTime) return;
+    const debut = pauseStartTime;
+    const fin   = new Date();
+    const dur   = Math.round((fin.getTime() - debut.getTime()) / 1000);
     try {
-      const statut = crmStatus === "Converti" ? "Converti" : crmStatus === "Refusé" ? "Refusé" : "Rappel";
-      await api.saveCall({
-        contact_id: 1,
-        contact_name: contact.contact,
-        contact_company: contact.company,
-        phone: contact.phone,
-        email: contact.email,
-        duration: callDuration,
-        besoin: form.chauffage || "",
-        budget: form.budget || "",
-        interet: form.interet || "",
-        notes: agentNote,
-        statut,
-        call_date: new Date().toISOString()
+      const token = getToken();
+      await fetch(`${API_BASE}/agent/me/dialer/pause`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ debut: debut.toISOString(), fin: fin.toISOString(), dureeSecondes: dur, type: activePause }),
       });
-      if (crmStatus.includes("RDV")) {
-        await api.createAppointment({
-          client_name: contact.contact,
-          client_phone: contact.phone,
-          appointment_date: rdvDate,
-          appointment_time: rdvTime,
-          commercial: rdvCommercial
+    } catch { /* non-blocking */ }
+    setActivePause(null);
+    setPauseSeconds(0);
+    setPauseStartTime(null);
+  }, [activePause, pauseStartTime]);
+
+  // ── Call controls ──────────────────────────────────────────────────────────
+  const handleStartCall = () => {
+    setEnAppel(true);
+    setDuree(0);
+    setTranscript([]);
+    setAiAnalysis(null);
+    setIsMuted(false);
+    setIsOnHold(false);
+    toast.info('Appel démarré');
+  };
+
+  const handleStopCall = async () => {
+    setEnAppel(false);
+    setIsOnHold(false);
+    if (duree > 3 && transcript.length > 0) await triggerAiAnalysis();
+    toast.info('Appel terminé');
+  };
+
+  const triggerAiAnalysis = async () => {
+    const rawTranscript = transcript.length > 0
+      ? transcript.map(l => `${l.role === 'agent' ? 'Agent' : 'Client'}: ${l.text}`).join('\n')
+      : 'Agent: Bonjour je suis de EBI.\nClient: Oui bonjour.';
+    setAiLoading(true);
+    try {
+      const result = await runAiAnalysis(rawTranscript, duree, besoin || 'PAC');
+      setAiAnalysis(result);
+      setAiTab('scores');
+      toast.success('Analyse IA terminée');
+    } catch {
+      toast.warning('Analyse IA non disponible');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // ── Transcript input ───────────────────────────────────────────────────────
+  const addLine = () => {
+    const text = transcriptInput.trim();
+    if (!text) return;
+    setTranscript(prev => [...prev, { role: inputRole, text, ts: duree }]);
+    setTranscriptInput('');
+  };
+
+  const handleTranscriptKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addLine(); }
+  };
+
+  // ── Validation ─────────────────────────────────────────────────────────────
+  const getValidationError = (action: 'converti' | 'rappel' | 'refuse' | 'nrp'): string | null => {
+    if (action === 'converti') {
+      if (!besoin) return 'Sélectionnez un besoin identifié avant de valider le RDV';
+      if (!niveauInteret) return 'Sélectionnez le niveau d\'intérêt du prospect';
+    }
+    if (action === 'rappel') {
+      if (!besoin) return 'Sélectionnez un besoin identifié avant de planifier un rappel';
+      if (!dateRappel) return 'Choisissez une date de rappel';
+    }
+    return null;
+  };
+
+  // ── Qualification ──────────────────────────────────────────────────────────
+  const handleQualification = async (action: 'converti' | 'rappel' | 'refuse' | 'nrp') => {
+    if (!contact) return;
+
+    // Validate before submitting
+    const err = getValidationError(action);
+    if (err) { toast.warning(err); return; }
+
+    setSubmitting(true);
+    const isConf = !!(returnTo && rdvId);
+    try {
+      if (isConf) {
+        const prefix = returnTo!.split('/').filter(Boolean)[0];
+        const rdvStatut = action === 'converti' ? 'CONFIRME' : action === 'rappel' ? 'REPORTER' : 'ANNULE';
+        const token = getToken();
+        await fetch(`${API_BASE}/${prefix}/rdv/${rdvId}/statut`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ statut: rdvStatut, commentaire: notes }),
         });
-      }
-    } catch (e) {
-      console.error("Auto-save error:", e);
-    }
-  };
-  const startPause = (type: string) => { setAgentStatus("break"); setActivePause(type); setShowPauseMenu(false); };
-  const endPause = () => { setAgentStatus("online"); setActivePause(""); };
-const saveCrm = async () => {
-  let statut: "Rappel" | "Converti" | "Refusé" = "Rappel";
+        toast.success(ACTION_LABELS[action]);
+        setAppelDone(true);
+      } else {
+        const qualifMap: Record<string, string> = {
+          converti: 'RENDEZ_VOUS', rappel: 'RAPPEL', refuse: 'REFUS_PAS_INTERESSE', nrp: 'NRP',
+        };
+        const appelData: CreateAppelDTO = {
+          agentId: user?.id || 1,
+          contactId: contact.id,
+          dureeSecondes: duree,
+          qualification: qualifMap[action],
+          dateRappelPlanifie: action === 'rappel' ? (dateRappel || new Date().toISOString()) : undefined,
+        };
+        await agentService.enregistrerAppel(appelData);
+        toast.success(ACTION_LABELS[action]);
 
-  if (crmStatus === "Converti") {
-    statut = "Converti";
-  } else if (crmStatus === "Refusé") {
-    statut = "Refusé";
-  }
-
-  try {
-    console.log("CRM BEFORE API");
-
-    const response = await api.saveCall({
-      contact_id: 1,
-      contact_name: contact.contact,
-      contact_company: contact.company,
-      phone: contact.phone,
-      email: contact.email,
-      duration: callDuration,
-      besoin: form.chauffage || "",
-      budget: form.budget || "",
-      interet: form.interet || "",
-      notes: agentNote,
-      statut,
-      call_date: new Date().toISOString()
-    });
-
-    console.log("CRM API RESPONSE =", response);
-
-    alert("CRM enregistré avec succès");
-  } catch (error) {
-    console.error("CRM API ERROR =", error);
-    alert("Erreur lors de l'enregistrement CRM");
-  }
-};
-
-  const addNote = () => {
-    if (!newNote.trim()) return;
-    setNotes(prev => [{ id: Date.now(), text: newNote, author: "Moi", time: "À l'instant" }, ...prev]);
-    setNewNote("");
-  };
-
-  const markNotificationAsRead = (id: number) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-
-  const iStyle = (k: keyof FormData): React.CSSProperties => ({
-    ...inputStyle(darkMode),
-    borderColor: highlighted.has(k) ? "#8B7EF5" : undefined,
-    background: highlighted.has(k) ? (darkMode ? "#1E1B3A" : "#F3E5F5") : (darkMode ? "#11161F" : "#F8FAFC"),
-    transition: "background 0.3s, border-color 0.3s",
-    boxShadow: highlighted.has(k) ? `0 0 0 2px ${darkMode ? "rgba(139,126,245,0.2)" : "rgba(139,126,245,0.3)"}` : "none",
-  });
-  const handleManualCall = async (number: string) => {
-    startCall();
-    try {
-      await api.saveCall({
-        contact_id: 0,
-        contact_name: number,
-        contact_company: "Appel manuel",
-        phone: number,
-        email: "",
-        duration: 0,
-        besoin: "",
-        budget: "",
-        interet: "",
-        notes: `Appel manuel vers ${number}`,
-        statut: "Rappel",
-        call_date: new Date().toISOString()
-      });
-    } catch (e) {
-      console.error("Manual call save error:", e);
-    }
-  };
-
-  const changeCampaign = (newCampaign: string) => {
-  setCampaign(newCampaign);
-
-  if (callState === 'calling') {
-    endCall();
-
-    setTimeout(() => {
-      startCall();
-    }, 500);
-  }
-  
-};
-
-  const callStatusLabel = callState === 'calling' && !isOnHold ? "En ligne" : callState === 'calling' ? "En attente" : "Inactif";
-  const colors = getColors(darkMode);
-
-  type TabId = "qualification" | "rdv" | "statut" | "notes";
-  const TABS: { id: TabId; label: string; icon: LucideIcon }[] = [
-    { id: "qualification", label: "Qualification", icon: FileText },
-    { id: "rdv", label: "Rendez-vous", icon: Calendar },
-    { id: "statut", label: "Statut CRM", icon: Award },
-    { id: "notes", label: "Notes", icon: MessageCircle },
-  ];
-
-  // Helper pour obtenir la couleur par clé
-  const getColorByKey = (key: ColorKey) => colors[key];
-const saveQualification = async () => {
-  console.log("QUALIFICATION BUTTON CLICKED");
-
-  try {
-    console.log("BEFORE API");
-
-    const response = await api.saveAgentData({
-      chauffage: form.chauffage,
-      revenus: form.revenus,
-      budget: form.budget,
-      interet: form.interet
-    });
-
-    console.log("API RESPONSE =", response);
-
-    alert("Qualification enregistrée");
-  } catch (error) {
-    console.error("API ERROR =", error);
-  }
-};
-const saveRdv = async () => {
-  try {
-    console.log("BEFORE API");
-
-    const response = await api.createAppointment({
-      client_name: contact.contact,
-      client_phone: contact.phone,
-      appointment_date: rdvDate,
-      appointment_time: rdvTime,
-      commercial: rdvCommercial
-    });
-
-    console.log("API RESPONSE =", response);
-
-    alert("RDV enregistré");
-  } catch (error) {
-    console.error("API ERROR =", error);
-  }
-};
-  return (
-    <div style={{
-      background: "transparent",
-      fontFamily: "'Inter', system-ui, sans-serif",
-    }}>
-      <style>{`
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes fadeSlide { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        
-        * { scrollbar-width: thin; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: ${darkMode ? "#2A3645" : "#CBD5E1"}; border-radius: 4px; }
-        
-        input:focus, select:focus, textarea:focus { 
-          border-color: #8B7EF5 !important; 
-          box-shadow: 0 0 0 3px rgba(139,126,245,0.15) !important; 
+        if (isDirectMode) {
+          // Switch to inter-call phase instead of navigating away
+          setLastAction(action);
+          setAppelDone(true);
+          setPhase('inter_call');
+          setCalledToday(c => c + 1); // live update of the daily counter
+        } else {
+          // List mode: go back to contacts
+          setAppelDone(true);
+          setTimeout(() => navigate('/agent/contacts'), 1500);
         }
-        
-        button { transition: all 0.2s ease; cursor: pointer; }
-        button:hover { opacity: 0.85; transform: translateY(-1px); }
-        button:active { transform: translateY(0); }
-        
-        .message-appear { animation: fadeSlide 0.25s ease-out; }
-        .spin-animation { animation: spin 0.8s linear infinite; }
+      }
+    } catch {
+      toast.error("Erreur lors de l'enregistrement");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── Next contact ───────────────────────────────────────────────────────────
+  const handleNextContact = async () => {
+    // End active pause first
+    if (activePause) await handleEndPause();
+
+    const nextIdx = currentIndex + 1;
+    if (nextIdx >= allContacts.length) {
+      toast.success('Tous les contacts ont été appelés !');
+      navigate('/agent/contacts');
+      return;
+    }
+    const next = allContacts[nextIdx];
+    setCurrentIndex(nextIdx);
+    setContactId(String(next.id));
+    setContact(next);
+    // Reset for new call
+    setPhase('calling');
+    setLastAction('');
+    setAppelDone(false);
+    setEnAppel(false);
+    setDuree(0);
+    setTranscript([]);
+    setAiAnalysis(null);
+    setBesoin('');
+    setBudget('');
+    setNiveauInteret('');
+    setNotes('');
+    setDateRappel('');
+  };
+
+  const handleRetourAgenda = () => {
+    if (returnTo && rdvId) navigate(`${returnTo}?calledRdvId=${rdvId}`);
+  };
+
+  // ── Guards ─────────────────────────────────────────────────────────────────
+  if (loading) return (
+    <><div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"/>
+      </div></>
+  );
+
+  if (!contact) return (
+    <><div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-muted-foreground">
+          {!contactId ? 'Aucun contact à appeler pour le moment' : 'Contact introuvable'}
+        </p>
+        <button onClick={() => navigate('/agent/contacts')}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90">
+          ← Retour à la liste
+        </button>
+      </div></>
+  );
+
+  const pauseOption = PAUSE_OPTIONS.find(p => p.id === activePause);
+
+  // Daily progress: calledToday (from DB, resets at midnight) + calls done in current session
+  const sessionDone  = currentIndex + (phase === 'inter_call' ? 1 : 0);
+  const totalDoneToday = calledToday + sessionDone;           // total calls today (DB + this session)
+  const totalForDay    = calledToday + allContacts.length;    // all work for the day
+  const donePct = totalForDay > 0 ? Math.round((totalDoneToday / totalForDay) * 100) : 0;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  return (
+    <><style>{`
+        @keyframes pulse-ring { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.1)} }
+        @keyframes blink-anim { 0%,100%{opacity:1} 50%{opacity:.35} }
+        .calling-dot { animation: pulse-ring 1.3s ease-in-out infinite; }
+        .pause-blink { animation: blink-anim 1.2s ease-in-out infinite; }
       `}</style>
 
-      {/* ═══════════════════════════════════════════════════════════════════════ */}
-      {/* UNIQUE HEADER BAR - SANS DEUXIÈME BARRE */}
-      {/* ═══════════════════════════════════════════════════════════════════════ */}
-     
+      {/* ── Confirmatrice banner ───────────────────────────────────────────── */}
+      {returnTo && rdvId && (
+        <div className={`mb-4 flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium ${
+          appelDone ? 'bg-success/10 text-success border border-success/30' : 'bg-primary/10 text-primary border border-primary/30'}`}>
+          <span>{appelDone ? 'Appel enregistré — retournez à l\'agenda' : 'Appel depuis agenda confirmatrice'}</span>
+          {appelDone && (
+            <button onClick={handleRetourAgenda}
+              className="ml-4 px-4 py-1.5 bg-success text-success-foreground rounded-lg hover:bg-success/90 text-xs font-medium">
+              Retourner à l'agenda
+            </button>
+          )}
+        </div>
+      )}
 
-      {/* ═══ MAIN BODY ════════════════════════════════════════════════════════ */}
-      <div style={{
-        maxWidth: 1440, margin: "0 auto", padding: "24px",
-        display: "grid", gridTemplateColumns: "minmax(0, 1fr) 360px", gap: 24,
-      }}>
+      {/* ── TOP BAR ───────────────────────────────────────────────────────── */}
+      <div className="mb-4 space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/agent/contacts')}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition px-2 py-1 rounded-lg hover:bg-muted">
+              <ArrowLeft size={15}/> Liste contacts
+            </button>
+            <div className="w-px h-5 bg-border"/>
+            <h2 className="text-lg font-bold">Appel en direct</h2>
+          </div>
 
-        {/* LEFT COLUMN */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-
-          {/* CALL CONSOLE - BOUTONS CORRIGÉS */}
-          <div style={{
-            background: darkMode ? "#0B0F17" : "#FFFFFF",
-            border: `1px solid ${darkMode ? "#252E3A" : "#E2E8F0"}`,
-            borderRadius: 24, overflow: "hidden",
-          }}>
-            <div style={{
-              padding: "16px 24px", borderBottom: `1px solid ${darkMode ? "#252E3A" : "#E2E8F0"}`,
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-            }}>
-            <select
-  value={campaign}
-  onChange={(e) => changeCampaign(e.target.value)}
-  style={{
-  ...inputStyle(darkMode),
-  width: "160px",
-  fontWeight: 600
-}}
->
-  <option value="PAC">PAC</option>
-  <option value="PV">PV</option>
-  <option value="Isolation">Isolation</option>
-  <option value="Toiture">Toiture</option>
-</select>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <PhoneCall size={18} style={{ color: callState === 'calling' && !isOnHold ? "#2DCF7F" : (darkMode ? "#9AA9B9" : "#64748B") }} />
-                <span style={{ fontSize: 15, fontWeight: 700, color: darkMode ? "#F1F5F9" : "#0F172A" }}>CONSOLE TÉLÉPHONIQUE</span>
-                {callState === 'calling' && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2DCF7F", animation: "pulse 1.5s infinite" }} />
-                    <span style={{ fontSize: 11, color: "#2DCF7F" }}>APPEL EN COURS</span>
-                  </div>
-                )}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <span style={{ fontFamily: "monospace", fontSize: 28, fontWeight: 700, color: darkMode ? "#F1F5F9" : "#0F172A" }}>{fmt(callDuration)}</span>
-                <span style={{
-                  padding: "4px 14px", borderRadius: 30, fontSize: 11, fontWeight: 600,
-                  background: callState === 'calling' && !isOnHold ? getColorByKey("green").bg : callState === 'calling' ? getColorByKey("amber").bg : getColorByKey("slate").bg,
-                  color: callState === 'calling' && !isOnHold ? getColorByKey("green").text : callState === 'calling' ? getColorByKey("amber").text : getColorByKey("slate").text,
-                }}>{callStatusLabel}</span>
-              </div>
-            </div>
-
-            {callState === 'calling' && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)" }}>
-                {[
-                  { icon: Signal, label: "Qualité", val: `${Math.round(callQuality)}%` },
-                  { icon: Wifi, label: "Latence", val: "24 ms" },
-                  { icon: Radio, label: "Whisper AI", val: "Actif" },
-                  { icon: Battery, label: "Volume", val: "-12 dB" },
-                ].map(({ icon: I, label, val }) => (
-                  <div key={label} style={{
-                    padding: "12px 20px",
-                    borderRight: `1px solid ${darkMode ? "#252E3A" : "#E2E8F0"}`,
-                    borderBottom: `1px solid ${darkMode ? "#252E3A" : "#E2E8F0"}`,
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                      <I size={12} style={{ color: "#2DCF7F" }} />
-                      <span style={{ fontSize: 10, color: darkMode ? "#5A6C7E" : "#94A3B8", textTransform: "uppercase" }}>{label}</span>
-                    </div>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: darkMode ? "#F1F5F9" : "#0F172A" }}>{val}</span>
-                  </div>
-                ))}
-              </div>
+          <div className="flex items-center gap-2">
+            {enAppel && !isOnHold && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-destructive/10 text-destructive border border-destructive/30 rounded-full text-xs font-medium">
+                <span className="w-2 h-2 rounded-full bg-destructive calling-dot inline-block"/>
+                En appel — {fmt(duree)}
+              </span>
             )}
+            {enAppel && isOnHold && (
+              <span className="px-3 py-1.5 bg-warning/10 text-warning border border-warning/30 rounded-full text-xs font-medium">
+                En attente — {fmt(duree)}
+              </span>
+            )}
+            {activePause && pauseOption && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium pause-blink"
+                style={{ background: pauseOption.bg, color: pauseOption.color, border: `1px solid ${pauseOption.color}44` }}>
+                {pauseOption.icon}&nbsp;{pauseOption.label} — {fmt(pauseSeconds)}
+              </span>
+            )}
+          </div>
+        </div>
 
-            <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <div style={{
-                  width: 52, height: 52, borderRadius: "50%",
-                  background: callState === 'calling' && !isOnHold ? getColorByKey("green").bg : (darkMode ? "#11161F" : "#F8FAFC"),
-                  border: `1px solid ${callState === 'calling' && !isOnHold ? getColorByKey("green").border : (darkMode ? "#252E3A" : "#E2E8F0")}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  <Phone size={20} style={{ color: callState === 'calling' && !isOnHold ? getColorByKey("green").text : (darkMode ? "#9AA9B9" : "#64748B") }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: darkMode ? "#F1F5F9" : "#0F172A" }}>{contact.contact}</div>
-                  <div style={{ fontSize: 13, color: darkMode ? "#9AA9B9" : "#64748B" }}>{contact.phone}</div>
-                </div>
-              </div>
+        {/* Pause buttons */}
+        <div className="flex flex-wrap gap-2">
+          {PAUSE_OPTIONS.map(p => (
+            <button key={p.id}
+              onClick={() => activePause === p.id ? handleEndPause() : handleStartPause(p.id)}
+              disabled={enAppel}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all disabled:opacity-40"
+              style={activePause === p.id
+                ? { background: p.color, color: 'white', borderColor: p.color }
+                : { background: p.bg, color: p.color, borderColor: `${p.color}50` }}>
+              {p.icon}
+              {activePause === p.id ? `Terminer (${fmt(pauseSeconds)})` : p.label}
+            </button>
+          ))}
+        </div>
 
-              {/* BOUTONS D'APPEL — Nouveau workflow 3 états */}
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {callState === 'cooldown' && (
-                  <div style={{
-                    display: "flex", alignItems: "center",
-                    padding: "8px 24px",
-                    borderRadius: 40,
-                    background: getColorByKey("amber").bg,
-                    border: `1px solid ${getColorByKey("amber").border}`,
-                    boxShadow: "0 4px 20px rgba(240,179,75,0.2)",
-                  }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <Clock size={16} style={{ color: getColorByKey("amber").text }} />
-                        <span style={{ fontSize: 15, fontWeight: 700, color: getColorByKey("amber").text, fontVariantNumeric: "tabular-nums" }}>
-                          {cooldownRemaining}s
-                        </span>
-                      </div>
-                      <div style={{
-                        width: 80, height: 4, background: `${getColorByKey("amber").border}`,
-                        borderRadius: 4, marginTop: 4, overflow: "hidden",
-                      }}>
-                        <div style={{
-                          height: "100%", background: getColorByKey("amber").text,
-                          borderRadius: 4,
-                          width: `${((30 - cooldownRemaining) / 30) * 100}%`,
-                          transition: "width 1s linear",
-                        }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
+        {/* Progress bar (direct mode only) — resets automatically each day */}
+        {isDirectMode && totalForDay > 0 && (
+          <div className="bg-card rounded-xl border px-4 py-3 flex items-center gap-4">
+            <div className="flex-1">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                <span className="font-medium text-foreground">Progression du jour</span>
+                <span>
+                  <span className="font-bold text-primary">{totalDoneToday}</span>
+                  <span> / {totalForDay} appelés</span>
+                  {calledToday > 0 && (
+                    <span className="ml-2 text-success">({calledToday} avant cette session)</span>
+                  )}
+                </span>
               </div>
+              <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                <div className="h-full rounded-full bg-primary transition-all duration-500"
+                  style={{ width: `${donePct}%` }}/>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="text-xl font-bold text-primary">{donePct}%</div>
+              <div className="text-xs text-muted-foreground">du jour</div>
             </div>
           </div>
+        )}
+      </div>
 
-          {/* TRANSCRIPTION IA */}
-          <div style={{
-            background: darkMode ? "#0B0F17" : "#FFFFFF",
-            border: `1px solid ${darkMode ? "#252E3A" : "#E2E8F0"}`,
-            borderRadius: 24, overflow: "hidden",
-          }}>
-            <div style={{
-              padding: "14px 24px", borderBottom: `1px solid ${darkMode ? "#252E3A" : "#E2E8F0"}`,
-              display: "flex", alignItems: "center", justifyContent: "space-between"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Bot size={18} style={{ color: "#8B7EF5" }} />
-                <span style={{ fontSize: 14, fontWeight: 700, color: darkMode ? "#F1F5F9" : "#0F172A" }}>TRANSCRIPTION IA</span>
-                <span style={{ fontSize: 11, color: darkMode ? "#5A6C7E" : "#94A3B8" }}>Whisper · Diarisation</span>
-              </div>
-              {aiLoading && (
-                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                  <RefreshCw size={13} className="spin-animation" style={{ color: "#8B7EF5" }} />
-                  <span style={{ fontSize: 11, color: "#8B7EF5" }}>Analyse...</span>
-                </div>
-              )}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* INTER-CALL PHASE                                                      */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {phase === 'inter_call' ? (
+        <div className="max-w-2xl mx-auto space-y-5">
+
+          {/* Result card */}
+          <div className="glass-card p-6 text-center space-y-3">
+            <div className="w-14 h-14 rounded-full bg-success/15 flex items-center justify-center mx-auto">
+              <CheckSquare size={24} className="text-success"/>
             </div>
-            <div ref={scrollRef} style={{
-              padding: "18px 24px", maxHeight: 300, overflowY: "auto",
-              display: "flex", flexDirection: "column", gap: 12
-            }}>
-              {messages.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 0" }}>
-                  <Bot size={36} style={{ color: darkMode ? "#5A6C7E" : "#94A3B8", margin: "0 auto 12px", display: "block" }} />
-                  <p style={{ fontSize: 13, color: darkMode ? "#5A6C7E" : "#94A3B8" }}>L'appel va démarrer automatiquement...</p>
-                </div>
-              ) : (
-                messages.map(m => (
-                  <div key={m.id} className="message-appear" style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: m.speaker === "Agent" ? "flex-end" : "flex-start" }}>
-                    <span style={{ fontSize: 10, color: m.speaker === "Agent" ? "#8B7EF5" : "#2DCF7F", fontWeight: 600 }}>{m.speaker} · {fmt(m.t)}</span>
-                    <div style={{
-                      maxWidth: "78%", padding: "10px 16px", borderRadius: 18, fontSize: 13, lineHeight: 1.5,
-                      background: m.speaker === "Agent" ? getColorByKey("purple").bg : (darkMode ? "#11161F" : "#F8FAFC"),
-                      color: m.speaker === "Agent" ? getColorByKey("purple").text : (darkMode ? "#F1F5F9" : "#0F172A"),
-                      border: `1px solid ${m.speaker === "Agent" ? getColorByKey("purple").border : (darkMode ? "#252E3A" : "#E2E8F0")}`,
-                    }}>{m.text}</div>
-                  </div>
-                ))
-              )}
+            <div>
+              <h3 className="font-bold text-lg">Appel terminé</h3>
+              <p className="text-muted-foreground text-sm mt-1">
+                {contact.prenom} {contact.nom}
+              </p>
             </div>
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border ${ACTION_COLORS[lastAction] || 'text-foreground bg-muted border-border'}`}>
+              {lastAction === 'converti' && <CheckCircle size={14}/>}
+              {lastAction === 'rappel'   && <RotateCcw size={14}/>}
+              {lastAction === 'refuse'   && <XCircle size={14}/>}
+              {lastAction === 'nrp'      && <Phone size={14}/>}
+              {ACTION_LABELS[lastAction]}
+            </div>
+            <p className="text-xs text-muted-foreground">Durée : {fmt(duree)}</p>
           </div>
 
-          {/* TABBED SECTION */}
-          <div style={{
-            background: darkMode ? "#0B0F17" : "#FFFFFF",
-            border: `1px solid ${darkMode ? "#252E3A" : "#E2E8F0"}`,
-            borderRadius: 24, overflow: "hidden",
-          }}>
-            <div style={{ display: "flex", borderBottom: `1px solid ${darkMode ? "#252E3A" : "#E2E8F0"}`, padding: "0 20px", gap: 6 }}>
-              {TABS.map(({ id, label, icon: I }) => (
-                <button key={id} onClick={() => setActiveTab(id)} style={{
-                  padding: "14px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer",
-                  background: "transparent", border: "none", whiteSpace: "nowrap",
-                  borderBottom: activeTab === id ? "2px solid #8B7EF5" : "2px solid transparent",
-                  color: activeTab === id ? "#8B7EF5" : (darkMode ? "#9AA9B9" : "#64748B"),
-                  display: "flex", alignItems: "center", gap: 8,
-                }}>
-                  <I size={14} /> {label}
+          {/* Pause section */}
+          <div className="glass-card p-5">
+            <h3 className="font-semibold text-sm mb-1">Prendre une pause</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Sélectionnez votre type de pause. Cliquez à nouveau pour la terminer.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {PAUSE_OPTIONS.map(p => (
+                <button key={p.id}
+                  onClick={() => activePause === p.id ? handleEndPause() : handleStartPause(p.id)}
+                  className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm font-medium border transition-all"
+                  style={activePause === p.id
+                    ? { background: p.color, color: 'white', borderColor: p.color }
+                    : { background: p.bg, color: p.color, borderColor: `${p.color}50` }}>
+                  <span className="text-lg">{p.icon}</span>
+                  <div className="text-left">
+                    <div className="text-xs font-semibold">{p.label}</div>
+                    {activePause === p.id && (
+                      <div className="text-xs opacity-80">{fmt(pauseSeconds)}</div>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
+          </div>
 
-            <div style={{ padding: "24px" }}>
-              {activeTab === "qualification" && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#5D9BFF", marginBottom: 14 }}>IDENTITÉ & LOGEMENT</div>
-                    <Field label="NOM COMPLET" isDark={darkMode}><input value={form.nom} onChange={e => setF("nom", e.target.value)} style={iStyle("nom")} /></Field>
-                    <Field label="GSM" isDark={darkMode}><input value={form.gsm} readOnly style={iStyle("gsm")} /></Field>
-                    <Field label="PROPRIÉTAIRE DEPUIS" isDark={darkMode}><input value={form.depuis} onChange={e => setF("depuis", e.target.value)} style={iStyle("depuis")} /></Field>
-                    <Field label="PERSONNES" isDark={darkMode}><input value={form.nbPersonnes} onChange={e => setF("nbPersonnes", e.target.value)} style={iStyle("nbPersonnes")} /></Field>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#2DCF7F", marginBottom: 14 }}>QUALIFICATION TECHNIQUE</div>
-                    <Field label="CHAUFFAGE" isDark={darkMode}><FSelect value={form.chauffage} onChange={e => setF("chauffage", e.target.value)} options={["Gaz", "Fioul", "Électrique", "Bois"]} isDark={darkMode} /></Field>
-                    <Field label="ÂGE CHAUDIÈRE" isDark={darkMode}><input value={form.ageChaudiere} onChange={e => setF("ageChaudiere", e.target.value)} style={iStyle("ageChaudiere")} /></Field>
-                    <Field label="CONSOMMATION" isDark={darkMode}><input value={form.consommation} onChange={e => setF("consommation", e.target.value)} style={iStyle("consommation")} /></Field>
-                    <Field label="SURFACE" isDark={darkMode}><input value={form.surface} onChange={e => setF("surface", e.target.value)} style={iStyle("surface")} /></Field>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#F0B34B", marginBottom: 14 }}>PROFIL FINANCIER</div>
-                    <Field label="REVENUS" isDark={darkMode}><input value={form.revenus} onChange={e => setF("revenus", e.target.value)} style={iStyle("revenus")} /></Field>
-                    <Field label="BUDGET" isDark={darkMode}><input value={form.budget} onChange={e => setF("budget", e.target.value)} style={iStyle("budget")} /></Field>
-                    <Field label="INTÉRÊT" isDark={darkMode}><FSelect value={form.interet} onChange={e => setF("interet", e.target.value)} options={["Faible", "Moyen", "Élevé", "Très élevé"]} isDark={darkMode} /></Field>
-                    <button onClick={saveQualification}
-                    style={{ marginTop: 16, width: "100%", padding: "12px", background: "#1C4935", border: "none", borderRadius: 40, color: "#fff", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                      <Save size={14} /> ENREGISTRER
-                    </button>
-                  </div>
+          {/* Next contact */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {currentIndex + 1 < allContacts.length ? (
+              <>
+                <div className="glass-card flex-1 p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Prochain contact</p>
+                  <p className="font-semibold">
+                    {allContacts[currentIndex + 1]?.prenom} {allContacts[currentIndex + 1]?.nom}
+                  </p>
+                  <p className="text-xs text-primary">{allContacts[currentIndex + 1]?.telephone}</p>
+                </div>
+                <button onClick={handleNextContact}
+                  className="flex items-center justify-center gap-2 px-6 py-4 bg-primary text-primary-foreground rounded-2xl font-semibold text-sm hover:opacity-90 transition sm:w-48 shrink-0">
+                  Contact suivant <ChevronRight size={16}/>
+                </button>
+              </>
+            ) : (
+              <button onClick={handleNextContact}
+                className="flex-1 py-4 bg-success text-success-foreground rounded-2xl font-semibold text-sm hover:bg-success/90 transition flex items-center justify-center gap-2">
+                <CheckCircle size={16}/> Terminer la session
+              </button>
+            )}
+          </div>
+
+          <button onClick={() => navigate('/agent/contacts')}
+            className="w-full text-xs text-muted-foreground hover:text-foreground transition py-2">
+            ← Retour à la liste des contacts
+          </button>
+        </div>
+
+      ) : (
+
+      // ══════════════════════════════════════════════════════════════════════
+      // CALLING PHASE — 3-column layout
+      // ══════════════════════════════════════════════════════════════════════
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+        {/* ──────────────────────────────────────────────────────────────── */}
+        {/* COL 1 : Call console + Fiche prospect                            */}
+        {/* ──────────────────────────────────────────────────────────────── */}
+        <div className="space-y-4">
+
+          {/* Call console */}
+          <div className="glass-card p-5">
+            <div className="text-center mb-4">
+              <div className="text-4xl font-mono font-bold mb-1">{fmt(duree)}</div>
+              <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                enAppel && !isOnHold ? 'bg-success/15 text-success' :
+                enAppel ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground'}`}>
+                {enAppel && !isOnHold ? 'En ligne' : enAppel ? 'En attente' : 'Inactif'}
+              </span>
+            </div>
+
+            {/* Contact mini-card */}
+            <div className="flex items-center gap-3 mb-4 p-3 bg-muted/40 rounded-xl">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary text-sm shrink-0">
+                {(contact.prenom?.[0] || '?').toUpperCase()}{(contact.nom?.[0] || '').toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold text-sm truncate">{contact.prenom} {contact.nom}</div>
+                <a href={`tel:${contact.telephone}`} className="text-xs text-primary hover:underline">
+                  {contact.telephone}
+                </a>
+              </div>
+            </div>
+
+            {/* Call buttons */}
+            {!enAppel ? (
+              <button onClick={handleStartCall} disabled={!!activePause}
+                className="w-full py-3 bg-success text-success-foreground rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-success/90 transition disabled:opacity-40 disabled:cursor-not-allowed text-sm">
+                <Phone size={16}/> Démarrer l'appel
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex gap-2 justify-center">
+                  <button onClick={() => setIsMuted(!isMuted)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition ${
+                      isMuted ? 'bg-destructive/15 text-destructive border-destructive/30' : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'}`}>
+                    {isMuted ? <MicOff size={14}/> : <Mic size={14}/>}
+                    {isMuted ? 'Muet' : 'Micro'}
+                  </button>
+                  <button onClick={() => setIsOnHold(!isOnHold)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition ${
+                      isOnHold ? 'bg-warning/15 text-warning border-warning/30' : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'}`}>
+                    {isOnHold ? <Play size={14}/> : <Pause size={14}/>}
+                    {isOnHold ? 'Reprendre' : 'Attente'}
+                  </button>
+                </div>
+                <button onClick={handleStopCall}
+                  className="w-full py-2.5 bg-destructive text-destructive-foreground rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-destructive/90 transition text-sm">
+                  <PhoneOff size={15}/> Raccrocher
+                </button>
+              </div>
+            )}
+
+            {/* Manual AI trigger after call */}
+            {!enAppel && duree > 0 && !aiAnalysis && (
+              <button onClick={triggerAiAnalysis} disabled={aiLoading}
+                className="mt-3 w-full py-2 bg-primary text-primary-foreground rounded-xl text-xs font-medium hover:bg-primary/90 transition disabled:opacity-50 flex items-center justify-center gap-1.5">
+                <Zap size={13}/>
+                {aiLoading ? 'Analyse en cours…' : 'Analyser avec l\'IA'}
+              </button>
+            )}
+          </div>
+        </div>{/* end COL 1 */}
+
+        {/* ──────────────────────────────────────────────────────────────── */}
+        {/* COL 2 : Transcript + Qualification                               */}
+        {/* ──────────────────────────────────────────────────────────────── */}
+        <div className="space-y-4">
+
+          {/* Live transcript */}
+          <div className="bg-card rounded-2xl border shadow-sm flex flex-col" style={{ height: enAppel ? '380px' : '260px' }}>
+            <div className="px-4 py-3 border-b flex items-center gap-2 shrink-0">
+              <MessageSquare size={14} className="text-primary"/>
+              <span className="font-semibold text-sm">Transcription en direct</span>
+              <span className="ml-auto text-xs text-muted-foreground">{transcript.length} ligne{transcript.length !== 1 ? 's' : ''}</span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {transcript.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-1.5">
+                  <MessageSquare size={22} className="opacity-30"/>
+                  <p className="text-xs opacity-60">{enAppel ? 'Tapez ce que dit l\'agent ou le client' : 'La transcription apparaît pendant l\'appel'}</p>
                 </div>
               )}
-
-              {activeTab === "rdv" && (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                  <div>
-                    <Field label="DATE" isDark={darkMode}><input type="date" value={rdvDate} onChange={e => setRdvDate(e.target.value)} style={inputStyle(darkMode)} /></Field>
-                    <Field label="HEURE" isDark={darkMode}><input type="time" value={rdvTime} onChange={e => setRdvTime(e.target.value)} style={inputStyle(darkMode)} /></Field>
-                    <Field label="COMMERCIAL" isDark={darkMode}><FSelect value={rdvCommercial} onChange={e => setRdvCommercial(e.target.value)} options={["Michel Martin", "Jean-Luc Dubois", "Sarah Lopez"]} isDark={darkMode} /></Field>
-                    <button onClick={saveRdv}
-                    style={{ marginTop: 16, width: "100%", padding: "12px", background: "#8B7EF5", border: "none", borderRadius: 40, color: "#fff", fontWeight: 600 }}>CONFIRMER LE RENDEZ-VOUS</button>
+              {transcript.map((line, i) => (
+                <div key={i} className={`flex gap-2 ${line.role === 'agent' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    line.role === 'agent' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                    {line.role === 'agent' ? 'A' : 'C'}
                   </div>
-                  <div style={{ background: darkMode ? "#11161F" : "#F8FAFC", borderRadius: 16, padding: 18 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 14, color: darkMode ? "#F1F5F9" : "#0F172A" }}>RÉCAPITULATIF</div>
-                    {[["Date", rdvDate], ["Heure", rdvTime], ["Commercial", rdvCommercial], ["Client", contact.contact], ["Adresse", contact.city]].map(([k, v]) => (
-                      <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${darkMode ? "#252E3A" : "#E2E8F0"}`, fontSize: 13 }}>
-                        <span style={{ color: darkMode ? "#9AA9B9" : "#64748B" }}>{k}</span><span style={{ fontWeight: 600, color: darkMode ? "#F1F5F9" : "#0F172A" }}>{v}</span>
+                  <div className={`max-w-[78%] px-3 py-2 rounded-xl text-xs leading-snug ${
+                    line.role === 'agent' ? 'bg-primary/10 text-foreground rounded-tr-sm' : 'bg-muted text-foreground rounded-tl-sm'}`}>
+                    <p>{line.text}</p>
+                    <span className="text-muted-foreground mt-0.5 block">{fmt(line.ts)}</span>
+                  </div>
+                </div>
+              ))}
+              <div ref={transcriptEndRef}/>
+            </div>
+
+            {enAppel && (
+              <div className="p-3 border-t space-y-2 shrink-0">
+                <div className="flex rounded-lg overflow-hidden border text-xs font-medium">
+                  <button onClick={() => setInputRole('agent')}
+                    className={`flex-1 py-1.5 transition ${inputRole === 'agent' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}>
+                    Agent
+                  </button>
+                  <button onClick={() => setInputRole('client')}
+                    className={`flex-1 py-1.5 transition ${inputRole === 'client' ? 'bg-muted-foreground text-white' : 'bg-background text-muted-foreground hover:bg-muted'}`}>
+                    Client
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <input type="text" value={transcriptInput}
+                    onChange={e => setTranscriptInput(e.target.value)}
+                    onKeyDown={handleTranscriptKey}
+                    placeholder={inputRole === 'agent' ? 'Ce que vous dites…' : 'Ce que le client dit…'}
+                    className="flex-1 px-3 py-2 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary"/>
+                  <button onClick={addLine} disabled={!transcriptInput.trim()}
+                    className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 hover:opacity-90 disabled:opacity-40 transition">
+                    <Send size={13}/>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Qualification form */}
+          <div className="glass-card p-5">
+            <h3 className="font-semibold text-sm mb-4">Qualification</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Besoin identifié <span className="text-destructive">*</span>
+                </label>
+                <select value={besoin} onChange={e => setBesoin(e.target.value)}
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                  <option value="">Sélectionner…</option>
+                  <option value="PAC">PAC — Pompe à chaleur</option>
+                  <option value="PAC_EAU">PAC Air/Eau</option>
+                  <option value="PV">PV — Panneaux solaires</option>
+                  <option value="ISOLATION">Isolation thermique</option>
+                  <option value="CHAUDIERE">Chaudière</option>
+                  <option value="CCE">Chauffe-eau</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Budget estimé</label>
+                <input type="text" value={budget} onChange={e => setBudget(e.target.value)}
+                  placeholder="Ex : 15 000 €"
+                  className="w-full px-3 py-2 bg-background border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+              </div>
+
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Niveau d'intérêt <span className="text-destructive">*</span>
+                </label>
+                <div className="flex gap-1 flex-wrap">
+                  {['Faible', 'Moyen', 'Élevé', 'Très élevé'].map(n => (
+                    <button key={n} onClick={() => setNiveauInteret(n)}
+                      className={`px-2.5 py-1 rounded-lg text-xs transition ${
+                        niveauInteret === n ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">Notes</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
+                  placeholder="Notes sur l'appel…"
+                  className="w-full px-3 py-2 bg-background border rounded-lg resize-none text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+              </div>
+
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">
+                  Date de rappel <span className="text-destructive">*</span> <span className="text-muted-foreground font-normal">(requis si Rappel)</span>
+                </label>
+                <input type="datetime-local" value={dateRappel} onChange={e => setDateRappel(e.target.value)}
+                  className="w-full px-3 py-1.5 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary"/>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="glass-card p-5">
+            <h3 className="font-semibold text-sm mb-3">Action</h3>
+
+            {enAppel && (
+              <div className="mb-3 px-3 py-2 bg-warning/10 border border-warning/30 text-warning rounded-lg text-xs text-center">
+                Raccrochez d'abord pour qualifier l'appel
+              </div>
+            )}
+
+            {!enAppel && duree === 0 && (
+              <div className="mb-3 px-3 py-2 bg-muted/60 rounded-lg text-xs text-muted-foreground text-center">
+                Démarrez et terminez un appel avant de qualifier
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'converti', label: 'RDV Pris',  icon: <CheckCircle size={14}/>, cls: 'bg-success hover:bg-success/90', hint: 'Besoin + Intérêt requis' },
+                { id: 'rappel',  label: 'Rappel',     icon: <RotateCcw size={14}/>,   cls: 'bg-primary hover:bg-primary/90',   hint: 'Besoin + Date requis' },
+                { id: 'refuse',  label: 'Refus',      icon: <XCircle size={14}/>,     cls: 'bg-destructive hover:bg-destructive/90',     hint: '' },
+                { id: 'nrp',     label: 'NRP',        icon: <Phone size={14}/>,       cls: 'bg-warning hover:bg-warning/90', hint: '' },
+              ].map(({ id, label, icon, cls, hint }) => (
+                <button key={id}
+                  onClick={() => handleQualification(id as 'converti' | 'rappel' | 'refuse' | 'nrp')}
+                  disabled={submitting || enAppel || duree === 0}
+                  title={hint}
+                  className={`flex items-center justify-center gap-1.5 py-2.5 text-white rounded-xl text-sm font-medium transition disabled:opacity-40 disabled:cursor-not-allowed ${cls}`}>
+                  {icon} {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ──────────────────────────────────────────────────────────────── */}
+        {/* COL 3 : AI Analysis                                              */}
+        {/* ──────────────────────────────────────────────────────────────── */}
+        <div className="space-y-4">
+          <div className="glass-card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap size={15} className="text-primary"/>
+              <h3 className="font-semibold text-sm">Analyse IA</h3>
+              {aiLoading && (
+                <span className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="w-3 h-3 border border-primary/40 border-t-primary rounded-full animate-spin inline-block"/>
+                  Analyse…
+                </span>
+              )}
+              {aiAnalysis && !aiLoading && (
+                <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
+                  aiAnalysis.performance === 'Excellent' ? 'bg-success/15 text-success' :
+                  aiAnalysis.performance === 'Bon' ? 'bg-primary/15 text-primary' :
+                  aiAnalysis.performance === 'Moyen' ? 'bg-warning/15 text-warning' : 'bg-destructive/15 text-destructive'}`}>
+                  {aiAnalysis.performance}
+                </span>
+              )}
+            </div>
+
+            {!aiAnalysis && !aiLoading && (
+              <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground gap-2">
+                <BarChart2 size={28} className="opacity-30"/>
+                <p className="text-xs">Démarrez et terminez un appel<br/>pour l'analyse IA automatique</p>
+              </div>
+            )}
+
+            {aiLoading && (
+              <div className="flex flex-col items-center justify-center h-48 gap-3">
+                <div className="animate-spin rounded-full w-8 h-8 border-2 border-primary/20 border-t-primary"/>
+                <p className="text-xs text-muted-foreground">Diarisation · Sentiment · Refus…</p>
+              </div>
+            )}
+
+            {aiAnalysis && !aiLoading && (
+              <>
+                <div className="flex gap-1 mb-4 bg-muted rounded-lg p-1">
+                  {(['scores', 'analysis', 'transcript', 'refusal'] as const).map(tab => (
+                    <button key={tab} onClick={() => setAiTab(tab)}
+                      className={`flex-1 py-1 text-xs font-medium rounded-md transition ${
+                        aiTab === tab ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                      {tab === 'scores' ? 'Scores' : tab === 'analysis' ? 'Analyse' : tab === 'transcript' ? 'Transcript' : 'Refus'}
+                    </button>
+                  ))}
+                </div>
+
+                {aiTab === 'scores' && (
+                  <div className="space-y-4">
+                    <div className="flex justify-around">
+                      <CircleScore value={aiAnalysis.score_percentage} label="Global" color="#8B7EF5"/>
+                      <CircleScore value={aiAnalysis.agent_talk_ratio} label="Parole agent" color="#2DCF7F"/>
+                      <CircleScore value={aiAnalysis.client_talk_ratio} label="Parole client" color="#5D9BFF"/>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <ScoreBar label="Écoute"          value={aiAnalysis.score_ecoute}        color="#8B7EF5"/>
+                      <ScoreBar label="Persuasion"      value={aiAnalysis.score_persuasion}    color="#5D9BFF"/>
+                      <ScoreBar label="Empathie"        value={aiAnalysis.score_empathie}      color="#2DCF7F"/>
+                      <ScoreBar label="Argumentation"   value={aiAnalysis.score_argumentation} color="#F0B34B"/>
+                      <ScoreBar label="Gestion refus"   value={aiAnalysis.score_refus}         color="#FB923C"/>
+                      <ScoreBar label="Technique vente" value={aiAnalysis.score_vente}         color="var(--color-chart-5)"/>
+                    </div>
+                  </div>
+                )}
+
+                {aiTab === 'analysis' && (
+                  <div className="space-y-3 text-xs">
+                    {aiAnalysis.summary && (
+                      <div className="px-3 py-2.5 bg-muted/60 rounded-lg leading-relaxed">{aiAnalysis.summary}</div>
+                    )}
+                    {aiAnalysis.keywords.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {aiAnalysis.keywords.map(k => (
+                          <span key={k} className="px-2 py-0.5 bg-primary/15 text-primary rounded-full">{k}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        { ok: aiAnalysis.script_respected,     yes: '✓ Script OK',    no: '✗ Script' },
+                        { ok: aiAnalysis.objections_handled,   yes: '✓ Objections',   no: '⚠ Objections' },
+                        { ok: aiAnalysis.appointment_detected, yes: '✓ RDV détecté',  no: '— RDV' },
+                        { ok: aiAnalysis.qualification_coherent, yes: '✓ Qualif OK',  no: '✗ Qualif' },
+                      ].map(({ ok, yes, no }) => (
+                        <div key={yes} className={`px-2 py-1.5 rounded-lg ${ok ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+                          {ok ? yes : no}
+                        </div>
+                      ))}
+                    </div>
+                    {aiAnalysis.next_steps && (
+                      <div className="px-3 py-2 rounded-lg bg-primary/10 text-primary">
+                        <span className="font-medium">Prochaine étape :</span> {aiAnalysis.next_steps}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {aiTab === 'transcript' && (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {transcript.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-6">Aucune transcription enregistrée</p>
+                    )}
+                    {transcript.map((line, i) => (
+                      <div key={i} className={`flex gap-2 ${line.role === 'agent' ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                          line.role === 'agent' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                          {line.role === 'agent' ? 'A' : 'C'}
+                        </div>
+                        <div className={`max-w-[80%] px-2.5 py-1.5 rounded-xl text-xs ${
+                          line.role === 'agent' ? 'bg-primary/10 rounded-tr-sm' : 'bg-muted rounded-tl-sm'}`}>
+                          {line.text}
+                          <span className="block text-muted-foreground">{fmt(line.ts)}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
 
-              {activeTab === "statut" && (
-                <div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
-                    {STATUS_OPTIONS.map(s => {
-                      const isActive = crmStatus === s.value;
-                      const c = getColorByKey(s.color);
-      
-                      return (
-                        <button key={s.value} onClick={() => setCrmStatus(s.value)} style={{
-                          padding: "7px 16px", borderRadius: 30, fontSize: 12, fontWeight: 500,
-                          border: `1px solid ${isActive ? c.border : (darkMode ? "#252E3A" : "#E2E8F0")}`,
-                          background: isActive ? c.bg : (darkMode ? "#11161F" : "#F8FAFC"),
-                          color: isActive ? c.text : (darkMode ? "#9AA9B9" : "#64748B"),
-                        }}>
-                          {isActive && <Check size={11} style={{ marginRight: 6, display: "inline" }} />}
-                          {s.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <textarea value={agentNote} onChange={e => setAgentNote(e.target.value)} rows={3} style={{ width: "100%", padding: "12px", background: darkMode ? "#11161F" : "#F8FAFC", borderRadius: 16, border: `1px solid ${darkMode ? "#252E3A" : "#E2E8F0"}`, color: darkMode ? "#F1F5F9" : "#0F172A" }} />
-                  <button onClick={saveCrm}
-                  style={{ marginTop: 16, padding: "12px 24px", background: "#1C4935", border: "none", borderRadius: 40, color: "#fff", fontWeight: 600 }}><Save size={14} style={{ marginRight: 8 }} /> SAUVEGARDER CRM</button>
-                </div>
-              )}
-
-              {activeTab === "notes" && (
-                <div>
-                  <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-                    <input value={newNote} onChange={e => setNewNote(e.target.value)} placeholder="Ajouter une note..." onKeyDown={e => e.key === "Enter" && addNote()} style={{ flex: 1, ...inputStyle(darkMode) }} />
-                    <button onClick={addNote} style={{ padding: "10px 20px", background: "#8B7EF5", border: "none", borderRadius: 40, cursor: "pointer" }}><Plus size={16} color="#fff" /></button>
-                  </div>
-                  {notes.map(n => (
-                    <div key={n.id} style={{ padding: "14px", background: darkMode ? "#11161F" : "#F8FAFC", borderRadius: 16, marginBottom: 12 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: "#8B7EF5" }}>{n.author}</span>
-                        <span style={{ fontSize: 11, color: darkMode ? "#5A6C7E" : "#94A3B8" }}>{n.time}</span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: 13, color: darkMode ? "#F1F5F9" : "#0F172A" }}>{n.text}</p>
+                {aiTab === 'refusal' && (
+                  <div className="space-y-3 text-xs">
+                    <div className={`flex items-center gap-2 px-3 py-2.5 rounded-lg font-medium ${
+                      aiAnalysis.refusal_detected ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
+                      {aiAnalysis.refusal_detected ? <XCircle size={14}/> : <CheckCircle size={14}/>}
+                      {aiAnalysis.refusal_detected ? 'Refus détecté' : 'Aucun refus détecté'}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    {aiAnalysis.refusal_detected && (
+                      <>
+                        {aiAnalysis.refusal_motive && (
+                          <div className="px-3 py-2 bg-muted/60 rounded-lg">{aiAnalysis.refusal_motive}</div>
+                        )}
+                        {aiAnalysis.refusal_keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {aiAnalysis.refusal_keywords.map(k => (
+                              <span key={k} className="px-2 py-0.5 bg-destructive/15 text-destructive rounded-full">{k}</span>
+                            ))}
+                          </div>
+                        )}
+                        {aiAnalysis.suggested_response && (
+                          <div className="px-3 py-2 bg-warning/10 text-warning rounded-lg">
+                            <span className="font-medium">Réponse suggérée :</span> {aiAnalysis.suggested_response}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {aiAnalysis.inactivity_detected && (
+                      <div className="px-3 py-2 bg-warning/10 text-warning rounded-lg">
+                        Inactivité détectée — appel trop court
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 
-        {/* RIGHT COLUMN */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <Section title="FICHE PROSPECT" icon={User} iconColor="#5D9BFF" isDark={darkMode}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18, padding: "12px", background: darkMode ? "#11161F" : "#F8FAFC", borderRadius: 18 }}>
-              <div style={{ width: 52, height: 52, borderRadius: "50%", background: getColorByKey("purple").bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: getColorByKey("purple").text }}>JD</div>
-              <div><div style={{ fontWeight: 700, fontSize: 16, color: darkMode ? "#F1F5F9" : "#0F172A" }}>{contact.contact}</div><div style={{ fontSize: 12, color: darkMode ? "#9AA9B9" : "#64748B" }}>{contact.role} · {contact.company}</div></div>
-            </div>
-            {[
-              { icon: PhoneCall, val: contact.phone },
-              { icon: Mail, val: contact.email },
-              { icon: MapPin, val: contact.city },
-            ].map(({ icon: I, val }) => (
-              <div key={val} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13, marginBottom: 10 }}>
-                <I size={14} style={{ color: darkMode ? "#5A6C7E" : "#94A3B8" }} /><span style={{ color: darkMode ? "#9AA9B9" : "#64748B" }}>{val}</span>
-              </div>
-            ))}
-          </Section>
-
-          <Section title="COMPOSER UN NUMÉRO" icon={PhoneCall} iconColor="#F0B34B" isDark={darkMode}>
-            <PhoneKeypad onCall={handleManualCall} />
-          </Section>
-
-          <Section title="PIPELINE CRM" icon={Activity} iconColor="#2DCF7F" isDark={darkMode}>
-            {[
-              { step: 1, title: "Agent", detail: "Qualification & RDV", active: callState === 'calling' },
-              { step: 2, title: "Confirmation", detail: "Vérification qualité", active: callState === 'cooldown' },
-              { step: 3, title: "Commercial", detail: "Visite à domicile", active: false },
-              { step: 4, title: "Installation", detail: "Pose & raccordement", active: false },
-            ].map(({ step, title, detail, active }) => (
-              <div key={step} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px", borderRadius: 14, background: active ? getColorByKey("green").bg : (darkMode ? "#11161F" : "#F8FAFC"), marginBottom: 10 }}>
-                <div style={{ width: 30, height: 30, borderRadius: "50%", background: active ? getColorByKey("green").text : (darkMode ? "#2A3645" : "#CBD5E1"), display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: active ? (darkMode ? "#03050A" : "#0F172A") : (darkMode ? "#5A6C7E" : "#94A3B8") }}>{step}</div>
-                <div style={{ flex: 1 }}><div style={{ fontWeight: 600, fontSize: 13, color: darkMode ? "#F1F5F9" : "#0F172A" }}>{title}</div><div style={{ fontSize: 11, color: darkMode ? "#5A6C7E" : "#94A3B8" }}>{detail}</div></div>
-                {active && <Badge color="green" isDark={darkMode}>En cours</Badge>}
-              </div>
-            ))}
-          </Section>
-
-          <Section title="ANALYSE IA" icon={Sparkles} iconColor="#8B7EF5" isDark={darkMode} action={aiLoading ? <RefreshCw size={14} className="spin-animation" style={{ color: "#8B7EF5" }} /> : undefined}>
-            <div style={{ display: "flex", justifyContent: "space-around", marginBottom: 16 }}>
-              <CircleScore value={aiScore.lead} label="Score Lead" color="#8B7EF5" isDark={darkMode} />
-              <CircleScore value={aiScore.conversion} label="Conversion" color="#2DCF7F" isDark={darkMode} />
-            </div>
-            <Div isDark={darkMode} />
-            <div><div style={{ fontSize: 10, color: darkMode ? "#5A6C7E" : "#94A3B8", marginBottom: 6 }}>RÉSUMÉ AUTOMATIQUE</div><p style={{ fontSize: 12, background: darkMode ? "#11161F" : "#F8FAFC", padding: "12px", borderRadius: 14, lineHeight: 1.5, color: darkMode ? "#F1F5F9" : "#0F172A" }}>Prospect Jean Dupont, propriétaire depuis 2010, chaudière fioul 12 ans. Revenus ~38k€, projet de PAC. RDV confirmé mardi 10h. Fort potentiel.</p></div>
-            {objections.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 10, color: darkMode ? "#5A6C7E" : "#94A3B8", marginBottom: 6 }}>OBJECTIONS</div>
-                <div style={{ display: "flex", gap: 8 }}>{objections.map(o => <Badge key={o} color="amber" isDark={darkMode}>{o}</Badge>)}</div>
-              </div>
-            )}
-          </Section>
-
-          <Section title="ACTIONS RAPIDES" icon={Zap} iconColor="#F0B34B" isDark={darkMode}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {[
-                { label: "SMS", icon: Send, color: "blue" as ColorKey },
-                { label: "RDV", icon: Calendar, color: "purple" as ColorKey },
-                { label: "Lead Chaud", icon: TrendingUp, color: "orange" as ColorKey },
-                { label: "Export", icon: Download, color: "slate" as ColorKey },
-              ].map(({ label, icon: I, color }) => (
-                <button key={label} style={{ padding: "10px", background: darkMode ? "#11161F" : "#F8FAFC", border: `1px solid ${darkMode ? "#252E3A" : "#E2E8F0"}`, borderRadius: 40, fontSize: 12, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: darkMode ? "#F1F5F9" : "#0F172A" }}>
-                  <I size={14} style={{ color: getColorByKey(color).text }} /> {label}
-                </button>
-              ))}
-            </div>
-          </Section>
-        </div>
       </div>
-    </div>
+      )}</>
   );
-};
-
-export default ContactPage;
+}

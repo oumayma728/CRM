@@ -143,7 +143,10 @@ const Chatbot: React.FC = () => {
       const response = await api.sendChatMessage(
         userMessage.content,
         user?.role || 'agent',
-        user?.username
+        user?.username,
+        messages
+          .filter((m) => m.role === 'user' || m.role === 'assistant')
+          .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
       );
       
       const assistantMessage: Message = {

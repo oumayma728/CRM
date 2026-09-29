@@ -7,6 +7,9 @@ using Backend.Data;
 using Backend.Entities;
 using Backend.Helpers;
 using Microsoft.EntityFrameworkCore;
+using Backend.Attributes;
+using Backend.DTOs.Admin;
+using Backend.Services.Admin;
 
 namespace Backend.Controllers;
 
@@ -17,11 +20,93 @@ public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly ApplicationDbContext _context;
+    private readonly IAdminService _adminService;
 
-    public AuthController(IAuthService authService, ApplicationDbContext context)
+    public AuthController(IAuthService authService, ApplicationDbContext context, IAdminService adminService)
     {
         _authService = authService;
         _context = context;
+        _adminService = adminService;
+    }
+
+    // ── Gestion rapide agents / qualité (pages Agents & Dashboard, contrat khaled-dev-v3) ──
+    // Le CRUD complet de tous les rôles reste dans AdminController (/api/admin/utilisateurs).
+
+    public record QuickUserCreateDto(string? Username, string? Password, string? Name, string? Role, string? Email);
+    public record QuickUserUpdateDto(string? Name, string? Email, string? Password);
+
+    private static (string prenom, string nom) SplitName(string? name)
+    {
+        var parts = (name ?? "").Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length switch { 0 => ("", ""), 1 => (parts[0], ""), _ => (parts[0], parts[1]) };
+    }
+
+    /// <summary>Agents et superviseurs qualité actifs</summary>
+    [HttpGet("agents")]
+    [Authorize]
+    [SnakeCaseJson]
+    public async Task<IActionResult> GetAgents()
+    {
+        var users = await _context.Utilisateurs.AsNoTracking()
+            .Where(u => u.Actif && (u.Role == "AGENT" || u.Role == "QUALITE"))
+            .OrderBy(u => u.Nom)
+            .ToListAsync();
+        return Ok(users.Select(u => new
+        {
+            u.Id,
+            Username = u.Email,
+            Name = $"{u.Prenom} {u.Nom}".Trim(),
+            Role = u.Role.ToLowerInvariant(),
+            u.Email,
+            CreatedAt = u.DateCreation,
+        }));
+    }
+
+    [HttpPost("users/create")]
+    [Authorize(Roles = "ADMIN,SuperAdmin")]
+    [SnakeCaseJson]
+    public async Task<IActionResult> CreateQuickUser([FromBody] QuickUserCreateDto dto)
+    {
+        var email = !string.IsNullOrWhiteSpace(dto.Email) ? dto.Email! : dto.Username ?? "";
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(dto.Password))
+            return BadRequest(new { detail = "Email et mot de passe requis." });
+        if (await _context.Utilisateurs.AnyAsync(u => u.Email == email))
+            return BadRequest(new { detail = "Cet email est déjà utilisé." });
+
+        var (prenom, nom) = SplitName(dto.Name);
+        var created = await _adminService.CreateUtilisateurAsync(new UtilisateurRequestDTO
+        {
+            Nom = nom, Prenom = prenom, Email = email, MotDePasse = dto.Password!, Role = dto.Role ?? "agent",
+        });
+        return Ok(new { success = true, message = "Utilisateur créé", user_id = created.Id });
+    }
+
+    [HttpPut("users/{userId:long}")]
+    [Authorize(Roles = "ADMIN,SuperAdmin")]
+    [SnakeCaseJson]
+    public async Task<IActionResult> UpdateQuickUser(long userId, [FromBody] QuickUserUpdateDto dto)
+    {
+        var user = await _context.Utilisateurs.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null) return NotFound(new { detail = "Utilisateur introuvable." });
+
+        if (!string.IsNullOrWhiteSpace(dto.Name)) (user.Prenom, user.Nom) = SplitName(dto.Name);
+        if (!string.IsNullOrWhiteSpace(dto.Email)) user.Email = dto.Email!;
+        if (!string.IsNullOrWhiteSpace(dto.Password)) user.MotDePasse = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+        await _context.SaveChangesAsync();
+        return Ok(new { success = true, message = "Utilisateur mis à jour" });
+    }
+
+    [HttpDelete("users/{userId:long}")]
+    [Authorize(Roles = "ADMIN,SuperAdmin")]
+    [SnakeCaseJson]
+    public async Task<IActionResult> DeleteQuickUser(long userId)
+    {
+        try
+        {
+            await _adminService.DeleteUtilisateurAsync(userId);
+            return Ok(new { success = true, message = "Utilisateur désactivé" });
+        }
+        catch (KeyNotFoundException ex) { return NotFound(new { detail = ex.Message }); }
     }
 
     /// <summary>Profil de l'utilisateur connecté (restauration de session côté frontend)</summary>
