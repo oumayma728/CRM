@@ -75,7 +75,7 @@ export default function MonHistoriquePointagePage() {
         <select
           value={days}
           onChange={e => setDays(Number(e.target.value))}
-          className="text-sm border border-border rounded-lg px-3 py-1.5 bg-card"
+          className="glass-input text-sm rounded-lg px-3 py-1.5"
         >
           <option value={7}>7 derniers jours</option>
           <option value={14}>14 derniers jours</option>

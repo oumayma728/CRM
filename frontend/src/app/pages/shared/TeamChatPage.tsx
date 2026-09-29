@@ -288,7 +288,7 @@ export default function TeamChatPage() {
               onKeyDown={handleKey}
               placeholder={`Message dans #${activeInfo?.label ?? activeChannel}…`}
               rows={1}
-              className="flex-1 resize-none bg-muted/50 border border-input rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary max-h-32 overflow-y-auto"
+              className="glass-input flex-1 resize-none bg-muted/50 border-input rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary max-h-32 overflow-y-auto"
               style={{ minHeight: '42px' }}
             />
             <button

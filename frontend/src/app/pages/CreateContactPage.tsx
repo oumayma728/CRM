@@ -379,7 +379,7 @@ export default function CreateContactPage() {
                 type="checkbox"
                 checked={newContact.etudePV}
                 onChange={(e) => setNewContact({...newContact, etudePV: e.target.checked})}
-                className="w-4 h-4 text-primary rounded border-border"
+                className="w-4 h-4 text-primary rounded"
               />
               <span className="text-foreground">Étude PV</span>
             </label>
@@ -388,7 +388,7 @@ export default function CreateContactPage() {
                 type="checkbox"
                 checked={newContact.equipePV}
                 onChange={(e) => setNewContact({...newContact, equipePV: e.target.checked})}
-                className="w-4 h-4 text-primary rounded border-border"
+                className="w-4 h-4 text-primary rounded"
               />
               <span className="text-foreground">Équipé PV</span>
             </label>
@@ -397,7 +397,7 @@ export default function CreateContactPage() {
                 type="checkbox"
                 checked={newContact.equipePAC}
                 onChange={(e) => setNewContact({...newContact, equipePAC: e.target.checked})}
-                className="w-4 h-4 text-primary rounded border-border"
+                className="w-4 h-4 text-primary rounded"
               />
               <span className="text-foreground">Équipé PAC</span>
             </label>

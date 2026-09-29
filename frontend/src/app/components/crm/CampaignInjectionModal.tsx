@@ -146,7 +146,7 @@ export const CampaignInjectionModal: React.FC<CampaignInjectionModalProps> = ({
                     <select
                         value={selectedCampaignId || ''}
                         onChange={(event) => setSelectedCampaignId(Number(event.target.value) || null)}
-                        className="w-full rounded-lg border border-border p-3"
+                        className="glass-input w-full rounded-lg p-3"
                         disabled={isLoading || isInjecting}
                     >
                         <option value="">

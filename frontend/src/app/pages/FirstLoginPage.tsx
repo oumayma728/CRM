@@ -78,7 +78,7 @@ export default function FirstLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40"
+                className="glass-input w-full pl-10 pr-4 py-2 rounded-lg focus:ring-2 focus:ring-primary/40"
                 placeholder="votre@email.com"
                 required
               />
@@ -93,7 +93,7 @@ export default function FirstLoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={tempPassword}
                 onChange={(e) => setTempPassword(e.target.value)}
-                className="w-full pl-10 pr-12 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40"
+                className="glass-input w-full pl-10 pr-12 py-2 rounded-lg focus:ring-2 focus:ring-primary/40"
                 required
               />
             </div>
@@ -107,7 +107,7 @@ export default function FirstLoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full pl-10 pr-12 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40"
+                className="glass-input w-full pl-10 pr-12 py-2 rounded-lg focus:ring-2 focus:ring-primary/40"
                 required
               />
             </div>
@@ -121,7 +121,7 @@ export default function FirstLoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full pl-10 pr-12 py-2 border rounded-lg focus:ring-2 focus:ring-primary/40"
+                className="glass-input w-full pl-10 pr-12 py-2 rounded-lg focus:ring-2 focus:ring-primary/40"
                 required
               />
             </div>

@@ -728,7 +728,7 @@ export default function ContactPage() {
                     onChange={e => setTranscriptInput(e.target.value)}
                     onKeyDown={handleTranscriptKey}
                     placeholder={inputRole === 'agent' ? 'Ce que vous dites…' : 'Ce que le client dit…'}
-                    className="flex-1 px-3 py-2 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary"/>
+                    className="glass-input flex-1 px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary"/>
                   <button onClick={addLine} disabled={!transcriptInput.trim()}
                     className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 hover:opacity-90 disabled:opacity-40 transition">
                     <Send size={13}/>
@@ -747,7 +747,7 @@ export default function ContactPage() {
                   Besoin identifié <span className="text-destructive">*</span>
                 </label>
                 <select value={besoin} onChange={e => setBesoin(e.target.value)}
-                  className="w-full px-3 py-2 bg-background border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                  className="glass-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                   <option value="">Sélectionner…</option>
                   <option value="PAC">PAC — Pompe à chaleur</option>
                   <option value="PAC_EAU">PAC Air/Eau</option>
@@ -762,7 +762,7 @@ export default function ContactPage() {
                 <label className="block text-xs text-muted-foreground mb-1">Budget estimé</label>
                 <input type="text" value={budget} onChange={e => setBudget(e.target.value)}
                   placeholder="Ex : 15 000 €"
-                  className="w-full px-3 py-2 bg-background border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+                  className="glass-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
               </div>
 
               <div>
@@ -784,7 +784,7 @@ export default function ContactPage() {
                 <label className="block text-xs text-muted-foreground mb-1">Notes</label>
                 <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                   placeholder="Notes sur l'appel…"
-                  className="w-full px-3 py-2 bg-background border rounded-lg resize-none text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+                  className="glass-input w-full px-3 py-2 rounded-lg resize-none text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
               </div>
 
               <div>
@@ -792,7 +792,7 @@ export default function ContactPage() {
                   Date de rappel <span className="text-destructive">*</span> <span className="text-muted-foreground font-normal">(requis si Rappel)</span>
                 </label>
                 <input type="datetime-local" value={dateRappel} onChange={e => setDateRappel(e.target.value)}
-                  className="w-full px-3 py-1.5 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary"/>
+                  className="glass-input w-full px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary"/>
               </div>
             </div>
           </div>

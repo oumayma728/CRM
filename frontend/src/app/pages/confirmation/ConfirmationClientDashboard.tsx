@@ -358,7 +358,7 @@ export default function ConfirmationClientDashboard() {
                 <select
                   value={selectedCommercial}
                   onChange={(e) => setSelectedCommercial(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none bg-card text-foreground"
+                  className="glass-input w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary outline-none text-foreground"
                 >
                   <option value="">-- Choisir un commercial --</option>
                   {commerciaux.map((c) => (
@@ -375,7 +375,7 @@ export default function ConfirmationClientDashboard() {
                 <textarea
                   value={commentaireBanque}
                   onChange={(e) => setCommentaireBanque(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none bg-card text-foreground"
+                  className="glass-input w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary outline-none text-foreground"
                   rows={3}
                   placeholder="Ajouter un commentaire pour la banque..."
                 />

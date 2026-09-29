@@ -204,7 +204,7 @@ export default function CommercialAgenda() {
                         <select
                           value={form.statut}
                           onChange={e => setForm(f => ({ ...f, statut: e.target.value }))}
-                          className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-muted appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="glass-input w-full px-4 py-2.5 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30"
                         >
                           {STATUTS_COMMERCIAL.map(s => (
                             <option key={s.value} value={s.value}>{s.label}</option>
@@ -221,7 +221,7 @@ export default function CommercialAgenda() {
                         onChange={e => setForm(f => ({ ...f, commentaireCommercial: e.target.value }))}
                         rows={3}
                         placeholder="Observations sur la visite…"
-                        className="w-full px-4 py-2.5 border border-border rounded-xl text-sm bg-muted resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        className="glass-input w-full px-4 py-2.5 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
                     </div>
 
@@ -243,7 +243,7 @@ export default function CommercialAgenda() {
                           type="datetime-local"
                           value={form.dateReport || ''}
                           onChange={e => setForm(f => ({ ...f, dateReport: e.target.value }))}
-                          className="px-4 py-2.5 border border-border rounded-xl text-sm bg-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="glass-input px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                         />
                       </div>
                     )}

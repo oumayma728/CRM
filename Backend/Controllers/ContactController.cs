@@ -270,7 +270,7 @@ public class ContactController : ControllerBase
 
     /// <summary>Exporter tous les contacts en CSV</summary>
     [HttpGet("export/csv")]
-    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "ADMIN,TECH")]
+    [Microsoft.AspNetCore.Authorization.Authorize(Roles = "ADMIN,SuperAdmin,TECH")]
     public async Task<IActionResult> ExportCsv([FromQuery] long? fichierId)
     {
         var query = _context.Contacts.Include(c => c.Agent).AsQueryable();

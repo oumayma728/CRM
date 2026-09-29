@@ -74,7 +74,7 @@ export default function Pointage() {
             type="date"
             value={date}
             onChange={e => setDate(e.target.value)}
-            className="px-3 py-1.5 border border-border rounded-lg text-sm bg-card"
+            className="glass-input px-3 py-1.5 rounded-lg text-sm"
           />
         </div>
       </div>

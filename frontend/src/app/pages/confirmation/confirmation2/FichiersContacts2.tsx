@@ -156,11 +156,11 @@ export default function FichiersContacts() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Fichier CSV/Excel</label>
-                <input type="file" accept=".csv,.xlsx,.xls" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="w-full p-2 border rounded" />
+                <input type="file" accept=".csv,.xlsx,.xls" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="w-full p-2 rounded" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Nom de la campagne</label>
-                <input type="text" value={campagne} onChange={(e) => setCampagne(e.target.value)} className="w-full p-2 border rounded" placeholder="Campagne été 2026" />
+                <input type="text" value={campagne} onChange={(e) => setCampagne(e.target.value)} className="glass-input w-full p-2 rounded" placeholder="Campagne été 2026" />
               </div>
               <div className="flex justify-end gap-2">
                 <button onClick={() => setShowUpload(false)} className="px-4 py-2 border rounded hover:bg-muted">Annuler</button>

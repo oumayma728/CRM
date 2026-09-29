@@ -128,13 +128,13 @@ export default function HistoryPage() {
               placeholder="Rechercher par société ou contact..."
               value={recherche}
               onChange={(e) => setRecherche(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="glass-input w-full pl-10 pr-4 py-2.5 bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
           <select
             value={filtre}
             onChange={(e) => setFiltre(e.target.value)}
-            className="px-4 py-2.5 bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            className="glass-input px-4 py-2.5 bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {filterOptions.map(option => (
               <option key={option} value={option}>{option}</option>

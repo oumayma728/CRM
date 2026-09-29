@@ -88,7 +88,7 @@ export default function ChangePasswordPage() {
                       type={showPassword ? 'text' : 'password'}
                       value={oldPassword}
                       onChange={(e) => setOldPassword(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+                      className="glass-input w-full pl-10 pr-4 py-3 bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
                       placeholder="••••••••"
                       required
                     />
@@ -103,7 +103,7 @@ export default function ChangePasswordPage() {
                       type={showPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full pl-10 pr-12 py-3 bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+                      className="glass-input w-full pl-10 pr-12 py-3 bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
                       placeholder="Minimum 8 caractères"
                       required
                       minLength={8}
@@ -126,7 +126,7 @@ export default function ChangePasswordPage() {
                       type={showPassword ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+                      className="glass-input w-full pl-10 pr-4 py-3 bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
                       placeholder="Répétez le mot de passe"
                       required
                     />

@@ -61,7 +61,7 @@ export default function CompteCalendrier() {
                 value={calId}
                 onChange={e => setCalId(e.target.value)}
                 placeholder="ex: agenda.ebi2026"
-                className="w-full px-3 py-2 border border-border rounded-lg bg-card focus:ring-2 focus:ring-primary outline-none text-sm"
+                className="glass-input w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
               />
             </div>
 
@@ -74,7 +74,7 @@ export default function CompteCalendrier() {
                 value={mdp}
                 onChange={e => setMdp(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-3 py-2 border border-border rounded-lg bg-card focus:ring-2 focus:ring-primary outline-none text-sm"
+                className="glass-input w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
               />
             </div>
 

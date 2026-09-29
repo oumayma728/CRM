@@ -121,7 +121,7 @@ export function RecycleTab() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Rechercher une liste recyclee..."
-                className="w-full rounded-lg border border-border py-2.5 pl-10 pr-3 text-sm focus:border-primary focus:outline-none"
+                className="glass-input w-full rounded-lg py-2.5 pl-10 pr-3 text-sm focus:border-primary focus:outline-none"
               />
             </div>
             <button

@@ -635,7 +635,7 @@ export default function DialerPage() {
                   <div>
                     <label className="text-xs text-muted-foreground mb-1 block">Projet détecté</label>
                     <select value={besoin} onChange={e => setBesoin(e.target.value)}
-                      className="w-full px-2.5 py-1.5 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                      className="glass-input w-full px-2.5 py-1.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                       <option value="">— Sélectionner —</option>
                       <option value="PAC">PAC Air/Air</option>
                       <option value="PAC_EAU">PAC Air/Eau</option>
@@ -742,7 +742,7 @@ export default function DialerPage() {
                       onChange={e => setTranscriptInput(e.target.value)}
                       onKeyDown={handleTranscriptKey}
                       placeholder={inputRole === 'agent' ? "Ce que vous dites…" : "Ce que le client dit…"}
-                      className="flex-1 px-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="glass-input flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                     <button onClick={addTranscriptLine}
                       disabled={!transcriptInput.trim()}
@@ -809,7 +809,7 @@ export default function DialerPage() {
                   <div className="mb-3">
                     <label className="text-xs text-muted-foreground mb-1 block">Date de rappel</label>
                     <input type="datetime-local" value={dateRappel} onChange={e => setDateRappel(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
+                      className="glass-input w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"/>
                   </div>
                 )}
 
@@ -817,7 +817,7 @@ export default function DialerPage() {
                   <label className="text-xs text-muted-foreground mb-1 block">Notes</label>
                   <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
                     placeholder="Commentaire sur l'appel…"
-                    className="w-full px-3 py-2 border rounded-lg bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"/>
+                    className="glass-input w-full px-3 py-2 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"/>
                 </div>
 
                 <button onClick={handleSubmitQualif} disabled={!qualifAction || submitting}

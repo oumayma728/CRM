@@ -123,7 +123,7 @@ export default function AttributionRDV() {
             <select
               value={selectedCommercial}
               onChange={(e) => setSelectedCommercial(e.target.value)}
-              className="w-full p-2 border border-border rounded mb-4 bg-card text-foreground"
+              className="glass-input w-full p-2 rounded mb-4 text-foreground"
             >
               <option value="">Sélectionner...</option>
               {commerciaux.map((c) => (

@@ -176,13 +176,13 @@ export default function QualityCalendarPage() {
               placeholder="Rechercher par client, agent, téléphone..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="glass-input w-full pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
             <select value={filterStatut} onChange={e => setFilterStatut(e.target.value)}
-              className="bg-background border border-border rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20">
+              className="glass-input rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20">
               <option value="all">Tous les statuts</option>
               {Object.entries(STATUT_CONFIG).map(([key, cfg]) => (
                 <option key={key} value={key}>{cfg.label}</option>
@@ -192,7 +192,7 @@ export default function QualityCalendarPage() {
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-muted-foreground shrink-0" />
             <select value={filterAgent} onChange={e => setFilterAgent(e.target.value)}
-              className="bg-background border border-border rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20">
+              className="glass-input rounded-lg text-sm px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20">
               <option value="all">Tous les agents</option>
               {agents.map(a => <option key={a.id} value={String(a.id)}>{a.nom}</option>)}
             </select>

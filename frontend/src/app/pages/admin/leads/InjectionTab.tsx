@@ -305,7 +305,7 @@ function FileList({
                 value={file.priority}
                 onChange={(event) => onChangePriority(file, Number(event.target.value))}
                 disabled={isUpdatingPriority}
-                className="w-full rounded-lg border border-border bg-card px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50"
+                className="glass-input w-full rounded-lg px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none disabled:opacity-50"
               >
                 {priorityOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -447,7 +447,7 @@ function HopperPanel({
               min={1}
               value={form.lowContactsThreshold}
               onChange={(event) => onChangeField('lowContactsThreshold', event.target.value)}
-              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="glass-input w-full rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
           </label>
           <div className="flex items-end">
@@ -536,7 +536,7 @@ function AgentPanel({
             value={details.assignAgentId}
             onChange={(event) => onChangeAssign(campaignId, event.target.value)}
             disabled={details.assigning || assignableAgents.length === 0}
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+            className="glass-input w-full rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
           >
             <option value="">
               {assignableAgents.length === 0 ? 'Aucun agent disponible' : 'Selectionner un agent'}
@@ -555,7 +555,7 @@ function AgentPanel({
               value={details.quota}
               onChange={(event) => onChangeQuota(campaignId, event.target.value)}
               placeholder="Quota"
-              className="min-w-0 flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              className="glass-input min-w-0 flex-1 rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
             />
             <button
               type="button"
@@ -689,7 +689,7 @@ function RecycleFileModal({
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleStatus(item.qualificationStatus)}
-                          className="h-4 w-4 rounded border-border"
+                          className="h-4 w-4 rounded"
                         />
                         <span className="text-sm font-medium text-foreground">
                           {getQualificationLabel(item.qualificationStatus)}
@@ -1256,7 +1256,7 @@ export function InjectionTab({ onRecycled }: { onRecycled?: () => void }) {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Rechercher une campagne..."
-                className="w-full rounded-lg border border-border py-2.5 pl-10 pr-3 text-sm focus:border-primary focus:outline-none"
+                className="glass-input w-full rounded-lg py-2.5 pl-10 pr-3 text-sm focus:border-primary focus:outline-none"
               />
             </div>
             <button
@@ -1308,7 +1308,7 @@ export function InjectionTab({ onRecycled }: { onRecycled?: () => void }) {
                     value={createCampaignName}
                     onChange={(event) => setCreateCampaignName(event.target.value)}
                     placeholder="Ex: Campagne PV - Juin 2026"
-                    className="w-full rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none"
+                    className="glass-input w-full rounded-lg px-3 py-2.5 text-sm focus:border-primary focus:outline-none"
                     disabled={creatingCampaign}
                   />
                 </div>
@@ -1318,7 +1318,7 @@ export function InjectionTab({ onRecycled }: { onRecycled?: () => void }) {
                     value={createCampaignDescription}
                     onChange={(event) => setCreateCampaignDescription(event.target.value)}
                     placeholder="Objectif, fournisseur, pays ou notes utiles"
-                    className="min-h-24 w-full resize-y rounded-lg border border-border px-3 py-2.5 text-sm focus:border-primary focus:outline-none"
+                    className="glass-input min-h-24 w-full resize-y rounded-lg px-3 py-2.5 text-sm focus:border-primary focus:outline-none"
                     disabled={creatingCampaign}
                   />
                 </div>

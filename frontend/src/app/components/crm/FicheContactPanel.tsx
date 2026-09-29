@@ -381,7 +381,7 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
                     setSelectedLabel(e.target.value);
                     setSelectedStatut(opt?.value || '');
                   }}
-                  className="w-full px-2 py-1.5 border border-border rounded-lg bg-card text-sm focus:ring-2 focus:ring-primary outline-none"
+                  className="glass-input w-full px-2 py-1.5 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
                 >
                   <option value="">-- Sélectionner --</option>
                   {statuts.map((s, i) => (
@@ -397,7 +397,7 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
                   value={projet}
                   onChange={e => setProjet(e.target.value)}
                   placeholder="PV, PAC, Isolation…"
-                  className="w-full px-2 py-1.5 border border-border rounded-lg bg-card text-sm focus:ring-2 focus:ring-primary outline-none"
+                  className="glass-input w-full px-2 py-1.5 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
                 />
               </div>
 
@@ -408,7 +408,7 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
                   value={commentaire}
                   onChange={e => setCommentaire(e.target.value)}
                   placeholder="Remarques confirmatrice…"
-                  className="w-full px-2 py-1.5 border border-border rounded-lg bg-card text-sm focus:ring-2 focus:ring-primary outline-none resize-none"
+                  className="glass-input w-full px-2 py-1.5 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none resize-none"
                 />
               </div>
 

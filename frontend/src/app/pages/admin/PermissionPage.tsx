@@ -584,7 +584,7 @@ function SearchBox({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm text-foreground outline-none transition-colors focus:border-ring"
+        className="glass-input h-10 w-full rounded-md border-input pl-9 pr-3 text-sm text-foreground outline-none transition-colors focus:border-ring"
       />
     </div>
   );
@@ -983,7 +983,7 @@ function ScopedPermissionEditor({
           <select
             value={newScopedPermission}
             onChange={(event) => onNewScopedPermissionChange(event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring"
+            className="glass-input h-10 rounded-md border-input px-3 text-sm text-foreground outline-none focus:border-ring"
           >
             <option value="">Permission</option>
             {permissions.map((permission) => (
@@ -996,7 +996,7 @@ function ScopedPermissionEditor({
           <select
             value={newScopedTargetUserId}
             onChange={(event) => onNewScopedTargetUserChange(event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-ring"
+            className="glass-input h-10 rounded-md border-input px-3 text-sm text-foreground outline-none focus:border-ring"
           >
             <option value="">Utilisateur cible</option>
             {targetUsers.map((user) => (
@@ -1188,13 +1188,13 @@ function EndpointsView({ roles }: { roles: RolePermissionDto[] }) {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Rechercher endpoint, permission..."
-            className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="glass-input w-full pl-9 pr-4 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
         <select
           value={filterRole}
           onChange={e => setFilterRole(e.target.value)}
-          className="px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="glass-input px-3 py-2 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-primary/30"
         >
           <option value="">Tous les rôles</option>
           {roles.map(r => (

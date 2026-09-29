@@ -198,7 +198,7 @@ function ConfigPanel({
             <select
               value={mode}
               onChange={e => setMode(e.target.value as PendingFile['distributionMode'])}
-              className="w-full px-2 py-1.5 text-sm bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+              className="glass-input w-full px-2 py-1.5 text-sm bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
             >
               <option value="round-robin">Round-robin (équilibré)</option>
               <option value="random">Aléatoire</option>
@@ -214,12 +214,12 @@ function ConfigPanel({
                 value={perAgent}
                 min={1}
                 onChange={e => setPerAgent(Number(e.target.value))}
-                className="w-20 px-2 py-1.5 text-sm bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+                className="glass-input w-20 px-2 py-1.5 text-sm bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
               />
               <select
                 value={perAgentUnit}
                 onChange={e => setPerAgentUnit(e.target.value as PendingFile['leadsPerAgentUnit'])}
-                className="flex-1 px-2 py-1.5 text-sm bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+                className="glass-input flex-1 px-2 py-1.5 text-sm bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
               >
                 <option value="day">par jour</option>
                 <option value="session">par session</option>
@@ -233,7 +233,7 @@ function ConfigPanel({
             <select
               value={team}
               onChange={e => setTeam(e.target.value)}
-              className="w-full px-2 py-1.5 text-sm bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+              className="glass-input w-full px-2 py-1.5 text-sm bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
             >
               <option value="">Toutes les équipes</option>
               <option value="a">Équipe A</option>
@@ -246,7 +246,7 @@ function ConfigPanel({
             <select
               value={priority}
               onChange={e => setPriority(e.target.value as PendingFile['priority'])}
-              className="w-full px-2 py-1.5 text-sm bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+              className="glass-input w-full px-2 py-1.5 text-sm bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
             >
               <option value="high">Haute (dialer en premier)</option>
               <option value="normal">Normale</option>
@@ -266,7 +266,7 @@ function ConfigPanel({
             <select
               value={dedup}
               onChange={e => setDedup(e.target.value as PendingFile['dedupStrategy'])}
-              className="w-full px-2 py-1.5 text-sm bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+              className="glass-input w-full px-2 py-1.5 text-sm bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
             >
               <option value="ignore">Ignorer les doublons</option>
               <option value="update">Mettre à jour les existants</option>
@@ -291,13 +291,13 @@ function ConfigPanel({
                   type="date"
                   value={schedDate}
                   onChange={e => setSchedDate(e.target.value)}
-                  className="flex-1 px-2 py-1.5 text-sm bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+                  className="glass-input flex-1 px-2 py-1.5 text-sm bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
                 />
                 <input
                   type="time"
                   value={schedTime}
                   onChange={e => setSchedTime(e.target.value)}
-                  className="w-24 px-2 py-1.5 text-sm bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+                  className="glass-input w-24 px-2 py-1.5 text-sm bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
                 />
               </div>
             )}
@@ -609,7 +609,7 @@ export default function FichierAcharge() {
                 placeholder="Rechercher entreprise ou fichier..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full sm:w-64 px-4 py-1.5 pl-9 bg-input-background border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
+                className="glass-input w-full sm:w-64 px-4 py-1.5 pl-9 bg-input-background border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring text-foreground"
               />
               <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             </div>
@@ -689,7 +689,7 @@ export default function FichierAcharge() {
                                         <select
                                           value={file.campaignTarget}
                                           onChange={e => handleUpdateCampaign(company.id, file.id, e.target.value)}
-                                          className="px-2 py-1 bg-input-background border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring w-40"
+                                          className="glass-input px-2 py-1 bg-input-background border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring w-40"
                                         >
                                           <option value="">-- Sélectionner --</option>
                                           <option value="Campagne X">Campagne X</option>

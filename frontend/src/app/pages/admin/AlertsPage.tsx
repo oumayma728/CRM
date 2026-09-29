@@ -1,3 +1,4 @@
+import { API_BASE, getAuthHeaders } from '../../services/api';
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, Clock, TrendingDown, Trash2, Save } from 'lucide-react';
 import { Button } from '../../components/ui/button';
@@ -38,8 +39,8 @@ export default function AlertsPage() {
     setLoading(true);
     try {
       const [rulesRes, historyRes] = await Promise.all([
-        fetch('/api/alerts/rules'),
-        fetch('/api/alerts/history?limit=20')
+        fetch(`${API_BASE}/alerts/rules`, { headers: getAuthHeaders() }),
+        fetch(`${API_BASE}/alerts/history?limit=20`, { headers: getAuthHeaders() })
       ]);
       
       const rulesData = await rulesRes.json();
@@ -57,9 +58,9 @@ export default function AlertsPage() {
   const handleUpdate = async (ruleId: number, thresholdValue: number) => {
     setSaving(true);
     try {
-      await fetch(`/api/alerts/rules/${ruleId}`, {
+      await fetch(`${API_BASE}/alerts/rules/${ruleId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ threshold_value: thresholdValue, is_active: true })
       });
       fetchData();
@@ -74,7 +75,7 @@ export default function AlertsPage() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette règle?')) return;
     
     try {
-      await fetch(`/api/alerts/rules/${ruleId}`, { method: 'DELETE' });
+      await fetch(`${API_BASE}/alerts/rules/${ruleId}`, { method: 'DELETE', headers: getAuthHeaders() });
       fetchData();
     } catch (error) {
       console.error('Error deleting rule:', error);

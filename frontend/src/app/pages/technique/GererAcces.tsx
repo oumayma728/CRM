@@ -96,7 +96,7 @@ export default function GererAcces() {
                   type={f.type || 'text'}
                   value={(form as any)[f.key]}
                   onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-card focus:ring-2 focus:ring-primary outline-none"
+                  className="glass-input w-full px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none"
                   placeholder={f.key === 'motDePasse' ? 'Laisser vide pour Temp@1234' : ''}
                 />
               </div>

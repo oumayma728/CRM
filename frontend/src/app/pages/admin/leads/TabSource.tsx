@@ -96,7 +96,7 @@ function FileRow({ file, onRename, onInject, onDelete, onDownload }: {
                     onChange={(e) => setEditName(e.target.value)}
                     onBlur={handleRename}
                     onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-                    className="flex-1 rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+                    className="glass-input flex-1 rounded px-2 py-1 text-sm focus:border-primary focus:outline-none"
                     autoFocus
                     disabled={isRenaming}
                   />
@@ -265,7 +265,7 @@ function SupplierBlock({ supplier, onRename, onInject, onDelete, onRenameSupplie
                 onChange={(e) => setEditName(e.target.value)}
                 onBlur={handleRenameSubmit}
                 onKeyDown={(e) => e.key === 'Enter' && handleRenameSubmit()}
-                className="rounded border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none"
+                className="glass-input rounded px-2 py-1 text-sm focus:border-primary focus:outline-none"
                 autoFocus
               />
               <button onClick={handleRenameSubmit} className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground">OK</button>
@@ -310,7 +310,7 @@ function SupplierBlock({ supplier, onRename, onInject, onDelete, onRenameSupplie
                   placeholder="Rechercher un fichier..."
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="w-full rounded-md border border-border py-1.5 pl-8 pr-3 text-sm focus:border-primary focus:outline-none"
+                  className="glass-input w-full rounded-md py-1.5 pl-8 pr-3 text-sm focus:border-primary focus:outline-none"
                 />
                 {search && (
                   <button onClick={() => { setSearch(''); setPage(1); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground">

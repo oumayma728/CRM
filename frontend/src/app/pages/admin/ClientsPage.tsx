@@ -254,7 +254,7 @@ export default function ClientsPage() {
                                     value={form.code}
                                     onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
                                     disabled={!!editingClient}
-                                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="glass-input w-full rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
                                 {editingClient && (
                                     <p className="text-xs text-muted-foreground mt-1">Le code ne peut pas être modifié.</p>
@@ -270,7 +270,7 @@ export default function ClientsPage() {
                                     placeholder="ex: Société Dupont Solar"
                                     value={form.nom}
                                     onChange={e => setForm(f => ({ ...f, nom: e.target.value }))}
-                                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="glass-input w-full rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             </div>
 
@@ -281,7 +281,7 @@ export default function ClientsPage() {
                                     placeholder="contact@societe.fr"
                                     value={form.email}
                                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="glass-input w-full rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             </div>
 
@@ -292,7 +292,7 @@ export default function ClientsPage() {
                                     placeholder="06 00 00 00 00"
                                     value={form.telephone}
                                     onChange={e => setForm(f => ({ ...f, telephone: e.target.value }))}
-                                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="glass-input w-full rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             </div>
 
@@ -303,7 +303,7 @@ export default function ClientsPage() {
                                     placeholder="12 rue de la Paix, Paris"
                                     value={form.adresse}
                                     onChange={e => setForm(f => ({ ...f, adresse: e.target.value }))}
-                                    className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    className="glass-input w-full rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                                 />
                             </div>
 

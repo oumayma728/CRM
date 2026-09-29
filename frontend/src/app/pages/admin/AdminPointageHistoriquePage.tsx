@@ -131,7 +131,7 @@ export default function AdminPointageHistoriquePage() {
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="glass-input px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -139,7 +139,7 @@ export default function AdminPointageHistoriquePage() {
             <select
               value={roleFilter}
               onChange={e => setRole(e.target.value)}
-              className="px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="glass-input px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             >
               <option value="">Tous les rôles</option>
               {allRoles.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
@@ -153,7 +153,7 @@ export default function AdminPointageHistoriquePage() {
                 placeholder="Nom d'utilisateur…"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="glass-input w-full pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </div>

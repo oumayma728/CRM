@@ -212,7 +212,7 @@ export default function UsersPage() {
     confirmatrices2: users.filter(u => u.role?.toUpperCase() === 'CONFIRMATRICE' && u.type === 'CONF2').length,
     confirmatiresClient: users.filter(u => u.role?.toUpperCase() === 'CONFIRMATRICE' && u.type === 'CONFCLIENT').length,
     techniques: users.filter(u => u.role?.toUpperCase() === 'TECH').length,
-    qualites: users.filter(u => u.role?.toUpperCase() === 'QUAL').length,
+    qualites: users.filter(u => u.role?.toUpperCase() === 'QUALITE').length,
   };
 
   if (loading) {
@@ -269,7 +269,7 @@ export default function UsersPage() {
             placeholder="Rechercher un utilisateur..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="glass-input w-full pl-10 pr-4 py-2 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
 
@@ -559,7 +559,7 @@ export default function UsersPage() {
                     type="text"
                     value={formData.nom}
                     onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="glass-input w-full px-3 py-2 rounded-lg"
                     required
                   />
                 </div>
@@ -569,7 +569,7 @@ export default function UsersPage() {
                     type="text"
                     value={formData.prenom}
                     onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="glass-input w-full px-3 py-2 rounded-lg"
                     required
                   />
                 </div>
@@ -581,7 +581,7 @@ export default function UsersPage() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="glass-input w-full px-3 py-2 rounded-lg"
                   required
                 />
               </div>
@@ -592,7 +592,7 @@ export default function UsersPage() {
                   type="password"
                   value={formData.motDePasse}
                   onChange={(e) => setFormData({ ...formData, motDePasse: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="glass-input w-full px-3 py-2 rounded-lg"
                   required
                 />
               </div>
@@ -602,7 +602,7 @@ export default function UsersPage() {
                 <select
                   value={formData.role}
                   onChange={(e) => handleRoleChange(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="glass-input w-full px-3 py-2 rounded-lg"
                 >
                   {roleOptions.map(role => (
                     <option key={role.value} value={role.value}>{role.label}</option>
@@ -616,7 +616,7 @@ export default function UsersPage() {
                   type="text"
                   value={formData.equipe}
                   onChange={(e) => setFormData({ ...formData, equipe: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="glass-input w-full px-3 py-2 rounded-lg"
                   placeholder="Équipe par défaut"
                 />
               </div>

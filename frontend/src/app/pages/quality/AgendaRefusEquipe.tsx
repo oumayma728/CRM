@@ -85,7 +85,7 @@ export default function AgendaRefusEquipe() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Nom, téléphone, agent…"
-                className="w-full pl-9 pr-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="glass-input w-full pl-9 pr-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
           </div>
@@ -95,7 +95,7 @@ export default function AgendaRefusEquipe() {
               type="date"
               value={debutFilter}
               onChange={e => setDebutFilter(e.target.value)}
-              className="px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="glass-input px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
           <div>
@@ -104,7 +104,7 @@ export default function AgendaRefusEquipe() {
               type="date"
               value={finFilter}
               onChange={e => setFinFilter(e.target.value)}
-              className="px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="glass-input px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
           <button

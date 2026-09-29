@@ -88,7 +88,7 @@ export default function StatsAppelsPage() {
             <select
               value={agentFilter}
               onChange={e => setAgentFilter(e.target.value)}
-              className="px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="glass-input px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
               <option value="">Tous les agents</option>
               {agents.map(a => (
@@ -99,12 +99,12 @@ export default function StatsAppelsPage() {
           <div>
             <label className="block text-xs text-muted-foreground mb-1">Début</label>
             <input type="date" value={debutFilter} onChange={e => setDebutFilter(e.target.value)}
-              className="px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              className="glass-input px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
           <div>
             <label className="block text-xs text-muted-foreground mb-1">Fin</label>
             <input type="date" value={finFilter} onChange={e => setFinFilter(e.target.value)}
-              className="px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              className="glass-input px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
           <button onClick={fetchStats}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">

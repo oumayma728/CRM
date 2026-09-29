@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Backend.Attributes;
 using Microsoft.AspNetCore.Mvc.Formatters;
 
@@ -19,6 +20,7 @@ internal static class SnakeCaseJson
             DictionaryKeyPolicy = null,
             DefaultIgnoreCondition = JsonIgnoreCondition.Never,
             ReferenceHandler = ReferenceHandler.IgnoreCycles,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
         };
         o.Converters.Add(new JsonStringEnumConverter());
         return o;
@@ -48,6 +50,7 @@ public sealed class SnakeCaseJsonInputFormatter : TextInputFormatter
     {
         PropertyNameCaseInsensitive = true,
         NumberHandling = JsonNumberHandling.AllowReadingFromString,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
         Converters = { new JsonStringEnumConverter() },
     };
 

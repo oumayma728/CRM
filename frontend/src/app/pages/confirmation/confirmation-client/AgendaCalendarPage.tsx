@@ -186,7 +186,7 @@ export default function AgendaCalendarPage({ title, icon, fetchEndpoint, updateE
                   {format(selectedDay, 'EEEE d MMMM', { locale: fr })}
                   <span className="ml-2 text-xs text-muted-foreground">({rdvsFiltered.length} RDV)</span>
                 </h3>
-                <select value={filterStatut} onChange={e => setFilterStatut(e.target.value)} className="text-xs px-2 py-1 border border-border rounded-lg bg-card">
+                <select value={filterStatut} onChange={e => setFilterStatut(e.target.value)} className="glass-input text-xs px-2 py-1 rounded-lg">
                   <option value="TOUS">Tous les statuts</option>
                   {Object.entries(STATUT_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>

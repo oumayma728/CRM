@@ -761,7 +761,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                                     setSupplierId('');
                                 }}
                                 disabled={loadingCountries || isUploading}
-                                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                className="glass-input w-full rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                             >
                                 <option value="">
                                     {loadingCountries ? 'Chargement des pays...' : '-- Sélectionnez un pays --'}
@@ -785,7 +785,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                                         placeholder="Nom du pays" 
                                         value={newCountryName}
                                         onChange={(e) => setNewCountryName(e.target.value)}
-                                        className="flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none" 
+                                        className="glass-input flex-1 rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none" 
                                         autoFocus 
                                     />
                                     <button 
@@ -816,7 +816,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                                     setSupplierId('');
                                 }}
                                 disabled={!selectedCountry || loadingLeadTypes || isUploading}
-                                className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
+                                className="glass-input w-full rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/40"
                             >
                                 <option value="">
                                     {loadingLeadTypes ? 'Chargement des types...' : '-- Sélectionnez un type --'}
@@ -840,7 +840,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                                         placeholder="Code du type (ex: B2B)" 
                                         value={newLeadTypeCode}
                                         onChange={(e) => setNewLeadTypeCode(e.target.value)}
-                                        className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none" 
+                                        className="glass-input w-full rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none" 
                                         autoFocus 
                                     />
                                     <input 
@@ -848,7 +848,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                                         placeholder="Nom du type (optionnel)" 
                                         value={newLeadTypeName}
                                         onChange={(e) => setNewLeadTypeName(e.target.value)}
-                                        className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none" 
+                                        className="glass-input w-full rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none" 
                                     />
                                     <div className="flex gap-2">
                                         <button 
@@ -887,7 +887,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                                 <select 
                                     value={supplierId} 
                                     onChange={(e) => setSupplierId(e.target.value)}
-                                    className="ml-6 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                                    className="glass-input ml-6 w-full rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
                                     disabled={loadingSuppliers || isUploading}
                                 >
                                     <option value="">Sélectionnez un fournisseur</option>
@@ -912,7 +912,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({
                                     value={newSupplierName}
                                     onChange={(e) => setNewSupplierName(e.target.value)}
                                     disabled={isUploading}
-                                    className="ml-6 w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                                    className="glass-input ml-6 w-full rounded-lg px-3 py-2 text-sm focus:border-primary focus:outline-none"
                                 />
                             )}
                         </div>

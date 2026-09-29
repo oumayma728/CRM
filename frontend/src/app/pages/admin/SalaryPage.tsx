@@ -11,6 +11,7 @@ import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, Legend
 } from 'recharts';
 import api from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import { useChartTheme } from '../../hooks/useChartTheme';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
@@ -18,6 +19,8 @@ import 'jspdf-autotable';
 type TabType = 'dashboard' | 'salaries' | 'rules' | 'detail';
 
 export default function SalaryPage() {
+  // salary rules are editable by the super admin only (SalaryController)
+  const { isSuperAdmin } = useAuth();
   const chartTheme = useChartTheme();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [loading, setLoading] = useState(true);
@@ -469,9 +472,9 @@ export default function SalaryPage() {
               <Settings className="w-4 h-4 text-primary" />
               <h3 className="text-sm font-black uppercase tracking-widest text-foreground">PARAMETRES DE REMUNERATION</h3>
             </div>
-            <button onClick={openNewRule} className="h-9 px-4 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center gap-2">
+            {isSuperAdmin && <button onClick={openNewRule} className="h-9 px-4 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:opacity-90 transition-all flex items-center gap-2">
               <Plus className="w-3.5 h-3.5" /> Ajouter Regle
-            </button>
+            </button>}
           </div>
 
           <div className="overflow-x-auto">
@@ -507,14 +510,14 @@ export default function SalaryPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
+                      {isSuperAdmin && <div className="flex items-center justify-center gap-1">
                         <button onClick={() => openEditRule(r)} className="p-1.5 rounded-lg hover:bg-blue-500/10 text-blue-400 transition-all" title="Modifier">
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => handleDeleteRule(r.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-400 transition-all" title="Supprimer">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      </div>
+                      </div>}
                     </td>
                   </tr>
                 ))}

@@ -279,7 +279,7 @@ export const ColumnMapping = ({ file, value, onChange, onStatusChange, disabled 
                                     value={value[column] ?? ""}
                                     onChange={(event) => updateColumn(column, event.target.value)}
                                     disabled={disabled}
-                                    className="w-full rounded-md border border-border bg-card px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-muted"
+                                    className="glass-input w-full rounded-md px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-muted"
                                 >
                                     <option value="">Ignorer</option>
                                     {targetFields.map((field) => (

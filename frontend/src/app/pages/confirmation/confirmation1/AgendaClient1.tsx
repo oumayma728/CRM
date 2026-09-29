@@ -180,7 +180,7 @@ export default function AgendaClient1() {
                   <select
                     value={filterStatut}
                     onChange={e => setFilterStatut(e.target.value)}
-                    className="text-xs px-2 py-1 border border-border rounded-lg bg-card"
+                    className="glass-input text-xs px-2 py-1 rounded-lg"
                   >
                     <option value="TOUS">Tous les statuts</option>
                     {Object.entries(STATUT_CONFIG).map(([k, v]) => (

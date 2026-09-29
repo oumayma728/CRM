@@ -47,7 +47,7 @@ const FileSearch: React.FC = () => {
                         placeholder="Search by supplier or file name..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-10 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent"
+                        className="glass-input w-full pl-10 pr-10 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent"
                     />
                     {searchTerm && (
                         <button 
