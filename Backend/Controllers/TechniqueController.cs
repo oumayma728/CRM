@@ -1,3 +1,4 @@
+using Backend.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -210,18 +211,19 @@ public class TechniqueController : ControllerBase
 
         if (fichier == null) return NotFound(new { message = "Fichier introuvable" });
 
-        var sb = new StringBuilder();
-        sb.AppendLine("Nom,Prénom,Téléphone,Email,CodePostal,Ville,StatutAgent,ScoreIA");
-
-        foreach (var c in fichier.Contacts)
-        {
-            sb.AppendLine($"{c.Nom},{c.Prenom},{c.Telephone},{c.Email}," +
-                          $"{c.CodePostal},{c.Ville},{c.StatutAgent},{c.ScoreIA}");
-        }
-
-        var bytes  = Encoding.UTF8.GetBytes(sb.ToString());
-        var name   = $"{fichier.NomFichier}_{DateTime.Now:yyyyMMdd}.csv";
+        var (bytes, name) = FichierImportHelper.ToCsv(fichier);
         return File(bytes, "text/csv", name);
+    }
+
+    /// <summary>Import d'un fichier de contacts (CSV) par le service technique</summary>
+    [HttpPost("fichiers/upload")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadFichier(IFormFile file, [FromForm] string? campagne)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "Aucun fichier sélectionné" });
+        var fichier = await FichierImportHelper.SaveUploadAsync(_context, file, campagne, User.Identity?.Name);
+        return Ok(new { message = "Fichier importé avec succès", id = fichier.Id, contactsCount = fichier.NombreContactsImportes });
     }
 
     // ─────────────────────────────────────────────────────────────────────────

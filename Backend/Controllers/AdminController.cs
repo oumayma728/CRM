@@ -151,7 +151,7 @@ public class AdminController : ControllerBase
     /// Retourne la liste des agendas accessibles pour la confirmatrice connectée
     /// </summary>
     [HttpGet("confirmatrices/my-agendas")]
-    [Authorize(Roles = "ADMIN,CONFIRMATRICE")]
+    [Authorize(Roles = "ADMIN,SuperAdmin,CONFIRMATRICE")]
     public async Task<IActionResult> GetMyAgendas()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value

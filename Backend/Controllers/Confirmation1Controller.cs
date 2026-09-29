@@ -1,3 +1,4 @@
+using Backend.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -321,48 +322,23 @@ public class Confirmation1Controller : ControllerBase
 
         try
         {
-            var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-            if (!Directory.Exists(uploadPath))
-                Directory.CreateDirectory(uploadPath);
-
-            var fileName = $"{DateTime.Now:yyyyMMdd_HHmmss}_{dto.File.FileName}";
-            var filePath = Path.Combine(uploadPath, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await dto.File.CopyToAsync(stream);
-            }
-
-            var lineCount = 0;
-            using (var reader = new StreamReader(filePath))
-            {
-                while (await reader.ReadLineAsync() != null)
-                    lineCount++;
-            }
-            var contactCount = Math.Max(0, lineCount - 1);
-
-            var fichierImport = new FichierImport
-            {
-                NomFichier = dto.Campagne ?? dto.File.FileName,
-                DateImport = DateTime.UtcNow,
-                Importateur = User.Identity?.Name ?? "System",
-                NombreTotalLignes = contactCount,
-                NombreContactsImportes = contactCount,
-                NombreErreurs = 0,
-                Actif = true,
-                Source = "Upload",
-                Statut = StatutImport.TERMINE
-            };
-
-            _context.FichiersImport.Add(fichierImport);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Fichier importé avec succès", contactsCount = contactCount });
+            var fichier = await FichierImportHelper.SaveUploadAsync(_context, dto.File, dto.Campagne, User.Identity?.Name);
+            return Ok(new { message = "Fichier importé avec succès", contactsCount = fichier.NombreContactsImportes });
         }
         catch (Exception ex)
         {
             return StatusCode(500, new { message = $"Erreur: {ex.Message}" });
         }
+    }
+
+    /// <summary>Export CSV des contacts d'un fichier</summary>
+    [HttpGet("export-contacts/{id:long}")]
+    public async Task<IActionResult> ExportContacts(long id)
+    {
+        var fichier = await _context.FichiersImport.Include(f => f.Contacts).FirstOrDefaultAsync(f => f.Id == id);
+        if (fichier == null) return NotFound(new { message = "Fichier non trouvé" });
+        var (bytes, name) = FichierImportHelper.ToCsv(fichier);
+        return File(bytes, "text/csv", name);
     }
 
     [HttpDelete("fichiers-contacts/{id}")]

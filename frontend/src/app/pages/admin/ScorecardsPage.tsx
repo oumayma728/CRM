@@ -1,141 +1,234 @@
-import React from 'react';
-import { Trophy, AlertCircle, TrendingUp, Star, Play } from 'lucide-react';
-import { Badge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
+import React, { useEffect, useState } from 'react';
+import { adminService } from '../../services/adminService';
+import { 
+  Trophy, TrendingUp, TrendingDown, AlertCircle, 
+  Play, Award, ChevronUp, ChevronDown, Search
+} from 'lucide-react';
 
-const agentScores = [
-  { id: 1, name: 'agent 1', score: 95, appels: 48, conversions: 32, qualite: 97, aRevoir: 2, tendance: 'up' },
-  { id: 2, name: 'agent 2', score: 94, appels: 45, conversions: 30, qualite: 95, aRevoir: 1, tendance: 'up' },
-  { id: 3, name: 'agent 3', score: 92, appels: 42, conversions: 28, qualite: 93, aRevoir: 3, tendance: 'up' },
-  { id: 4, name: 'agent 4', score: 90, appels: 40, conversions: 26, qualite: 91, aRevoir: 2, tendance: 'stable' },
-  { id: 5, name: 'agent 5', score: 88, appels: 38, conversions: 24, qualite: 89, aRevoir: 4, tendance: 'down' },
-  { id: 6, name: 'agent 6', score: 86, appels: 36, conversions: 22, qualite: 87, aRevoir: 5, tendance: 'down' },
-  { id: 7, name: 'agent 7', score: 85, appels: 35, conversions: 20, qualite: 84, aRevoir: 5, tendance: 'down' }
-];
+interface ScorecardAgent {
+  rang: number;
+  agentId: number;
+  agentNom: string;
+  scoreGlobal: number;
+  appels: number;
+  conversions: number;
+  qualite: number;
+  aRevoir: number;
+  tendance: string;
+}
+
+interface AgentSuivi {
+  agentId: number;
+  agentNom: string;
+  score: number;
+  appelsAVerifier: number;
+  tendance: string;
+}
 
 export default function ScorecardsPage() {
+  const [agents, setAgents] = useState<ScorecardAgent[]>([]);
+  const [agentsSuivi, setAgentsSuivi] = useState<AgentSuivi[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [scorecardsRes, suiviRes] = await Promise.all([
+          adminService.getScorecards(),
+          adminService.getAgentsSuivi()
+        ]);
+        setAgents(scorecardsRes.data);
+        setAgentsSuivi(suiviRes.data);
+      } catch (error) {
+        console.error('Erreur chargement scorecards:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const getTendanceIcon = (tendance: string) => {
+    if (tendance === 'up') return <ChevronUp className="w-4 h-4 text-success" />;
+    if (tendance === 'down') return <ChevronDown className="w-4 h-4 text-destructive" />;
+    return <div className="w-4 h-4" />;
+  };
+
+  const getTendanceText = (tendance: string) => {
+    if (tendance === 'up') return 'En hausse';
+    if (tendance === 'down') return 'En baisse';
+    return 'Stable';
+  };
+
+  const getMedal = (rang: number) => {
+    if (rang === 1) return <Trophy className="w-6 h-6 text-warning" />;
+    if (rang === 2) return <Award className="w-6 h-6 text-muted-foreground" />;
+    if (rang === 3) return <Award className="w-6 h-6 text-warning" />;
+    return <span className="text-lg font-bold text-muted-foreground">#{rang}</span>;
+  };
+
+  const filteredAgents = agents.filter(agent =>
+    agent.agentNom.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <><div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div></>
+    );
+  }
+
+  const top3 = filteredAgents.slice(0, 3);
+  const rest = filteredAgents.slice(3);
+
   return (
-    <>
-      <div className="space-y-6">
+    <><div className="space-y-6">
+        {/* Header */}
         <div>
-          <h2>Scorecards Agents</h2>
+          <h1 className="text-3xl font-black italic tracking-tighter text-foreground">Scorecards Agents</h1>
           <p className="text-muted-foreground mt-1">Classement et évaluation des performances</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {agentScores.slice(0, 3).map((agent, index) => (
-            <div key={agent.id} className={`rounded-lg p-6 text-white ${
-              index === 0 ? 'bg-gradient-to-br from-warning to-warning/80' :
-              index === 1 ? 'bg-gradient-to-br from-muted to-muted/80 text-foreground' :
-              'bg-gradient-to-br from-accent to-accent/80'
-            }`}>
-              <div className="flex items-center justify-between mb-4">
-                <Trophy className="w-8 h-8" />
-                <span className="text-3xl font-medium">#{index + 1}</span>
+        {/* Top 3 Agents */}
+        {top3.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {top3.map((agent) => (
+              <div
+                key={agent.agentId}
+                className={`rounded-xl p-6 text-center text-white ${
+                  agent.rang === 1 ? 'bg-gradient-to-r from-warning to-warning' :
+                  agent.rang === 2 ? 'bg-gradient-to-r from-muted to-muted' :
+                  'bg-gradient-to-r from-warning to-warning'
+                }`}
+              >
+                <div className="flex justify-center mb-3">{getMedal(agent.rang)}</div>
+                <h3 className="text-xl font-semibold">{agent.agentNom}</h3>
+                <p className="text-3xl font-bold mt-2">{agent.scoreGlobal}/100</p>
+                <div className="flex justify-center items-center gap-1 mt-2">
+                  {getTendanceIcon(agent.tendance)}
+                  <span className="text-sm opacity-90">{getTendanceText(agent.tendance)}</span>
+                </div>
               </div>
-              <h3 className="text-xl font-medium">{agent.name}</h3>
-              <p className="text-2xl font-medium mt-2">Score: {agent.score}/100</p>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
+
+        {/* Barre de recherche */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Rechercher un agent..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="glass-input w-full pl-10 pr-4 py-2 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+          />
         </div>
 
-        <div className="bg-card rounded-lg border border-border">
+        {/* Classement détaillé */}
+        <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
           <div className="p-6 border-b border-border">
-            <h3>Classement détaillé</h3>
+            <h2 className="font-semibold text-foreground">Classement détaillé</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-muted/50">
+              <thead className="bg-muted">
                 <tr>
-                  <th className="text-left p-4 text-muted-foreground">Rang</th>
-                  <th className="text-left p-4 text-muted-foreground">Agent</th>
-                  <th className="text-left p-4 text-muted-foreground">Score Global</th>
-                  <th className="text-left p-4 text-muted-foreground">Appels</th>
-                  <th className="text-left p-4 text-muted-foreground">Conversions</th>
-                  <th className="text-left p-4 text-muted-foreground">Qualité</th>
-                  <th className="text-left p-4 text-muted-foreground">À revoir</th>
-                  <th className="text-left p-4 text-muted-foreground">Tendance</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Rang</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Agent</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Score</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Appels</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Conversions</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Qualité</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">À revoir</th>
+                  <th className="text-left p-4 text-sm font-medium text-muted-foreground">Tendance</th>
                 </tr>
               </thead>
               <tbody>
-                {agentScores.map((agent, index) => (
-                  <tr key={agent.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                {filteredAgents.map((agent) => (
+                  <tr key={agent.agentId} className="border-b border-border hover:bg-muted transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        {index < 3 && <Star className="w-4 h-4 text-warning" />}
-                        <span className="font-medium text-foreground">#{index + 1}</span>
+                        {getMedal(agent.rang)}
+                        <span className="text-foreground">#{agent.rang}</span>
                       </div>
                     </td>
-                    <td className="p-4 text-foreground font-medium">{agent.name}</td>
+                    <td className="p-4 font-medium text-foreground">{agent.agentNom}</td>
                     <td className="p-4">
-                      <span className="text-xl font-medium text-primary">{agent.score}</span>
+                      <span className="text-lg font-bold text-primary">{agent.scoreGlobal}</span>
                     </td>
-                    <td className="p-4 text-foreground">{agent.appels}</td>
+                    <td className="p-4 text-muted-foreground">{agent.appels}</td>
                     <td className="p-4 text-success">{agent.conversions}</td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden w-20">
-                          <div className="h-full bg-primary" style={{ width: `${agent.qualite}%` }}></div>
+                        <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full" style={{ width: `${agent.qualite}%` }} />
                         </div>
-                        <span className="text-sm text-foreground">{agent.qualite}%</span>
+                        <span className="text-sm text-muted-foreground">{agent.qualite}%</span>
                       </div>
                     </td>
                     <td className="p-4">
-                      {agent.aRevoir > 0 && (
-                        <span className="flex items-center gap-1 text-warning">
-                          <AlertCircle className="w-4 h-4" />
+                      {agent.aRevoir > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-warning/15 text-warning">
+                          <AlertCircle className="w-3 h-3" />
                           {agent.aRevoir}
                         </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </td>
                     <td className="p-4">
-                      <TrendingUp className={`w-5 h-5 ${
-                        agent.tendance === 'up' ? 'text-success' :
-                        agent.tendance === 'down' ? 'text-destructive rotate-180' :
-                        'text-muted-foreground'
-                      }`} />
+                      <div className="flex items-center gap-1">
+                        {getTendanceIcon(agent.tendance)}
+                        <span className={`text-sm ${
+                          agent.tendance === 'up' ? 'text-success' : 
+                          agent.tendance === 'down' ? 'text-destructive' : 
+                          'text-muted-foreground'
+                        }`}>
+                          {getTendanceText(agent.tendance)}
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-             <div className="p-6 border-t border-border">
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              Agents nécessitant un suivi
-            </h2>
-          </div>
-          <div className="space-y-4">
-            <div className="space-y-3">
-              {agentScores.slice(-3).reverse().map((agent) => (
-                <div key={agent.id} className="p-3 bg-red-50 rounded-lg border border-red-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <p>{agent.name}</p>
-                    <Badge variant="outline" className="border-red-500 text-red-700">
-                      Score: {agent.score}
-                    </Badge>
+        </div>
+
+        {/* Agents nécessitant un suivi */}
+        {agentsSuivi.length > 0 && (
+          <div className="bg-card rounded-xl shadow-sm border border-border">
+            <div className="p-6 border-b border-border">
+              <h2 className="font-semibold text-foreground">Agents nécessitant un suivi</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              {agentsSuivi.map((agent) => (
+                <div key={agent.agentId} className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="font-semibold text-foreground">{agent.agentNom}</span>
+                      <span className="px-2 py-1 rounded-full text-xs bg-destructive/15 text-destructive">
+                        Score: {agent.score}
+                      </span>
+                    </div>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>• Vérifier {agent.appelsAVerifier} appel(s) récent(s)</li>
+                      <li>• Suivre la tendance: {agent.tendance === 'down' ? 'à la baisse' : 'stable'}</li>
+                    </ul>
                   </div>
-                  <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
-                    {[
-                      `Verifier ${agent.aRevoir} appel(s) recent(s)`,
-                      `Suivre la tendance: ${agent.tendance}`,
-                    ].map((rec, i) => (
-                      <li key={i}>• {rec}</li>
-                    ))}
-                  </ul>
-                  <Button className="w-full mt-3" size="sm" variant="outline">
-                    <Play className="w-4 h-4 mr-2" />
+                  <button className="ml-4 px-4 py-2 text-sm border border-border rounded-lg hover:bg-muted transition-colors flex items-center gap-2">
+                    <Play className="w-4 h-4" />
                     Écouter les appels
-                  </Button>
+                  </button>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-        </div>
-      </div>
-    </>
+        )}
+      </div></>
   );
 }

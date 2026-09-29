@@ -40,7 +40,7 @@ public class AIController : ControllerBase
     /// (ou tous si force=true). Appelle le microservice Python en batch.
     /// </summary>
     [HttpPost("score-contacts")]
-    [Authorize(Roles = "ADMIN,TECH")]
+    [Authorize(Roles = "ADMIN,SuperAdmin,TECH")]
     public async Task<IActionResult> ScoreContacts([FromQuery] bool force = false)
     {
         var query = _context.Contacts.AsQueryable();
@@ -186,7 +186,7 @@ public class AIController : ControllerBase
 
     /// <summary>Détecter les agents avec des ratios NRP/HC anormaux (alerte qualité)</summary>
     [HttpGet("anomalies")]
-    [Authorize(Roles = "ADMIN,QUALITE,TECH")]
+    [Authorize(Roles = "ADMIN,SuperAdmin,QUALITE,TECH")]
     public async Task<IActionResult> DetectAnomalies()
     {
         var since = DateTime.UtcNow.AddDays(-30);
@@ -324,7 +324,7 @@ public class AIController : ControllerBase
 
     /// <summary>Données synthèse pour le dashboard IA</summary>
     [HttpGet("dashboard")]
-    [Authorize(Roles = "ADMIN,TECH,QUALITE")]
+    [Authorize(Roles = "ADMIN,SuperAdmin,TECH,QUALITE")]
     public async Task<IActionResult> GetDashboard()
     {
         var totalContacts  = await _context.Contacts.CountAsync();

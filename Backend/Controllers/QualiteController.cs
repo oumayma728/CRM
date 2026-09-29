@@ -62,6 +62,56 @@ public class QualiteController : ControllerBase
         return Ok(rdvs);
     }
 
+    // ── CALENDRIER RDV (toute l'équipe, tous statuts) ─────────────────────
+
+    /// <summary>Tous les RDV de l'équipe pour une période, pour la vue calendrier</summary>
+    [HttpGet("rdv-calendrier")]
+    public async Task<IActionResult> GetRdvCalendrier([FromQuery] DateTime? debut, [FromQuery] DateTime? fin)
+    {
+        var debutUtc = debut.HasValue ? DateTime.SpecifyKind(debut.Value, DateTimeKind.Utc) : DateTime.UtcNow.AddMonths(-1);
+        var finUtc = fin.HasValue ? DateTime.SpecifyKind(fin.Value, DateTimeKind.Utc) : DateTime.UtcNow.AddMonths(1);
+
+        var rdvs = await _context.RendezVous
+            .Include(r => r.Contact)
+            .Include(r => r.Agent)
+            .Where(r => r.DateRendezVous >= debutUtc && r.DateRendezVous <= finUtc)
+            .OrderBy(r => r.DateRendezVous)
+            .Select(r => new
+            {
+                r.Id,
+                r.DateRendezVous,
+                r.Statut,
+                r.TypeRendezVous,
+                r.Commentaire,
+                r.CommentaireConfirmation,
+                Contact = r.Contact == null ? null : new
+                {
+                    r.Contact.Id, r.Contact.Nom, r.Contact.Prenom,
+                    r.Contact.Telephone, r.Contact.NumGSM, r.Contact.Projet,
+                },
+                Agent = r.Agent == null ? null : new { r.Agent.Id, r.Agent.Nom, r.Agent.Prenom },
+                r.DateCreation
+            })
+            .ToListAsync();
+
+        return Ok(rdvs);
+    }
+
+    /// <summary>Changer le statut d'un RDV depuis le calendrier qualité</summary>
+    [HttpPut("rdv-calendrier/{id:long}/statut")]
+    public async Task<IActionResult> UpdateRdvCalendrierStatut(long id, [FromBody] UpdateRdvStatutQualiteDTO dto)
+    {
+        var rdv = await _context.RendezVous.FindAsync(id);
+        if (rdv == null) return NotFound(new { message = "Rendez-vous non trouvé" });
+
+        if (!Enum.TryParse<StatutRendezVous>(dto.Statut, out var statut))
+            return BadRequest(new { message = "Statut invalide" });
+
+        rdv.Statut = statut;
+        await _context.SaveChangesAsync();
+        return Ok(new { message = "Statut mis à jour", statut = rdv.Statut.ToString() });
+    }
+
     // ── LISTE AGENTS ──────────────────────────────────────────────────────
 
     /// <summary>Liste des agents avec note d'évaluation</summary>
@@ -115,6 +165,74 @@ public class QualiteController : ControllerBase
         {
             return StatusCode(500, new { error = ex.Message, detail = ex.InnerException?.Message });
         }
+    }
+
+    // ── PERFORMANCE MENSUELLE D'UN AGENT (courant vs précédent) ───────────
+
+    /// <summary>Rendement mensuel d'un agent — appels/RDV/qualité/assiduité, courant vs mois précédent</summary>
+    [HttpGet("agent-performance/{agentId:long}")]
+    public async Task<IActionResult> GetAgentPerformance(long agentId)
+    {
+        var agent = await _context.Utilisateurs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentId);
+        if (agent == null) return NotFound(new { message = "Agent introuvable" });
+
+        var now = DateTime.UtcNow;
+
+        async Task<object> MonthStats(DateTime start, DateTime end)
+        {
+            var appels = await _context.Appels.AsNoTracking()
+                .Where(a => a.AgentId == agentId && a.DateHeure >= start && a.DateHeure < end)
+                .ToListAsync();
+            var rdvs = await _context.RendezVous.AsNoTracking()
+                .Where(r => r.AgentId == agentId && r.DateCreation >= start && r.DateCreation < end)
+                .ToListAsync();
+            var evals = await _context.Evaluations.AsNoTracking()
+                .Where(e => e.AgentId == agentId && e.DateEvaluation >= start && e.DateEvaluation < end)
+                .ToListAsync();
+            var pointages = await _context.Pointages.AsNoTracking()
+                .Where(p => p.AgentId == agentId && p.Date >= start && p.Date < end)
+                .ToListAsync();
+
+            var confirmed = rdvs.Count(r => r.Statut == StatutRendezVous.CONFIRME || r.Statut == StatutRendezVous.CONFIRME_TOTAL || r.Statut == StatutRendezVous.SIGNE);
+            var effectiveEnd = end < now ? end : now;
+            var workingDays = 0;
+            for (var d = start.Date; d < effectiveEnd.Date; d = d.AddDays(1))
+                if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday) workingDays++;
+            var daysPresent = pointages.Select(p => p.Date.Date).Distinct().Count();
+
+            var daysInMonth = (end - start).Days;
+            var dailyPerformance = new int[daysInMonth];
+            for (int i = 0; i < daysInMonth; i++)
+            {
+                var day = start.AddDays(i);
+                if (day >= now) break;
+                dailyPerformance[i] = rdvs.Count(r => r.DateCreation.Date == day.Date);
+            }
+
+            return new
+            {
+                calls = appels.Count,
+                appointments = rdvs.Count,
+                conversion_rate = appels.Count > 0 ? Math.Round(confirmed * 100.0 / appels.Count, 1) : 0,
+                quality_score = evals.Count > 0 ? Math.Round(Math.Min(evals.Average(e => e.NoteGlobale) * 20, 100), 1) : 0,
+                attendance_rate = workingDays > 0 ? Math.Round(Math.Min(daysPresent * 100.0 / workingDays, 100), 1) : 0,
+                avg_call_duration = appels.Count > 0 ? Math.Round(appels.Average(a => a.DureeSecondes), 0) : 0,
+                daily_performance = dailyPerformance
+            };
+        }
+
+        var curStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var curEnd = curStart.AddMonths(1);
+        var prevStart = curStart.AddMonths(-1);
+        var prevEnd = curStart;
+
+        return Ok(new
+        {
+            agent_id = agentId,
+            agent_name = $"{agent.Prenom} {agent.Nom}",
+            current_month = await MonthStats(curStart, curEnd),
+            previous_month = await MonthStats(prevStart, prevEnd)
+        });
     }
 
     // ── STATISTIQUES APPELS ───────────────────────────────────────────────
@@ -200,6 +318,11 @@ public class QualiteController : ControllerBase
 
         return CreatedAtAction(nameof(GetEvaluationsAgent), new { agentId = dto.AgentId }, evaluation);
     }
+}
+
+public class UpdateRdvStatutQualiteDTO
+{
+    public string Statut { get; set; } = string.Empty;
 }
 
 public class CreateEvaluationDTO

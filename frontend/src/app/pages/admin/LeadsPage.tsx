@@ -1,3 +1,4 @@
+import { API_BASE, getAuthHeaders } from '../../services/api';
 import React, { useState, useEffect } from 'react';
 import { 
   Users, MapPin, Phone, Search, Download, Target, 
@@ -94,8 +95,9 @@ export default function LeadsPage() {
                  const formData = new FormData();
                  formData.append('file', file);
                  try {
-                   const res = await fetch('http://127.0.0.1:8000/api/leads/import', {
+                   const res = await fetch(`${API_BASE}/leads/import`, {
                      method: 'POST',
+                     headers: getAuthHeaders(),
                      body: formData
                    });
                    if (res.ok) {

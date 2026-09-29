@@ -60,6 +60,18 @@ public class ApplicationDbContext : DbContext
     public DbSet<AdvancedAttendance> AdvancedAttendances => Set<AdvancedAttendance>();
     public DbSet<AttendanceBreak> AttendanceBreaks => Set<AttendanceBreak>();
 
+    // ─── KHALED-DEV-V3 CALL ANALYSIS MODULE (appels analysés IA, relances, RDV CRM, messagerie) ─
+    public DbSet<Call> Calls => Set<Call>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<CrmAppointment> CrmAppointments => Set<CrmAppointment>();
+    public DbSet<Followup> Followups => Set<Followup>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<AgentSavedData> AgentSavedData => Set<AgentSavedData>();
+    public DbSet<Log> Logs => Set<Log>();
+    public DbSet<Lead> Leads => Set<Lead>();
+    public DbSet<LeadFolder> LeadFolders => Set<LeadFolder>();
+    public DbSet<Qualification> Qualifications => Set<Qualification>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

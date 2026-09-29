@@ -1,3 +1,4 @@
+using Backend.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ using Backend.Helpers;
 
 namespace Backend.Controllers;
 
+[SnakeCaseJson]
 [ApiController]
 [Route("api/ai")]
 [Authorize]
@@ -51,7 +53,7 @@ public class AiScoringController : ControllerBase
 
     // ── Détecter les faux RDV ─────────────────────────────────────────────────
     [HttpPost("detect-fake-rdv")]
-    [Authorize(Roles = "ADMIN,QUALITE")]
+    [Authorize(Roles = "ADMIN,SuperAdmin,QUALITE")]
     public IActionResult DetectFakeRdv([FromBody] FakeRdvRequestDto dto)
     {
         if (dto == null) return BadRequest(new { error = "Body requis" });
@@ -94,7 +96,7 @@ public class AiScoringController : ControllerBase
 
     // ── Historique des analyses ───────────────────────────────────────────────
     [HttpGet("logs")]
-    [Authorize(Roles = "ADMIN,QUALITE")]
+    [Authorize(Roles = "ADMIN,SuperAdmin,QUALITE")]
     public async Task<IActionResult> GetLogs([FromQuery] int limit = 50)
     {
         var logs = await _context.AiEligibilityLogs.AsNoTracking()

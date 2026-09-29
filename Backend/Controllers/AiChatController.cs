@@ -68,7 +68,8 @@ public class AiChatController : ControllerBase
             model,
             max_tokens = maxTokens,
             messages,
-            temperature = 0.7
+            temperature = 0.7,
+            reasoning_effort = "low"
         };
 
         using var client = _httpFactory.CreateClient();
@@ -88,7 +89,7 @@ public class AiChatController : ControllerBase
             return StatusCode(502, new { error = $"Erreur de connexion à Groq : {ex.Message}" });
         }
 
-        var raw = await resp.Content.ReadAsStringAsync();
+        var raw = Encoding.UTF8.GetString(await resp.Content.ReadAsByteArrayAsync());
 
         if (!resp.IsSuccessStatusCode)
         {

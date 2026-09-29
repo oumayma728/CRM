@@ -17,4 +17,5 @@ public interface IAttendanceService
     Task<List<AgentAttendanceDayDto>> GetMyHistoryAsync(long userId, int days = 30);
     WorkScheduleDto GetWorkSchedule();
     Task<AllRolesHistoryResultDto> GetAllRolesHistoryAsync(DateTime? date = null, string? role = null);
+    Task<bool> UpdateAttendanceStatusAsync(long userId, string? status);
 }

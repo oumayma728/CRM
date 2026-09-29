@@ -260,15 +260,19 @@ export function Navbar({ onMobileMenuToggle, mobileMenuOpen }: { onMobileMenuTog
   };
 
   const roleLabels: Record<string, string> = {
-    agent: 'Agent',
-    confirmatrice1: 'Confirmatrice 1',
-    confirmatrice2: 'Confirmatrice 2',
+    superadmin: 'Super Admin',
     admin: 'Administrateur',
+    agent: 'Agent',
     qualite: 'Superviseur Qualite',
-    technique: 'Service Technique'
+    commercial: 'Commercial',
+    tech: 'Service Technique',
+    CONF1: 'Confirmatrice 1',
+    CONF2: 'Confirmatrice 2',
+    CONFCLIENT: 'Confirmatrice Client',
   };
 
-  const userRole = user ? (roleLabels[user.role] || 'Agent') : 'Agent';
+  const roleKey = user?.role === 'confirmatrice' ? (user.typeConfirmatrice ?? 'CONF1') : user?.role;
+  const userRole = roleKey ? (roleLabels[roleKey] || 'Agent') : 'Agent';
   const isOnBreak = agentStatus === 'break';
   const selectedPause = PAUSE_OPTIONS.find(p => p.id === activePause);
   const pauseLabel = selectedPause?.label || PAUSE_LABELS[activePause || ''] || activePause || '';

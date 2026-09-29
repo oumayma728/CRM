@@ -5,6 +5,16 @@ namespace Backend.Helpers;
 /// <summary>Calcul d'éligibilité IA pour les aides énergétiques (CEE, Coup de Pouce, TVA, Éco-PTZ)</summary>
 public static class EligibilityCalculator
 {
+    /// <summary>Typed overload used by the CRM appointment module (khaled-dev-v3).</summary>
+    public static EligibilityResultDto Calculate(
+        float? revenus, string? chauffage, string? toiture,
+        string? isolation, float? consommation,
+        int? creditScore, string? situationBancaire, string? projectType)
+        => Calculate(revenus, chauffage, toiture, isolation,
+            consommation?.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            creditScore?.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            situationBancaire, projectType);
+
     public static EligibilityResultDto Calculate(
         float? revenus, string? chauffage, string? toiture,
         string? isolation, string? consommation,

@@ -125,6 +125,7 @@ public class AppointmentDetectResultDto
     public bool Detected { get; set; }
     public int Confidence { get; set; }
     public bool RequiresValidation { get; set; } = true;
+    public string? Date { get; set; }
 }
 
 public class InactivityRequestDto
@@ -160,6 +161,7 @@ public class PostalCodeExtractResultDto
     public string? PostalCode { get; set; }
     public string? Region { get; set; }
     public bool Extracted { get; set; }
+    public string? City { get; set; }
 }
 
 public class SummarizeRequestDto
@@ -190,4 +192,46 @@ public class ScriptAnalysisResultDto
     public string Performance { get; set; } = string.Empty;
     public string? NextSteps { get; set; }
     public string? CustomerIntent { get; set; }
+    public int ScoreAccueil { get; set; }
+    public int ScoreEnergie { get; set; }
+    public int ScoreVoix { get; set; }
+    public int ScoreClient { get; set; }
+    public int ScoreOperateur { get; set; }
+    public int ScoreEfficacite { get; set; }
+    public int ScoreConclusion { get; set; }
+}
+
+// ── Ajouts khaled-dev-v3 (AiService : insights agent + analyse de script 8 critères) ──
+public class AiInsightsDto
+{
+    public int AgentId { get; set; }
+    public AppointmentStatsDto Appointments { get; set; } = new();
+    public List<DistributionDto> FinancingDistribution { get; set; } = new();
+    public List<DistributionDto> ProjectDistribution { get; set; } = new();
+    public AiCallStatsDto CallStats { get; set; } = new();
+    public string? Tip { get; set; }
+}
+
+public class AppointmentStatsDto
+{
+    public int Total { get; set; }
+    public double AvgScore { get; set; }
+}
+
+public class AiCallStatsDto
+{
+    public int TotalCalls { get; set; }
+    public double AvgCallScore { get; set; }
+}
+
+public class DistributionDto
+{
+    public string Label { get; set; } = string.Empty;
+    public int Count { get; set; }
+}
+
+public class ScriptAnalysisRequestDto
+{
+    public string Transcript { get; set; } = string.Empty;
+    public string Qualification { get; set; } = string.Empty;
 }

@@ -24,17 +24,19 @@ export default defineConfig({
   },
   assetsInclude: ['**/*.svg', '**/*.csv'],
   server: {
+    // Backend (Backend/CRM.API.csproj) listens on http://localhost:5241 (Properties/launchSettings.json)
     proxy: {
       '/api': {
-        target: 'http://localhost:5190',
+        target: 'http://localhost:5241',
         changeOrigin: true,
       },
-      '/auth': {
-        target: 'http://localhost:5190',
+      '/hubs': {
+        target: 'http://localhost:5241',
         changeOrigin: true,
+        ws: true,
       },
       '/ws': {
-        target: 'ws://localhost:5190',
+        target: 'ws://localhost:5241',
         ws: true,
       },
     },

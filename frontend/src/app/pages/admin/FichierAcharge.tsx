@@ -1,3 +1,4 @@
+import { API_BASE, getAuthHeaders } from '../../services/api';
 import React, { useState, useEffect } from 'react';
 import {
   Upload, FileText, Users, Download, Play, Trash2,
@@ -65,7 +66,7 @@ export default function FichierAcharge() {
   const [stats, setStats] = useState({ total: 0, campaigns: [], statuses: [] });
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/leads/stats')
+    fetch(`${API_BASE}/leads/stats`, { headers: getAuthHeaders() })
       .then(r => r.json())
       .then(data => setStats(data))
       .catch(err => console.error(err));

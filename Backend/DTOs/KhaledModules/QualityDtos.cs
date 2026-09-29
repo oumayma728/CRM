@@ -3,6 +3,8 @@ namespace Backend.DTOs.Quality;
 public class CreateEvaluationDto
 {
     public long AgentId { get; set; }
+    /// <summary>Date de l'appel évalué (khaled-dev-v3) ; sinon date du jour.</summary>
+    public DateTime? CallDate { get; set; }
     public string? CallRef { get; set; }
     public float? GlobalScore { get; set; }
     public string? Decision { get; set; }

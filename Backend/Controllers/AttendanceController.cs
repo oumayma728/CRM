@@ -1,3 +1,4 @@
+using Backend.Attributes;
 using System.Security.Claims;
 using Backend.DTOs;
 using Backend.Services.Attendance;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Backend.Controllers;
 
 /// <summary>Pointage et pauses des agents (clock-in / clock-out / breaks)</summary>
+[SnakeCaseJson]
 [ApiController]
 [Route("api/attendance")]
 [Authorize]
@@ -99,6 +101,21 @@ public class AttendanceController : ControllerBase
     }
 
     // ── Admin / Qualite endpoints ──────────────────────────────────────────────
+
+    /// <summary>Correction manuelle du statut du dernier pointage d'un utilisateur (admin)</summary>
+    [HttpPut("update/{userId:long}")]
+    public async Task<IActionResult> UpdateAttendance(long userId, [FromBody] UpdateAttendanceStatusDto dto)
+    {
+        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+        if (role is not ("ADMIN" or "SuperAdmin")) return Forbid();
+        try
+        {
+            var success = await _attendanceService.UpdateAttendanceStatusAsync(userId, dto.Status);
+            return success ? Ok(new { success }) : NotFound(new { error = "Aucun pointage trouvé pour cet utilisateur" });
+        }
+        catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
 
     /// <summary>Rapport complet (admin/qualite)</summary>
     [HttpGet("report")]

@@ -99,7 +99,8 @@ public class AuthService : IAuthService
         if (!motDePasseValide)
             throw new UnauthorizedAccessException("Mot de passe temporaire incorrect.");
 
-        if (utilisateur.Statut != "EN_ATTENTE")
+        // Also used after an admin password reset (MustChangePassword + temporary password)
+        if (utilisateur.Statut != "EN_ATTENTE" && !utilisateur.MustChangePassword)
             throw new InvalidOperationException("Ce compte n'est pas en attente d'activation.");
 
         utilisateur.MotDePasse = BCrypt.Net.BCrypt.HashPassword(dto.NouveauMotDePasse);

@@ -8,6 +8,9 @@ import type { Message, Conversation } from '../types/chat';
  */
 const BASE_URL = import.meta.env.VITE_API_URL || "";
 
+/** Backend origin ("" = same origin through the Vite / Nginx proxy). */
+export const API_ORIGIN = BASE_URL;
+
 export const API_BASE = `${BASE_URL}/api`;
 const AUTH_BASE = `${BASE_URL}/api/auth`;
 
@@ -16,14 +19,28 @@ interface LoginRequest {
   password: string;
 }
 
-interface LoginResponse {
+/** Response of POST /api/auth/login (main backend, LoginResponseDTO). */
+export interface LoginResponse {
   token: string;
-  user: {
-    id: number;
-    username: string;
-    name: string;
-    role: string;
-  };
+  refreshToken?: string;
+  role: string;
+  typeConfirmatrice?: string | null;
+  userId: number;
+  nom: string;
+  prenom: string;
+  email: string;
+}
+
+/** Response of GET /api/auth/me. */
+export interface MeResponse {
+  id: number;
+  username: string;
+  email: string;
+  nom: string;
+  prenom: string;
+  name: string;
+  role: string;
+  typeConfirmatrice?: string | null;
 }
 
 interface Call {
@@ -88,8 +105,11 @@ const request = async (path: string, options: any = {}) => {
       // For now, throw a specific error to be caught by UI components
       throw new Error('Unauthorized: Please log in again.');
     }
+    if (response.status === 429) {
+      throw new Error('Trop de requêtes. Veuillez patienter quelques instants.');
+    }
     const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-    throw new Error(error.detail || 'Request failed');
+    throw new Error(error.detail || error.message || error.error || 'Request failed');
   }
   return response.json();
 };
@@ -98,26 +118,59 @@ const request = async (path: string, options: any = {}) => {
 // Auth API
 // ============================================================
 
-export const login = async (username: string, password: string): Promise<LoginResponse> => {
-  const response = await fetch(`${AUTH_BASE}/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
+// ============================================================
+// Rate Limit Error (429 on the auth endpoints)
+// ============================================================
 
-  if (!response.ok) {
-    let detail = 'Login failed';
-    try { const e = await response.json(); detail = e.detail || detail; } catch { }
-    throw new Error(detail);
+export class RateLimitError extends Error {
+  retryAfter: number;
+  constructor(message: string, retryAfter: number) {
+    super(message);
+    this.name = 'RateLimitError';
+    this.retryAfter = retryAfter;
   }
+}
 
-  const result = await response.json();
-  // Store JWT token for subsequent authenticated requests
-  setToken(result.token);
-  return result;
+// A new login aborts the previous in-flight one (prevents duplicate requests → 429)
+let loginAbortController: AbortController | null = null;
+
+export const login = async (email: string, password: string): Promise<LoginResponse> => {
+  if (loginAbortController) loginAbortController.abort();
+  loginAbortController = new AbortController();
+
+  try {
+    const response = await fetch(`${AUTH_BASE}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, motDePasse: password, identifiantMachine: null }),
+      signal: loginAbortController.signal,
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
+        throw new RateLimitError('Trop de tentatives. Veuillez patienter une minute avant de réessayer.', retryAfter);
+      }
+      let detail = 'Login failed';
+      try { const e = await response.json(); detail = e.detail || e.message || e.error || detail; } catch { }
+      throw new Error(detail);
+    }
+
+    const result = await response.json();
+    // Store JWT token for subsequent authenticated requests
+    setToken(result.token);
+    return result;
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw new Error('Login annulé — une autre requête est déjà en cours.');
+    }
+    throw err;
+  } finally {
+    loginAbortController = null;
+  }
 };
 
-export const getMe = async (): Promise<LoginResponse['user']> => {
+export const getMe = async (): Promise<MeResponse> => {
   const response = await fetch(`${AUTH_BASE}/me`, {
     headers: getAuthHeaders(),
   });
@@ -141,7 +194,7 @@ export const createUser = async (userData: any): Promise<any> => {
 
   if (!response.ok) {
     let detail = 'Failed to create user';
-    try { const e = await response.json(); detail = e.detail || detail; } catch { }
+    try { const e = await response.json(); detail = e.detail || e.message || e.error || detail; } catch { }
     throw new Error(detail);
   }
 
@@ -156,7 +209,7 @@ export const deleteUser = async (userId: number): Promise<any> => {
 
   if (!response.ok) {
     let detail = 'Failed to delete user';
-    try { const e = await response.json(); detail = e.detail || detail; } catch { }
+    try { const e = await response.json(); detail = e.detail || e.message || e.error || detail; } catch { }
     throw new Error(detail);
   }
 
@@ -175,7 +228,7 @@ export const updateUser = async (userId: number, userData: any): Promise<any> =>
 
   if (!response.ok) {
     let detail = 'Failed to update user';
-    try { const e = await response.json(); detail = e.detail || detail; } catch { }
+    try { const e = await response.json(); detail = e.detail || e.message || e.error || detail; } catch { }
     throw new Error(detail);
   }
 
@@ -190,7 +243,7 @@ export const forgotPassword = async (email: string): Promise<any> => {
 
   if (!response.ok) {
     let detail = 'Failed to send reset email';
-    try { const e = await response.json(); detail = e.detail || detail; } catch { }
+    try { const e = await response.json(); detail = e.detail || e.message || e.error || detail; } catch { }
     throw new Error(detail);
   }
 
@@ -201,12 +254,12 @@ export const resetPassword = async (token: string, new_password: string): Promis
   const response = await fetch(`${AUTH_BASE}/reset-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token, new_password }),
+    body: JSON.stringify({ token, newPassword: new_password }),
   });
 
   if (!response.ok) {
     let detail = 'Failed to reset password';
-    try { const e = await response.json(); detail = e.detail || detail; } catch { }
+    try { const e = await response.json(); detail = e.detail || e.message || e.error || detail; } catch { }
     throw new Error(detail);
   }
 
@@ -386,7 +439,7 @@ export const createSalaryRule = async (data: any): Promise<any> => {
   });
   if (!response.ok) {
     let detail = 'Failed to create rule';
-    try { const e = await response.json(); detail = e.detail || detail; } catch { }
+    try { const e = await response.json(); detail = e.detail || e.message || e.error || detail; } catch { }
     throw new Error(detail);
   }
   return response.json();
@@ -400,7 +453,7 @@ export const updateSalaryRule = async (ruleId: number, data: any): Promise<any> 
   });
   if (!response.ok) {
     let detail = 'Failed to update rule';
-    try { const e = await response.json(); detail = e.detail || detail; } catch { }
+    try { const e = await response.json(); detail = e.detail || e.message || e.error || detail; } catch { }
     throw new Error(detail);
   }
   return response.json();
@@ -582,29 +635,30 @@ interface ChatMessage {
   content: string;
 }
 
+/**
+ * AI assistant (Groq) — POST /api/ai-chat/message.
+ * `history` carries the previous turns so the assistant keeps the conversation context.
+ */
 export const sendChatMessage = async (
   message: string,
-  role: string,
-  agentName?: string
+  _role?: string,
+  _agentName?: string,
+  history: { role: 'user' | 'assistant'; content: string }[] = []
 ): Promise<{ response: string; sources?: string[] }> => {
-  const response = await fetch(`${API_BASE}/chat`, {
+  const response = await fetch(`${API_BASE}/ai-chat/message`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...getAuthHeaders(),
     },
-    body: JSON.stringify({
-      message,
-      role,
-      agent_name: agentName,
-    }),
+    body: JSON.stringify({ messages: [...history, { role: 'user', content: message }] }),
   });
 
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error('Chat failed');
+    throw new Error(data.error || 'Chat failed');
   }
-
-  return response.json();
+  return { response: data.reply ?? '' };
 };
 
 // ============================================================
@@ -1023,7 +1077,7 @@ export const saveCall = async (callData: SaveCallRequest): Promise<any> => {
 
   if (!response.ok) {
     let detail = 'Failed to save call';
-    try { const e = await response.json(); detail = e.detail || detail; } catch { }
+    try { const e = await response.json(); detail = e.detail || e.message || e.error || detail; } catch { }
     throw new Error(detail);
   }
 

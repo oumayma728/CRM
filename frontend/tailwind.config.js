@@ -19,27 +19,27 @@ export default {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
         primary: {
-          DEFAULT: 'rgb(var(--primary-rgb) / <alpha-value>)',
+          DEFAULT: 'rgba(var(--primary-rgb), <alpha-value>)',
           foreground: 'var(--primary-foreground)',
         },
         secondary: {
-          DEFAULT: 'var(--secondary)',
+          DEFAULT: 'rgba(var(--secondary-rgb), <alpha-value>)',
           foreground: 'var(--secondary-foreground)',
         },
         destructive: {
-          DEFAULT: 'var(--destructive)',
+          DEFAULT: 'rgba(var(--destructive-rgb), <alpha-value>)',
           foreground: 'var(--destructive-foreground)',
         },
         success: {
-          DEFAULT: 'var(--success)',
+          DEFAULT: 'rgba(var(--success-rgb), <alpha-value>)',
           foreground: 'var(--success-foreground)',
         },
         warning: {
-          DEFAULT: 'var(--warning)',
+          DEFAULT: 'rgba(var(--warning-rgb), <alpha-value>)',
           foreground: 'var(--warning-foreground)',
         },
         info: {
-          DEFAULT: 'var(--info)',
+          DEFAULT: 'rgba(var(--info-rgb), <alpha-value>)',
           foreground: 'var(--info-foreground)',
         },
         chart: {

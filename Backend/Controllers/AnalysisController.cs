@@ -1,74 +1,36 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Backend.DTOs.Ai;
+using Backend.Services.Ai;
 using System.Text.RegularExpressions;
 
 namespace Backend.Controllers;
 
 /// <summary>
+/// Contrôles IA unitaires (refus, qualification) sur une transcription.
+/// L'analyse complète d'appel (audio / transcript, 8 critères) est dans CallAnalysisController ;
+/// Groq Whisper y sert de repli de transcription.
 /// Analyse IA des transcriptions d'appel — diarisation, détection refus,
 /// qualification, sentiment, résumé automatique, extraction code postal.
-/// Toute la logique est rule-based (pas de dépendance LLM externe).
+/// Le résumé et le scoring de script utilisent Groq (LLM) quand disponible,
+/// avec repli automatique sur la logique rule-based sinon. Le reste
+/// (diarisation, refus, qualification, RDV, inactivité, code postal) est
+/// toujours rule-based (pas de dépendance LLM).
 /// </summary>
 [ApiController]
 [Route("api/analyze")]
 [Authorize]
 public class AnalysisController : ControllerBase
 {
-    // ── POST /api/analyze/transcript ─────────────────────────────────────────
-    /// <summary>Analyse complète d'une transcription texte.</summary>
-    [HttpPost("transcript")]
-    public IActionResult AnalyzeTranscript([FromBody] TranscriptAnalysisRequestDto dto)
+    private static readonly string[] AudioExtensions = { ".mp3", ".wav", ".m4a", ".ogg", ".webm", ".flac" };
+
+    private readonly IGroqAiService _groqAi;
+    private readonly ILogger<AnalysisController> _logger;
+
+    public AnalysisController(IGroqAiService groqAi, ILogger<AnalysisController> logger)
     {
-        if (string.IsNullOrWhiteSpace(dto.Transcript))
-            return BadRequest(new { error = "Transcript requis" });
-
-        var transcript = dto.Transcript;
-        var qualification = dto.Qualification ?? "PV";
-
-        var diarization = Diarize(transcript, dto.CallDuration);
-        var refusal = DetectRefusal(transcript);
-        var qualCheck = CheckQualification(qualification, transcript);
-        var appointment = DetectAppointment(transcript);
-        var inactivity = AnalyzeInactivity(dto.CallDuration, transcript);
-        var postalCode = ExtractPostalCode(transcript);
-        var script = AnalyzeScript(transcript, qualification, refusal);
-        var summary = Summarize(transcript, dto.AgentName, script);
-
-        return Ok(new
-        {
-            sentiment = script.Sentiment,
-            sentiment_score = script.SentimentScore,
-            score_percentage = script.ScorePercentage,
-            performance = script.Performance,
-            summary = summary.Summary,
-            keywords = summary.Keywords.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList(),
-            score_ecoute = script.ScoreEcoute,
-            score_persuasion = script.ScorePersuasion,
-            score_empathie = script.ScoreEmpathie,
-            score_argumentation = script.ScoreArgumentation,
-            score_refus = script.ScoreRefus,
-            score_vente = script.ScoreVente,
-            agent_talk_ratio = diarization.AgentTalkRatio,
-            client_talk_ratio = diarization.ClientTalkRatio,
-            labeled_transcript = diarization.LabeledTranscript,
-            script_respected = script.ScriptRespected,
-            objections_handled = script.ObjectionsHandled,
-            customer_intent = script.CustomerIntent,
-            next_steps = script.NextSteps,
-            refusal_detected = refusal.RefusalDetected,
-            refusal_motive = refusal.PrimaryMotive,
-            refusal_keywords = refusal.RefusalKeywords,
-            suggested_response = refusal.SuggestedResponse,
-            inactivity_detected = inactivity.InactivityDetected,
-            inactivity_reason = inactivity.Reason,
-            appointment_detected = appointment.Detected,
-            appointment_confidence = appointment.Confidence,
-            qualification_coherent = qualCheck.Coherent,
-            qualification_details = qualCheck.Details,
-            postal_code = postalCode.PostalCode,
-            postal_region = postalCode.Region
-        });
+        _groqAi = groqAi;
+        _logger = logger;
     }
 
     // ── POST /api/analyze/check-refusal ──────────────────────────────────────

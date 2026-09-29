@@ -1,3 +1,4 @@
+import { API_BASE, getAuthHeaders } from '../../services/api';
 // ImportLeadsPage.tsx — updated with: column mapping preview, dedup control,
 // scheduled injection, priority field, leads-per-agent unit, confirmation summary
 
@@ -374,12 +375,13 @@ export default function ImportLeadsPage() {
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', fileToUpload);
-    formData.append('campaign_name', 'Campagne Import');
-    formData.append('company_name', 'CRM Import');
+    formData.append('campaignName', 'Campagne Import');
+    formData.append('companyName', 'CRM Import');
 
     try {
-      const response = await fetch('http://localhost:8000/api/leads/import', {
+      const response = await fetch(`${API_BASE}/leads/import`, {
         method: 'POST',
+        headers: getAuthHeaders(),
         body: formData,
       });
       const res = await response.json();

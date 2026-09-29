@@ -23,7 +23,11 @@ using Backend.Services.Clients;
 using Backend.Services.Attendance;
 using Backend.Filters;
 using Backend.Hubs;
+using Backend.Config;
+using Backend.Services.WebSocket;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +54,9 @@ if (string.IsNullOrEmpty(jwtConfig.Audience))
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<PermissionFilter>();
+    // snake_case contract for the modules ported from khaled-dev-v3 (see SnakeCaseJsonAttribute)
+    options.InputFormatters.Insert(0, new Backend.Formatters.SnakeCaseJsonInputFormatter());
+    options.OutputFormatters.Insert(0, new Backend.Formatters.SnakeCaseJsonOutputFormatter());
 })
 .AddJsonOptions(options =>
 {
@@ -57,9 +64,43 @@ builder.Services.AddControllers(options =>
         new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 
-// Database
+// Database — ConnectionStrings:DefaultConnection, or DB_HOST / DB_PORT / DB_NAME / DB_USER / DB_PASSWORD
+// (container / Render deployments, from feature/khaled)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString))
+{
+    var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+    var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+    var dbUser = Environment.GetEnvironmentVariable("DB_USER");
+    var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+    if (string.IsNullOrEmpty(dbHost) || string.IsNullOrEmpty(dbName) || string.IsNullOrEmpty(dbUser) || string.IsNullOrEmpty(dbPassword))
+        throw new InvalidOperationException("ConnectionStrings:DefaultConnection is missing and DB_HOST, DB_NAME, DB_USER, DB_PASSWORD are not set.");
+    var dbPort = Environment.GetEnvironmentVariable("DB_PORT");
+    connectionString = $"Host={dbHost};Port={(string.IsNullOrEmpty(dbPort) ? "5432" : dbPort)};Database={dbName};Username={dbUser};Password={dbPassword};";
+}
 builder.Services.AddDbContext<Backend.Data.ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
+
+// Rate limiting on authentication endpoints (feature/khaled1): 10 attempts / 2 min per client IP
+// (RateLimiting:LoginPermitLimit overrides the limit, e.g. for the E2E suite)
+var loginPermitLimit = builder.Configuration.GetValue("RateLimiting:LoginPermitLimit", 10);
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("login", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = loginPermitLimit, Window = TimeSpan.FromMinutes(2), QueueLimit = 0 }));
+    options.OnRejected = async (context, ct) =>
+    {
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue)
+            ? (int)retryAfterValue.TotalSeconds
+            : 60;
+        context.HttpContext.Response.ContentType = "application/json";
+        context.HttpContext.Response.Headers["Retry-After"] = retryAfter.ToString();
+        await context.HttpContext.Response.WriteAsync(
+            System.Text.Json.JsonSerializer.Serialize(new { error = "Trop de requêtes. Veuillez réessayer dans quelques instants.", retryAfter }), ct);
+    };
+});
 
 // ─── MY EXISTING SERVICES ─────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService,         AuthService>();
@@ -69,6 +110,7 @@ builder.Services.AddScoped<IEmailService,        EmailService>();
 builder.Services.AddScoped<IConfirmationService, ConfirmationService>();
 builder.Services.AddScoped<IDashboardService,    DashboardService>();
 builder.Services.AddScoped<Backend.Services.Permission.IPermissionService, Backend.Services.Permission.PermissionService>();
+builder.Services.AddScoped<Backend.Services.Ai.IGroqAiService, Backend.Services.Ai.GroqAiService>();
 builder.Services.AddHttpContextAccessor();
 
 // ─── COLLEAGUE'S NEW SERVICES ────────────────────────────────────────────
@@ -94,6 +136,28 @@ builder.Services.AddSignalR();
 
 // ─── HTTP CLIENT (pour appels microservice IA Python) ────────────────────
 builder.Services.AddHttpClient();
+
+// ─── MODULE ANALYSE D'APPELS IA (khaled-dev-v3) ──────────────────────────
+// Appels analysés, RDV CRM, relances, messagerie interne, leads, config IA.
+builder.Services.Configure<OllamaSettings>(builder.Configuration.GetSection("Ollama"));
+builder.Services.Configure<WeightsConfig>(builder.Configuration.GetSection("Weights"));
+builder.Services.Configure<WhisperSettings>(builder.Configuration.GetSection("Whisper"));
+builder.Services.Configure<AlertThresholds>(builder.Configuration.GetSection("Alerts"));
+builder.Services.AddHttpClient("Ollama");
+builder.Services.AddScoped<Backend.Services.Ai.ILlmCompletionService, Backend.Services.Ai.LlmCompletionService>();
+builder.Services.AddScoped<Backend.Services.Ai.IAiService, Backend.Services.Ai.AiService>();
+builder.Services.AddScoped<Backend.Services.Ai.ITranscriptionService, Backend.Services.Ai.TranscriptionService>();
+builder.Services.AddScoped<Backend.Services.Calls.ICallService, Backend.Services.Calls.CallService>();
+builder.Services.AddScoped<Backend.Services.Appointments.IAppointmentService, Backend.Services.Appointments.AppointmentService>();
+builder.Services.AddScoped<Backend.Services.Messages.IMessageService, Backend.Services.Messages.MessageService>();
+builder.Services.AddScoped<Backend.Services.Analytics.IAnalyticsService, Backend.Services.Analytics.AnalyticsService>();
+builder.Services.AddScoped<Backend.Services.Quality.IQualityService, Backend.Services.Quality.QualityService>();
+builder.Services.AddScoped<Backend.Services.Quality.IQualityDashboardService, Backend.Services.Quality.QualityDashboardService>();
+builder.Services.AddScoped<Backend.Services.Leads.ILeadService, Backend.Services.Leads.LeadService>();
+builder.Services.AddScoped<Backend.Services.AgentWorkspace.IAgentWorkspaceService, Backend.Services.AgentWorkspace.AgentWorkspaceService>();
+builder.Services.AddSingleton<WebSocketConnectionManager>();
+builder.Services.AddHostedService<Backend.Services.Followups.FollowupBackgroundService>();
+builder.Services.AddHostedService<Backend.Services.Alerts.InactivityAlertService>();
 
 // API Documentation
 builder.Services.AddEndpointsApiExplorer();
@@ -138,7 +202,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5174")
+        var origins = new[] { "http://localhost:5173", "http://localhost:3000", "http://localhost:5174" }
+            .Concat(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>())
+            .ToArray();
+        policy.WithOrigins(origins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); // Required for SignalR WebSocket
@@ -205,13 +272,50 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
+app.UseWebSockets();
+
+// ─── WebSocket messagerie interne + alertes d'inactivité (khaled-dev-v3) ────
+app.Map("/ws/messages/{userId}", async (HttpContext context, string userId) =>
+{
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        return;
+    }
+    using var socket = await context.WebSockets.AcceptWebSocketAsync();
+    var manager = context.RequestServices.GetRequiredService<WebSocketConnectionManager>();
+    if (long.TryParse(userId, out var uid)) manager.Add(uid, socket);
+
+    var buffer = new byte[1024 * 4];
+    try
+    {
+        while (socket.State == System.Net.WebSockets.WebSocketState.Open)
+        {
+            var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+            if (result.MessageType == System.Net.WebSockets.WebSocketMessageType.Close)
+            {
+                await socket.CloseAsync(System.Net.WebSockets.WebSocketCloseStatus.NormalClosure, "Closed", CancellationToken.None);
+                break;
+            }
+        }
+    }
+    catch { /* client disconnected */ }
+    finally { if (long.TryParse(userId, out var id)) manager.Remove(id); }
+});
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
 // ─── SIGNALR HUB ─────────────────────────────────────────────────────────
 app.MapHub<ChatHub>("/hubs/chat");
+
+app.MapGet("/api/health", async (Backend.Data.ApplicationDbContext db) =>
+{
+    var dbOk = await db.Database.CanConnectAsync();
+    return Results.Ok(new { status = dbOk ? "healthy" : "degraded", database = dbOk ? "connected" : "unreachable" });
+});
 
 // ─── SEED DONNÉES DE TEST (dev uniquement) ────────────────────────────────
 if (app.Environment.IsDevelopment())
@@ -222,3 +326,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+// Exposed for WebApplicationFactory-based integration tests (tests/CRM.API.Tests)
+public partial class Program { }

@@ -28,11 +28,13 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${DB_NAME:-pfe_crm_ia};Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-postgres}"
       Jwt__Secret: ${JWT_SECRET}
-      Jwt__Issuer: ${JWT_ISSUER:-CrmApi}
-      Jwt__Audience: ${JWT_AUDIENCE:-CrmApp}
+      Jwt__Issuer: ${JWT_ISSUER:-crm-api}
+      Jwt__Audience: ${JWT_AUDIENCE:-crm-client}
+      Groq__ApiKey: ${GROQ_API_KEY:-}
+      Ollama__BaseUrl: ${OLLAMA_URL:-http://host.docker.internal:11434}
       Whisper__Enabled: ${WHISPER_ENABLED:-true}
       Whisper__PythonPath: /opt/whisper/bin/python
-      Whisper__ScriptPath: ai-scripts/transcribe.py
+      Whisper__ScriptPath: scripts/transcribe.py
       Whisper__Model: ${WHISPER_MODEL:-base}
       Whisper__Language: ${WHISPER_LANGUAGE:-fr}
       Whisper__Device: ${WHISPER_DEVICE:-cpu}
@@ -52,6 +54,8 @@ services:
       context: ./frontend
     container_name: crm-frontend
     restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:5000
     ports:
       - "${PORT:-80}:80"
       # Décommentez pour activer HTTPS (après avoir généré les certificats SSL)
