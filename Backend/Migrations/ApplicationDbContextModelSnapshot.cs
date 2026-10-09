@@ -23,6 +23,43 @@ namespace CRM.API.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Backend.Entities.AdvancedAttendance", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("ClockIn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ClockOut")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("active");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AdvancedAttendances", (string)null);
+                });
+
             modelBuilder.Entity("Backend.Entities.Agenda", b =>
                 {
                     b.Property<long>("Id")
@@ -128,6 +165,243 @@ namespace CRM.API.Migrations
                     b.ToTable("agent_profiles", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Entities.AgentSavedData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("AgentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DataType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId");
+
+                    b.ToTable("agent_saved_data");
+                });
+
+            modelBuilder.Entity("Backend.Entities.AiEligibilityLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AgentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ClientData")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Result")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AiEligibilityLogs", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Entities.AlertHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<float>("ActualValue")
+                        .HasColumnType("real");
+
+                    b.Property<string>("AgentName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlertType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("warning");
+
+                    b.Property<int>("ThresholdValue")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AlertHistories", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Entities.AlertRule", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("NotificationEmail")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RuleType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("ThresholdValue")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AlertRules", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Entities.AppUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Avatar")
+                        .HasColumnType("text")
+                        .HasColumnName("avatar");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("email");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("first_name");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsOnline")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_online");
+
+                    b.Property<DateTime?>("LastHeartbeatAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_heartbeat_at");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_login_at");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("last_name");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("boolean")
+                        .HasColumnName("must_change_password");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("PasswordHash");
+
+                    b.Property<int?>("PasswordResetByUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("password_reset_by_user_id");
+
+                    b.Property<string>("PasswordResetToken")
+                        .HasColumnType("text")
+                        .HasColumnName("password_reset_token");
+
+                    b.Property<DateTime?>("PasswordResetTokenExpiry")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("password_reset_token_expiry");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text")
+                        .HasColumnName("phone");
+
+                    b.Property<DateTime?>("PresenceChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("presence_changed_at");
+
+                    b.Property<string>("PresenceStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("presence_status");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("text")
+                        .HasColumnName("refresh_token");
+
+                    b.Property<DateTime?>("RefreshTokenExpiryTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("refresh_token_expiry_time");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("integer")
+                        .HasColumnName("role_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PasswordResetByUserId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("users", (string)null);
+                });
+
             modelBuilder.Entity("Backend.Entities.Appel", b =>
                 {
                     b.Property<long>("Id")
@@ -164,6 +438,282 @@ namespace CRM.API.Migrations
                     b.HasIndex("ContactId");
 
                     b.ToTable("Appels");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Appointment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AgentIdRef")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("CallId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ClientName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ClientPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("ConfidenceScore")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DetectedDate")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("FinalDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CallId");
+
+                    b.ToTable("appointments");
+                });
+
+            modelBuilder.Entity("Backend.Entities.AttendanceBreak", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AttendanceId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttendanceId");
+
+                    b.ToTable("AttendanceBreaks", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Entities.Call", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AgentId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("AgentName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<int>("AgentPoliteness")
+                        .HasColumnType("integer");
+
+                    b.Property<float>("AgentSeconds")
+                        .HasColumnType("real");
+
+                    b.Property<float>("AgentTalkRatio")
+                        .HasColumnType("real");
+
+                    b.Property<string>("AgentText")
+                        .HasColumnType("text");
+
+                    b.Property<int>("AppointmentConfidence")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AppointmentDate")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("AudioFile")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("CallDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CallDuration")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CallType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<float>("ClientSeconds")
+                        .HasColumnType("real");
+
+                    b.Property<float>("ClientTalkRatio")
+                        .HasColumnType("real");
+
+                    b.Property<string>("ClientText")
+                        .HasColumnType("text");
+
+                    b.Property<float?>("CoherenceScore")
+                        .HasColumnType("real");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomerIntent")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("DiarizationMethod")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("InactivityDetected")
+                        .HasColumnType("boolean");
+
+                    b.Property<float>("InactivityDuration")
+                        .HasColumnType("real");
+
+                    b.Property<string>("Keywords")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LabeledTranscript")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("LeadId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NextSteps")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("ObjectionsHandled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Performance")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Problem")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Qualification")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool?>("QualificationCoherence")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool?>("QualificationMatch")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("RefusalReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("ScoreAccueil")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreArgumentation")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreClient")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreConclusion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreEcoute")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreEfficacite")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreEmpathie")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreEnergie")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreOperateur")
+                        .HasColumnType("integer");
+
+                    b.Property<float>("ScorePercentage")
+                        .HasColumnType("real");
+
+                    b.Property<int>("ScorePersuasion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreRefus")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreVente")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScoreVoix")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("ScriptRespected")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Sentiment")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<float>("SentimentScore")
+                        .HasColumnType("real");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Transcription")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TranscriptionStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("calls");
                 });
 
             modelBuilder.Entity("Backend.Entities.CallAttempt", b =>
@@ -633,6 +1183,11 @@ namespace CRM.API.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("nbre_personnes");
 
+                    b.Property<string>("NextAction")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("next_action");
+
                     b.Property<DateTime?>("NextCallAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("next_call_at");
@@ -701,6 +1256,81 @@ namespace CRM.API.Migrations
                     b.ToTable("campaign_file_contacts", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Entities.ChatMessage", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<long>("SenderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SenderName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SenderRole")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ChatMessages");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Client", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Adresse")
+                        .HasColumnType("text")
+                        .HasColumnName("adresse");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("text")
+                        .HasColumnName("email");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Nom")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("nom");
+
+                    b.Property<string>("Telephone")
+                        .HasColumnType("text")
+                        .HasColumnName("telephone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Client");
+                });
+
             modelBuilder.Entity("Backend.Entities.Conge", b =>
                 {
                     b.Property<long>("Id")
@@ -740,13 +1370,16 @@ namespace CRM.API.Migrations
                     b.Property<string>("Adresse")
                         .HasColumnType("text");
 
-                    b.Property<long?>("AgentId")
-                        .HasColumnType("bigint");
-
                     b.Property<int?>("AgeChaudiere")
                         .HasColumnType("integer");
 
+                    b.Property<long?>("AgentId")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("CodePostal")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Commentaire")
                         .HasColumnType("text");
 
                     b.Property<string>("CommentaireBanque")
@@ -758,10 +1391,13 @@ namespace CRM.API.Migrations
                     b.Property<string>("CommentaireConfirmation")
                         .HasColumnType("text");
 
-                    b.Property<string>("Commentaire")
+                    b.Property<string>("ConsommationChauffage")
                         .HasColumnType("text");
 
-                    b.Property<string>("ConsommationChauffage")
+                    b.Property<string>("Credits")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CreneauOptimalIA")
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("DateDernierAppel")
@@ -771,6 +1407,9 @@ namespace CRM.API.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("DateRappelPlanifie")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DateScoreIA")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("DureeDernierAppel")
@@ -806,6 +1445,9 @@ namespace CRM.API.Migrations
                     b.Property<string>("Nom")
                         .HasColumnType("text");
 
+                    b.Property<int>("NombreNRP")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("NombrePersonnes")
                         .HasColumnType("integer");
 
@@ -833,8 +1475,8 @@ namespace CRM.API.Migrations
                     b.Property<string>("Revenus")
                         .HasColumnType("text");
 
-                    b.Property<string>("Credits")
-                        .HasColumnType("text");
+                    b.Property<double?>("ScoreIA")
+                        .HasColumnType("double precision");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -867,6 +1509,84 @@ namespace CRM.API.Migrations
                     b.HasIndex("FichierImportId");
 
                     b.ToTable("Contacts");
+                });
+
+            modelBuilder.Entity("Backend.Entities.ContactNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AuthorUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("body");
+
+                    b.Property<int>("CampaignFileContactId")
+                        .HasColumnType("integer")
+                        .HasColumnName("campaign_file_contact_id");
+
+                    b.Property<int>("CampaignId")
+                        .HasColumnType("integer")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("NoteType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("note_type");
+
+                    b.Property<int?>("SourceFileContactId")
+                        .HasColumnType("integer")
+                        .HasColumnName("source_file_contact_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("CampaignFileContactId");
+
+                    b.HasIndex("CampaignId");
+
+                    b.HasIndex("DeletedByUserId");
+
+                    b.HasIndex("SourceFileContactId");
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.ToTable("contact_notes");
                 });
 
             modelBuilder.Entity("Backend.Entities.Country", b =>
@@ -907,6 +1627,101 @@ namespace CRM.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("countries");
+                });
+
+            modelBuilder.Entity("Backend.Entities.CrmAppointment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("AgentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("AppointmentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AppointmentTime")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Chauffage")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("ClientEmail")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("ClientName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("ClientPhone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<float>("Consommation")
+                        .HasColumnType("real");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CreditScore")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FinancingStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Isolation")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProjectType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("QualityScore")
+                        .HasColumnType("integer");
+
+                    b.Property<float>("Revenus")
+                        .HasColumnType("real");
+
+                    b.Property<string>("SituationBancaire")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Toiture")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId");
+
+                    b.ToTable("crm_appointments");
                 });
 
             modelBuilder.Entity("Backend.Entities.DistributedContact", b =>
@@ -999,6 +1814,71 @@ namespace CRM.API.Migrations
                     b.ToTable("contacts", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Entities.Evaluation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AgentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("AppelId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Commentaire")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("DateEvaluation")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("EvaluateurId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("NbPose")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NbRdvAnnule")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NbRdvBrut")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NbRdvConfirme")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NbRdvSigne")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NoteEcoute")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("NoteGlobale")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("NotePitchCommercial")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NoteQualiteAppel")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NoteRespectScript")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NoteTraitementObjections")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId");
+
+                    b.HasIndex("AppelId");
+
+                    b.ToTable("Evaluations");
+                });
+
             modelBuilder.Entity("Backend.Entities.FichierImport", b =>
                 {
                     b.Property<long>("Id")
@@ -1044,6 +1924,52 @@ namespace CRM.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("FichiersImport");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Followup", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long?>("AgentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("AgentName")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("AppointmentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long?>("ContactId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<int>("RelanceCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId");
+
+                    b.HasIndex("ContactId");
+
+                    b.ToTable("Followups");
                 });
 
             modelBuilder.Entity("Backend.Entities.ImportJob", b =>
@@ -1193,6 +2119,114 @@ namespace CRM.API.Migrations
                     b.ToTable("import_jobs", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Entities.ImportedLead", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("AgentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CampaignName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CompanyName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContactName")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PostalCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("new");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ImportedLeads", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Entities.Lead", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasColumnType("text");
+
+                    b.Property<long?>("AgentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CampaignName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CompanyName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContactName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PostalCode")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("leads");
+                });
+
+            modelBuilder.Entity("Backend.Entities.LeadFolder", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Campaign")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LeadFolders");
+                });
+
             modelBuilder.Entity("Backend.Entities.LeadType", b =>
                 {
                     b.Property<int>("Id")
@@ -1231,6 +2265,118 @@ namespace CRM.API.Migrations
                     b.HasIndex("CountryId");
 
                     b.ToTable("lead_types");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Log", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("logs");
+                });
+
+            modelBuilder.Entity("Backend.Entities.ManualEvaluation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AgentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CallRef")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Commentaires")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Decision")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("EvaluationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("EvaluatorId")
+                        .HasColumnType("bigint");
+
+                    b.Property<float>("GlobalScore")
+                        .HasColumnType("real");
+
+                    b.Property<string>("ScoresJson")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId");
+
+                    b.HasIndex("EvaluatorId");
+
+                    b.ToTable("ManualEvaluations", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Entities.Message", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsUrgent")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("ReceiverId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("SenderId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceiverId");
+
+                    b.HasIndex("SenderId");
+
+                    b.ToTable("messages");
                 });
 
             modelBuilder.Entity("Backend.Entities.Performance", b =>
@@ -1369,6 +2515,30 @@ namespace CRM.API.Migrations
                     b.ToTable("Pointages");
                 });
 
+            modelBuilder.Entity("Backend.Entities.Qualification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExpectedKeywords")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Qualifications");
+                });
+
             modelBuilder.Entity("Backend.Entities.RendezVous", b =>
                 {
                     b.Property<long>("Id")
@@ -1477,6 +2647,114 @@ namespace CRM.API.Migrations
                     b.HasIndex("PermissionId");
 
                     b.ToTable("role_permissions");
+                });
+
+            modelBuilder.Entity("Backend.Entities.SalaireAgent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AgentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<float>("BaseSalary")
+                        .HasColumnType("real");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<float>("InstallationBonus")
+                        .HasColumnType("real");
+
+                    b.Property<string>("Month")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("pending");
+
+                    b.Property<float>("Penalties")
+                        .HasColumnType("real");
+
+                    b.Property<float>("PoseBonus")
+                        .HasColumnType("real");
+
+                    b.Property<int>("PoseCount")
+                        .HasColumnType("integer");
+
+                    b.Property<float>("QualityBonus")
+                        .HasColumnType("real");
+
+                    b.Property<float>("QualityRate")
+                        .HasColumnType("real");
+
+                    b.Property<float>("RdvBonus")
+                        .HasColumnType("real");
+
+                    b.Property<int>("RdvCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RefusCount")
+                        .HasColumnType("integer");
+
+                    b.Property<float>("TotalSalary")
+                        .HasColumnType("real");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentId");
+
+                    b.ToTable("SalairesAgents", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Entities.SalaryRule", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<float>("Amount")
+                        .HasColumnType("real");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("agent");
+
+                    b.Property<string>("RuleName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("RuleType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SalaryRules", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Entities.SourceFile", b =>
@@ -1814,102 +3092,76 @@ namespace CRM.API.Migrations
                     b.ToTable("suppliers", (string)null);
                 });
 
-            modelBuilder.Entity("Backend.Entities.AppUser", b =>
+            modelBuilder.Entity("Backend.Entities.User", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
+                        .HasColumnType("bigint");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<string>("Avatar")
-                        .HasColumnType("text")
-                        .HasColumnName("avatar");
+                    b.Property<bool>("Actif")
+                        .HasColumnType("boolean");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
+                    b.Property<DateTime>("DateCreation")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DerniereConnexion")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("email");
+                        .HasColumnType("text");
 
-                    b.Property<string>("FirstName")
+                    b.Property<string>("IdentifiantMachine")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MotDePasse")
                         .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("first_name");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_deleted");
-
-                    b.Property<bool>("IsOnline")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_online");
-
-                    b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_login_at");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("last_name");
+                        .HasColumnType("text");
 
                     b.Property<bool>("MustChangePassword")
-                        .HasColumnType("boolean")
-                        .HasColumnName("must_change_password");
+                        .HasColumnType("boolean");
 
-                    b.Property<string>("PasswordHash")
+                    b.Property<string>("Nom")
                         .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("PasswordHash");
-
-                    b.Property<int?>("PasswordResetByUserId")
-                        .HasColumnType("integer")
-                        .HasColumnName("password_reset_by_user_id");
+                        .HasColumnType("text");
 
                     b.Property<string>("PasswordResetToken")
-                        .HasColumnType("text")
-                        .HasColumnName("password_reset_token");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("PasswordResetTokenExpiry")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("password_reset_token_expiry");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Phone")
-                        .HasColumnType("text")
-                        .HasColumnName("phone");
+                    b.Property<string>("Prenom")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("RefreshToken")
-                        .HasColumnType("text")
-                        .HasColumnName("refresh_token");
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("RefreshTokenExpiryTime")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("refresh_token_expiry_time");
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("RoleId")
-                        .HasColumnType("integer")
-                        .HasColumnName("role_id");
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("character varying(13)");
 
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
+                    b.Property<string>("Service")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Statut")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PasswordResetByUserId");
+                    b.ToTable("Utilisateur", (string)null);
 
-                    b.HasIndex("RoleId");
+                    b.HasDiscriminator<string>("Role").HasValue("User");
 
-                    b.ToTable("users", (string)null);
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Backend.Entities.UserPermission", b =>
@@ -1951,140 +3203,6 @@ namespace CRM.API.Migrations
                     b.ToTable("user_permissions");
                 });
 
-            modelBuilder.Entity("Backend.Entities.User", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<bool>("Actif")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("DateCreation")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DerniereConnexion")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("IdentifiantMachine")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("MustChangePassword")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("MotDePasse")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Nom")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Prenom")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(13)
-                        .HasColumnType("character varying(13)");
-
-                    b.Property<string>("PasswordResetToken")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("PasswordResetTokenExpiry")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("RefreshToken")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("RefreshTokenExpiryTime")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Statut")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Utilisateur");
-
-                    b.HasDiscriminator<string>("Role").HasValue("Utilisateur");
-
-                    b.UseTphMappingStrategy();
-                });
-
-            modelBuilder.Entity("Backend.Entities.Evaluation", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("AgentId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long?>("AppelId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Commentaire")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("DateEvaluation")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<long>("EvaluateurId")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("NbPose")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("NbRdvAnnule")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("NbRdvBrut")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("NbRdvConfirme")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("NbRdvSigne")
-                        .HasColumnType("integer");
-
-                    b.Property<double>("NoteGlobale")
-                        .HasColumnType("double precision");
-
-                    b.Property<int>("NoteEcoute")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("NotePitchCommercial")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("NoteQualiteAppel")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("NoteRespectScript")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("NoteTraitementObjections")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AgentId");
-
-                    b.HasIndex("AppelId");
-
-                    b.ToTable("Evaluations");
-                });
-
             modelBuilder.Entity("Backend.Entities.Admin", b =>
                 {
                     b.HasBaseType("Backend.Entities.User");
@@ -2095,16 +3213,6 @@ namespace CRM.API.Migrations
                     b.HasDiscriminator().HasValue("ADMIN");
                 });
 
-            modelBuilder.Entity("Backend.Entities.Qualite", b =>
-                {
-                    b.HasBaseType("Backend.Entities.User");
-
-                    b.Property<string>("Service")
-                        .HasColumnType("text");
-
-                    b.HasDiscriminator().HasValue("QUALITE");
-                });
-
             modelBuilder.Entity("Backend.Entities.Agent", b =>
                 {
                     b.HasBaseType("Backend.Entities.User");
@@ -2112,7 +3220,7 @@ namespace CRM.API.Migrations
                     b.Property<DateTime?>("DateEmbauche")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool?>("IsElite")
+                    b.Property<bool>("IsElite")
                         .HasColumnType("boolean");
 
                     b.Property<int>("ObjectifMensuel")
@@ -2125,7 +3233,6 @@ namespace CRM.API.Migrations
                         .HasColumnType("double precision");
 
                     b.Property<string>("TypeContrat")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.HasDiscriminator().HasValue("AGENT");
@@ -2161,6 +3268,38 @@ namespace CRM.API.Migrations
                     b.HasDiscriminator().HasValue("CONFIRMATRICE");
                 });
 
+            modelBuilder.Entity("Backend.Entities.Qualite", b =>
+                {
+                    b.HasBaseType("Backend.Entities.User");
+
+                    b.HasDiscriminator().HasValue("QUALITE");
+                });
+
+            modelBuilder.Entity("Backend.Entities.SuperAdmin", b =>
+                {
+                    b.HasBaseType("Backend.Entities.User");
+
+                    b.HasDiscriminator().HasValue("SuperAdmin");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Technique", b =>
+                {
+                    b.HasBaseType("Backend.Entities.User");
+
+                    b.HasDiscriminator().HasValue("TECH");
+                });
+
+            modelBuilder.Entity("Backend.Entities.AdvancedAttendance", b =>
+                {
+                    b.HasOne("Backend.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Backend.Entities.Agenda", b =>
                 {
                     b.HasOne("Backend.Entities.Agent", "Agent")
@@ -2183,21 +3322,32 @@ namespace CRM.API.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Backend.Entities.Evaluation", b =>
+            modelBuilder.Entity("Backend.Entities.AgentSavedData", b =>
                 {
-                    b.HasOne("Backend.Entities.Agent", "Agent")
+                    b.HasOne("Backend.Entities.User", "Agent")
                         .WithMany()
                         .HasForeignKey("AgentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Backend.Entities.Appel", "Appel")
-                        .WithMany()
-                        .HasForeignKey("AppelId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("Agent");
-                    b.Navigation("Appel");
+                });
+
+            modelBuilder.Entity("Backend.Entities.AppUser", b =>
+                {
+                    b.HasOne("Backend.Entities.AppUser", "PasswordResetBy")
+                        .WithMany()
+                        .HasForeignKey("PasswordResetByUserId");
+
+                    b.HasOne("Backend.Entities.Role", "Role")
+                        .WithMany("Users")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PasswordResetBy");
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("Backend.Entities.Appel", b =>
@@ -2217,6 +3367,28 @@ namespace CRM.API.Migrations
                     b.Navigation("Agent");
 
                     b.Navigation("Contact");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Appointment", b =>
+                {
+                    b.HasOne("Backend.Entities.Call", "Call")
+                        .WithMany()
+                        .HasForeignKey("CallId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Call");
+                });
+
+            modelBuilder.Entity("Backend.Entities.AttendanceBreak", b =>
+                {
+                    b.HasOne("Backend.Entities.AdvancedAttendance", "Attendance")
+                        .WithMany("Breaks")
+                        .HasForeignKey("AttendanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Attendance");
                 });
 
             modelBuilder.Entity("Backend.Entities.CallAttempt", b =>
@@ -2377,6 +3549,62 @@ namespace CRM.API.Migrations
                     b.Navigation("FichierSource");
                 });
 
+            modelBuilder.Entity("Backend.Entities.ContactNote", b =>
+                {
+                    b.HasOne("Backend.Entities.AppUser", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Entities.CampaignFileContact", "CampaignFileContact")
+                        .WithMany()
+                        .HasForeignKey("CampaignFileContactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Entities.Campaign", "Campaign")
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Entities.AppUser", "DeletedBy")
+                        .WithMany()
+                        .HasForeignKey("DeletedByUserId");
+
+                    b.HasOne("Backend.Entities.SourceFileContact", "SourceFileContact")
+                        .WithMany()
+                        .HasForeignKey("SourceFileContactId");
+
+                    b.HasOne("Backend.Entities.AppUser", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId");
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Campaign");
+
+                    b.Navigation("CampaignFileContact");
+
+                    b.Navigation("DeletedBy");
+
+                    b.Navigation("SourceFileContact");
+
+                    b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("Backend.Entities.CrmAppointment", b =>
+                {
+                    b.HasOne("Backend.Entities.User", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Agent");
+                });
+
             modelBuilder.Entity("Backend.Entities.DistributedContact", b =>
                 {
                     b.HasOne("Backend.Entities.AppUser", "Agent")
@@ -2392,6 +3620,38 @@ namespace CRM.API.Migrations
                     b.Navigation("Agent");
 
                     b.Navigation("SourceFileContact");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Evaluation", b =>
+                {
+                    b.HasOne("Backend.Entities.Agent", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Entities.Appel", "Appel")
+                        .WithMany()
+                        .HasForeignKey("AppelId");
+
+                    b.Navigation("Agent");
+
+                    b.Navigation("Appel");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Followup", b =>
+                {
+                    b.HasOne("Backend.Entities.User", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId");
+
+                    b.HasOne("Backend.Entities.Contact", "Contact")
+                        .WithMany()
+                        .HasForeignKey("ContactId");
+
+                    b.Navigation("Agent");
+
+                    b.Navigation("Contact");
                 });
 
             modelBuilder.Entity("Backend.Entities.ImportJob", b =>
@@ -2444,6 +3704,44 @@ namespace CRM.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Country");
+                });
+
+            modelBuilder.Entity("Backend.Entities.ManualEvaluation", b =>
+                {
+                    b.HasOne("Backend.Entities.User", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Entities.User", "Evaluator")
+                        .WithMany()
+                        .HasForeignKey("EvaluatorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Agent");
+
+                    b.Navigation("Evaluator");
+                });
+
+            modelBuilder.Entity("Backend.Entities.Message", b =>
+                {
+                    b.HasOne("Backend.Entities.User", "Receiver")
+                        .WithMany()
+                        .HasForeignKey("ReceiverId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Entities.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Receiver");
+
+                    b.Navigation("Sender");
                 });
 
             modelBuilder.Entity("Backend.Entities.Performance", b =>
@@ -2545,6 +3843,17 @@ namespace CRM.API.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("Backend.Entities.SalaireAgent", b =>
+                {
+                    b.HasOne("Backend.Entities.User", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Agent");
+                });
+
             modelBuilder.Entity("Backend.Entities.SourceFile", b =>
                 {
                     b.HasOne("Backend.Entities.SourceFile", "ParentSourceFile")
@@ -2626,23 +3935,6 @@ namespace CRM.API.Migrations
                     b.Navigation("LeadType");
                 });
 
-            modelBuilder.Entity("Backend.Entities.AppUser", b =>
-                {
-                    b.HasOne("Backend.Entities.AppUser", "PasswordResetBy")
-                        .WithMany()
-                        .HasForeignKey("PasswordResetByUserId");
-
-                    b.HasOne("Backend.Entities.Role", "Role")
-                        .WithMany("Users")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("PasswordResetBy");
-
-                    b.Navigation("Role");
-                });
-
             modelBuilder.Entity("Backend.Entities.UserPermission", b =>
                 {
                     b.HasOne("Backend.Entities.Permission", "Permission")
@@ -2658,6 +3950,18 @@ namespace CRM.API.Migrations
                         .IsRequired();
 
                     b.Navigation("Permission");
+                });
+
+            modelBuilder.Entity("Backend.Entities.AdvancedAttendance", b =>
+                {
+                    b.Navigation("Breaks");
+                });
+
+            modelBuilder.Entity("Backend.Entities.AppUser", b =>
+                {
+                    b.Navigation("AgentProfile");
+
+                    b.Navigation("UserPermissions");
                 });
 
             modelBuilder.Entity("Backend.Entities.Campaign", b =>
@@ -2713,13 +4017,6 @@ namespace CRM.API.Migrations
             modelBuilder.Entity("Backend.Entities.Supplier", b =>
                 {
                     b.Navigation("SourceFiles");
-                });
-
-            modelBuilder.Entity("Backend.Entities.AppUser", b =>
-                {
-                    b.Navigation("AgentProfile");
-
-                    b.Navigation("UserPermissions");
                 });
 
             modelBuilder.Entity("Backend.Entities.Agent", b =>
