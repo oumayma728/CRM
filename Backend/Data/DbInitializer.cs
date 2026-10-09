@@ -47,12 +47,15 @@ public static class DbInitializer
         if (!config.GetValue("Database:AutoCreateSchema", true)) return;
         if (!db.Database.IsRelational()) return;               // in-memory test databases need nothing
 
-        // EnsureCreated = create the database if it is missing + create the tables ONLY if the database has no table at all.
-        var created = await db.Database.EnsureCreatedAsync();
+        // Migrate = crée la base si besoin et applique les migrations manquantes, sans toucher aux données.
+
+        var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+        var created = pending.Count > 0;
         if (created)
-            logger.LogWarning("Empty database detected: the tables were created from the EF model (EnsureCreated).");
-        else
-            logger.LogInformation("Database already contains tables: schema left untouched.");
+        {
+            await db.Database.MigrateAsync();
+            logger.LogWarning("Migrations appliquées ({Count}) : {Names}", pending.Count, string.Join(", ", pending));
+        }
     }
 
     /// <summary>Creates the first super admin when none exists and credentials were provided in the configuration.</summary>

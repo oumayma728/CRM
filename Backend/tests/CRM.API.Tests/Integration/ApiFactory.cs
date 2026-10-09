@@ -36,6 +36,8 @@ public class ApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:DefaultConnection", "Host=unused");
+        // appsettings.json no longer holds any secret: the tests bring their own (never used outside the tests)
+        builder.UseSetting("Jwt:Secret", "test-only-jwt-secret-not-used-anywhere-else-0123456789");
         builder.UseSetting("RateLimiting:LoginPermitLimit", "1000");
         builder.ConfigureServices(services =>
         {
