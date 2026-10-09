@@ -222,8 +222,16 @@ public class TechniqueController : ControllerBase
     {
         if (file == null || file.Length == 0)
             return BadRequest(new { message = "Aucun fichier sélectionné" });
-        var fichier = await FichierImportHelper.SaveUploadAsync(_context, file, campagne, User.Identity?.Name);
-        return Ok(new { message = "Fichier importé avec succès", id = fichier.Id, contactsCount = fichier.NombreContactsImportes });
+        try
+        {
+            var fichier = await FichierImportHelper.SaveUploadAsync(_context, file, campagne, User.Identity?.Name);
+            var answer = FichierImportHelper.ToResponse(fichier);
+            return fichier.Statut == StatutImport.ERREUR ? BadRequest(answer) : Ok(answer);
+        }
+        catch (ArgumentException ex)   // refused file (type, size, no phone column): the message is meant for the user
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -18,7 +18,7 @@ public class AgentWorkspaceController : ControllerBase
 
     public AgentWorkspaceController(IAgentWorkspaceService agentService) => _agentService = agentService;
 
-    // GET /api/agents is the campaign-agent CRUD list (AgentsController); this simple
+    // GET /api/agents is the campaign-agent CRUD list (AgentProfilesController); this simple
     // id/name list used by the call-analysis pages lives under /api/agents/names.
     [HttpGet("names")]
     public async Task<IActionResult> GetAgents()

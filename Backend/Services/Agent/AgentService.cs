@@ -120,6 +120,7 @@ public class AgentService : IAgentService
 
         _context.Agents.Add(agent);
         await _context.SaveChangesAsync();
+        await AppUserMirror.EnsureAsync(_context, agent.Id);   // see AppUserMirror: second user table
         return MapToDto(agent);
     }
 

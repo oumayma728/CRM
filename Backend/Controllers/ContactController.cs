@@ -1,16 +1,24 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.DTOs.Agent;
 using Backend.Entities;
+using Backend.Helpers;
 
 namespace Backend.Controllers;
 
+// [Authorize] at class level: every contact route needs a valid login token.
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class ContactController : ControllerBase
 {
+    // Hard ceiling for one page: nobody can ask the server for the whole table in one request.
+    private const int MaxPageSize = 200;
+    private const int DefaultPageSize = 50;
+
     private readonly ApplicationDbContext _context;
 
     public ContactController(ApplicationDbContext context)
@@ -18,16 +26,53 @@ public class ContactController : ControllerBase
         _context = context;
     }
 
-    /// <summary>Récupère tous les contacts</summary>
+    /// <summary>
+    /// Liste PAGINÉE des contacts (50 par page par défaut, 200 maximum).
+    /// Paramètres : <c>page</c>, <c>pageSize</c>, <c>search</c> (nom, prénom, téléphone, e-mail, adresse, source).
+    /// Le nombre total de résultats est renvoyé dans l'en-tête HTTP <c>X-Total-Count</c>.
+    /// Un agent ne voit que ses propres contacts.
+    /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<ContactDTO>), 200)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = DefaultPageSize,
+        [FromQuery] string? search = null)
     {
-        var contacts = await _context.Contacts
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, MaxPageSize);
+
+        var query = _context.Contacts.AsNoTracking().AsQueryable();
+
+        if (UserContextHelper.IsAgent(User))
+        {
+            var me = UserContextHelper.GetUserId(User);
+            query = query.Where(c => c.AgentId == me);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim().ToLower();
+            query = query.Where(c =>
+                (c.Nom != null && c.Nom.ToLower().Contains(s)) ||
+                (c.Prenom != null && c.Prenom.ToLower().Contains(s)) ||
+                (c.Email != null && c.Email.ToLower().Contains(s)) ||
+                (c.Adresse != null && c.Adresse.ToLower().Contains(s)) ||
+                c.Telephone.Contains(s) ||
+                c.Source.ToLower().Contains(s));
+        }
+
+        var total = await query.CountAsync();
+
+        var contacts = await query
             .Include(c => c.Agent)
             .OrderByDescending(c => c.DateImport)
-            .AsNoTracking()
+            .ThenByDescending(c => c.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        Response.Headers["X-Total-Count"] = total.ToString();
 
         var result = contacts.Select(c => new ContactDTO
         {
@@ -40,7 +85,7 @@ public class ContactController : ControllerBase
             Source = c.Source,
             Statut = c.Statut,
             AgentId = c.AgentId,
-            AgentNom = c.Agent != null ? $"{c.Agent.Prenom} {c.Agent.Nom}" : null,  
+            AgentNom = c.Agent != null ? $"{c.Agent.Prenom} {c.Agent.Nom}" : null,
             DateRappelPlanifie = c.DateRappelPlanifie
         });
 
@@ -59,6 +104,8 @@ public class ContactController : ControllerBase
 
         if (contact == null)
             return NotFound(new { message = $"Contact {id} introuvable." });
+
+        if (!CanTouch(contact)) return Forbid();
 
         var result = new ContactDTO
         {
@@ -161,6 +208,8 @@ public class ContactController : ControllerBase
         if (contact == null)
             return NotFound(new { message = $"Contact {id} introuvable." });
 
+        if (!CanTouch(contact)) return Forbid();
+
         contact.Nom = dto.Nom ?? contact.Nom;
         contact.Prenom = dto.Prenom ?? contact.Prenom;
         contact.Telephone = dto.Telephone;
@@ -186,8 +235,9 @@ public class ContactController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>Supprime un contact</summary>
+    /// <summary>Supprime un contact (admin uniquement)</summary>
     [HttpDelete("{id:long}")]
+    [Authorize(Roles = "ADMIN,SuperAdmin")]
     [ProducesResponseType(204)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> Delete(long id)
@@ -211,6 +261,8 @@ public class ContactController : ControllerBase
     [Microsoft.AspNetCore.Authorization.Authorize]
     public async Task<IActionResult> GetContactsAgentAAppeler(long agentId)
     {
+        if (!UserContextHelper.CanAccessAgentData(User, agentId)) return Forbid();
+
         var contacts = await _context.Contacts
             .Where(c => c.AgentId == agentId && c.Statut != "TRAITE")
             .OrderByDescending(c => c.ScoreIA ?? 0)
@@ -258,6 +310,7 @@ public class ContactController : ControllerBase
     {
         var contact = await _context.Contacts.FindAsync(id);
         if (contact == null) return NotFound();
+        if (!CanTouch(contact)) return Forbid();
         contact.NombreNRP++;
         contact.DateDernierAppel = DateTime.UtcNow;
         await _context.SaveChangesAsync();
@@ -312,6 +365,8 @@ public class ContactController : ControllerBase
     [Microsoft.AspNetCore.Authorization.Authorize]
     public async Task<IActionResult> GetScoredByAgent(long agentId)
     {
+        if (!UserContextHelper.CanAccessAgentData(User, agentId)) return Forbid();
+
         var contacts = await _context.Contacts
             .Where(c => c.AgentId == agentId)
             .OrderByDescending(c => c.ScoreIA ?? 0)
@@ -362,4 +417,11 @@ public class ContactController : ControllerBase
 
         return Ok(result);
     }
+
+    /// <summary>
+    /// An agent may only open / edit contacts that are assigned to him; every other role
+    /// (confirmatrices, admins...) keeps access to all contacts, as before.
+    /// </summary>
+    private bool CanTouch(Contact contact) =>
+        !UserContextHelper.IsAgent(User) || contact.AgentId == UserContextHelper.GetUserId(User);
 }

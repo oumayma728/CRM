@@ -56,13 +56,15 @@ export default function FichierContacts() {
         headers: { Authorization: `Bearer ${token()}` },
         body: form,
       });
+      // The server now answers with the real numbers (contacts imported / refused) or the reason of the refusal.
+      const body = await res.json().catch(() => null);
       if (res.ok) {
-        alert('Fichier importé avec succès !');
+        alert(body?.message ?? 'Fichier importé avec succès !');
         setShowForm(false);
         setFile(null);
         fetchFichiers();
       } else {
-        alert('Erreur lors de l\'import');
+        alert(body?.message ?? 'Erreur lors de l\'import');
       }
     } catch {
       alert('Erreur réseau');

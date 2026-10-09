@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
+using Backend.Helpers;
 using Backend.Entities;
 
 namespace Backend.Controllers;
@@ -83,7 +84,8 @@ public class AnalyticsCrmController : ControllerBase
                     rdvSigne = rdvs.Count(r => r.Statut == StatutRendezVous.SIGNE),
                     totalAppels = appels.Count,
                     avgScore = evals.Count > 0 ? Math.Round(evals.Average(e => e.GlobalScore), 1) : 0,
-                    salaireMois = salary?.TotalSalary ?? 0,
+                    // salaries are for the SuperAdmin only: an ADMIN gets 0 here
+                    salaireMois = UserContextHelper.IsSuperAdmin(User) ? (salary?.TotalSalary ?? 0) : 0,
                     conversionRate = rdvs.Count > 0 ? Math.Round((double)rdvs.Count(r => r.Statut == StatutRendezVous.CONFIRME) / rdvs.Count * 100, 1) : 0
                 });
             }

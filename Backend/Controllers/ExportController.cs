@@ -72,6 +72,7 @@ public class ExportController : ControllerBase
     }
 
     [HttpGet("salaries")]
+    [Authorize(Roles = "SuperAdmin")]   // salaries: SuperAdmin only (class level allows ADMIN)
     public async Task<IActionResult> ExportSalaries([FromQuery] string format = "csv", [FromQuery] string? month = null)
     {
         var query = _context.SalairesAgents.AsNoTracking().Include(s => s.Agent).AsQueryable();

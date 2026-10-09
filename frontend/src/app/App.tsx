@@ -244,7 +244,7 @@ function AppRoutes() {
 <Route path="/admin/import-leads/importfile" element={<ImportFile />} />
 <Route path="/admin/import-leads/FichierAcharge" element={<FichierAcharge />} />
       <Route path="/admin/alerts" element={<AlertsPage />} />
-      <Route path="/admin/salaries" element={<SalaryPage />} />
+      <Route path="/admin/salaries" element={<SuperAdminRoute><SalaryPage /></SuperAdminRoute>} />
       <Route path="/admin/calls" element={<CallWorkspace />} />
       <Route path="/admin/pointage/rapport" element={<PointageRapportPage />} />
       <Route path="/admin/pointage-historique" element={<AdminPointageHistoriquePage />} />
@@ -253,7 +253,7 @@ function AppRoutes() {
       <Route path="/admin/confirmatrices-agendas" element={<ConfirmatricesAgendasPage />} />
       <Route path="/admin/injection" element={<InjectionPage />} />
       <Route path="/admin/fichiers-en-attente" element={<FichiersEnAttentePage />} />
-      <Route path="/admin/permissions" element={<PermissionPage />} />
+      <Route path="/admin/permissions" element={<SuperAdminRoute><PermissionPage /></SuperAdminRoute>} />
       <Route path="/admin/clients" element={<ClientsPage />} />
 
     </Route>

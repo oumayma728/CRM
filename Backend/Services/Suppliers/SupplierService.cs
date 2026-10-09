@@ -66,15 +66,11 @@ namespace Backend.Services.Suppliers
                 if (dto.LeadTypeId <= 0)
                     throw new InvalidOperationException("LeadType is required for creating a new supplier");
 
-                // Validate and fetch related entities in parallel
-                // Validate and fetch related entities in parallel
-                var countryTask = _db.Countries.FindAsync(dto.CountryId).AsTask();
-                var leadTypeTask = _db.LeadTypes.FindAsync(dto.LeadTypeId).AsTask();
-
-                await Task.WhenAll(countryTask, leadTypeTask);
-
-                var country = await countryTask;
-                var leadType = await leadTypeTask;
+                // One query after the other. An EF Core DbContext is NOT thread-safe: starting two
+                // queries on it at the same time (Task.WhenAll) throws "A second operation was started
+                // on this context instance before a previous operation completed".
+                var country = await _db.Countries.FindAsync(dto.CountryId);
+                var leadType = await _db.LeadTypes.FindAsync(dto.LeadTypeId);
 
                 if (country == null)
                     throw new InvalidOperationException($"Country with ID {dto.CountryId} not found");

@@ -24,7 +24,7 @@ namespace Backend.Controllers
         }
         // GET: api/Suppliers
         [HttpGet]
-        [Authorize(Roles = "SuperAdmin,Admin,ServiceTechnique")]
+        [Authorize(Roles = "ADMIN,SuperAdmin,TECH")]
         public async Task<IActionResult> GetAll()
         {
             try
@@ -63,7 +63,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "SuperAdmin,Admin")]
+        [Authorize(Roles = "ADMIN,SuperAdmin")]
        
         public async Task<IActionResult> Create([FromBody] CreateSupplierDto dto)
         {
@@ -101,7 +101,7 @@ namespace Backend.Controllers
 
         // GET: api/Suppliers/{id}
         [HttpGet("{id}")]
-        [Authorize(Roles = "SuperAdmin,Admin,ServiceTechnique")]
+        [Authorize(Roles = "ADMIN,SuperAdmin,TECH")]
         [RequirePermission(Permissions.Suppliers.View)]
         public async Task<IActionResult> GetById(int id)
         {
@@ -129,7 +129,7 @@ namespace Backend.Controllers
 
         // DELETE: api/Suppliers/{id}
         [HttpDelete("{id}")]
-        [Authorize(Roles = "SuperAdmin,Admin")]
+        [Authorize(Roles = "ADMIN,SuperAdmin")]
         [RequirePermission(Permissions.Suppliers.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
@@ -159,7 +159,7 @@ namespace Backend.Controllers
 
         // PUT: api/Suppliers/{id}
         [HttpPut("{id}")]
-        [Authorize(Roles = "SuperAdmin,Admin")]
+        [Authorize(Roles = "ADMIN,SuperAdmin")]
         [RequirePermission(Permissions.Suppliers.Edit)]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateSupplierDto dto)
         {

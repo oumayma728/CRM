@@ -11,7 +11,8 @@ namespace Backend.Controllers;
 [SnakeCaseJson]
 [ApiController]
 [Route("api/salaries")]
-[Authorize(Roles = "ADMIN,QUALITE,SuperAdmin")]
+// Salaries are reserved to the SuperAdmin: ADMIN (and QUALITE) get a 403 on every route of this controller.
+[Authorize(Roles = "SuperAdmin")]
 public class SalaryController : ControllerBase
 {
     private readonly ApplicationDbContext _context;

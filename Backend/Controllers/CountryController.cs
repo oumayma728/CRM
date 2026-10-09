@@ -30,7 +30,7 @@ namespace Backend.Controllers
             return Ok(countries);
         }
         [HttpPost]
-        [Authorize(Roles = "SuperAdmin,Admin, ServiceTechnique")]
+        [Authorize(Roles = "ADMIN,SuperAdmin,TECH")]
         public async Task<IActionResult> Create([FromBody] CreateCountryDto dto)
         {
             try

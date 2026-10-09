@@ -201,6 +201,7 @@ public class CallPerformanceController : ControllerBase
     }
 
     [HttpGet("agents-from-calls")]
+    [Authorize(Roles = "ADMIN,QUALITE,SuperAdmin")]
     public async Task<IActionResult> GetAgentsFromCalls()
     {
         try

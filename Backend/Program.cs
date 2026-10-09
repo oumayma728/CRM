@@ -15,7 +15,7 @@ using Backend.Services.Country;
 using Backend.Services.LeadType;
 using Backend.Services.Campaigns;
 using Backend.Services.ContactDistribution;
-using Backend.Services.Agents;
+using Backend.Services.AgentProfiles;
 using Backend.Services.Files;
 using Backend.Services.UserService;
 using Backend.Services.Email;
@@ -24,6 +24,7 @@ using Backend.Services.Attendance;
 using Backend.Filters;
 using Backend.Hubs;
 using Backend.Config;
+using Backend.Helpers;
 using Backend.Services.WebSocket;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.RateLimiting;
@@ -122,7 +123,7 @@ builder.Services.AddScoped<ICountryService,              CountryService>();
 builder.Services.AddScoped<ILeadTypeService,             LeadTypeService>();
 builder.Services.AddScoped<ICampaignService,             CampaignService>();
 builder.Services.AddScoped<IContactDistributionService,  ContactDistributionService>();
-builder.Services.AddScoped<Backend.Services.Agents.IAgentService, Backend.Services.Agents.AgentService>();
+builder.Services.AddScoped<Backend.Services.AgentProfiles.IAgentProfileService, Backend.Services.AgentProfiles.AgentProfileService>();
 builder.Services.AddScoped<IClientService,                   ClientService>();
 builder.Services.AddScoped<PasswordHasher>();
 builder.Services.AddScoped<JwtTokenGenerator>();
@@ -208,6 +209,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(origins)
               .AllowAnyHeader()
               .AllowAnyMethod()
+              .WithExposedHeaders("X-Total-Count") // pagination: browsers hide custom headers unless exposed
               .AllowCredentials(); // Required for SignalR WebSocket
     });
 });
@@ -239,7 +241,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
                 if (!string.IsNullOrEmpty(accessToken) &&
-                    path.StartsWithSegments("/hubs"))
+                    (path.StartsWithSegments("/hubs") || path.StartsWithSegments("/ws")))
                 {
                     context.Token = accessToken;
                 }
@@ -259,6 +261,9 @@ builder.Services.AddAuthorization(options =>
 });
 builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider,
     Backend.Authorization.PermissionPolicyProvider>();
+// SuperAdmin passes every role check, ADMIN passes all except "SuperAdmin"-only routes (salaries...)
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
+    Backend.Authorization.AdminAccessHandler>();
 
 // ============================================================================
 // BUILD & CONFIGURE PIPELINE
@@ -282,6 +287,13 @@ app.Map("/ws/messages/{userId}", async (HttpContext context, string userId) =>
         context.Response.StatusCode = StatusCodes.Status400BadRequest;
         return;
     }
+    // The route is protected by .RequireAuthorization() below. Here we also make sure nobody opens
+    // the socket of ANOTHER user (receiving his messages) just by changing the number in the URL.
+    if (!long.TryParse(userId, out var requestedId) || requestedId != UserContextHelper.GetUserId(context.User))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return;
+    }
     using var socket = await context.WebSockets.AcceptWebSocketAsync();
     var manager = context.RequestServices.GetRequiredService<WebSocketConnectionManager>();
     if (long.TryParse(userId, out var uid)) manager.Add(uid, socket);
@@ -301,7 +313,7 @@ app.Map("/ws/messages/{userId}", async (HttpContext context, string userId) =>
     }
     catch { /* client disconnected */ }
     finally { if (long.TryParse(userId, out var id)) manager.Remove(id); }
-});
+}).RequireAuthorization();
 app.UseHttpsRedirection();
 app.UseRateLimiter();
 app.UseAuthentication();
@@ -316,6 +328,10 @@ app.MapGet("/api/health", async (Backend.Data.ApplicationDbContext db) =>
     var dbOk = await db.Database.CanConnectAsync();
     return Results.Ok(new { status = dbOk ? "healthy" : "degraded", database = dbOk ? "connected" : "unreachable" });
 });
+
+// ─── INITIALISATION DE LA BASE (base vide, premier super admin, copie des comptes) ───────
+// Safe on an existing database: it only acts when the database is empty / no super admin exists.
+await Backend.Data.DbInitializer.InitializeAsync(app.Services, app.Configuration, app.Logger);
 
 // ─── SEED DONNÉES DE TEST (dev uniquement) ────────────────────────────────
 if (app.Environment.IsDevelopment())

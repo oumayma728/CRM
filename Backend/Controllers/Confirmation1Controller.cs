@@ -323,7 +323,12 @@ public class Confirmation1Controller : ControllerBase
         try
         {
             var fichier = await FichierImportHelper.SaveUploadAsync(_context, dto.File, dto.Campagne, User.Identity?.Name);
-            return Ok(new { message = "Fichier importé avec succès", contactsCount = fichier.NombreContactsImportes });
+            var answer = FichierImportHelper.ToResponse(fichier);
+            return fichier.Statut == StatutImport.ERREUR ? BadRequest(answer) : Ok(answer);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {

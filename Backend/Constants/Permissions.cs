@@ -1,4 +1,6 @@
 // Constants/Permissions.cs
+using System.Reflection;   // (declared here because the nested class "Permissions.System" hides the System namespace)
+
 namespace Backend.Constants
 {
     public static class Permissions
@@ -192,16 +194,33 @@ namespace Backend.Constants
         // =========================
         // GROUPES DE PERMISSIONS
         // =========================
+        /// <summary>
+        /// What an ADMIN can NOT do: manage who is allowed to do what (permissions of roles and of users).
+        /// Only the SuperAdmin can. Everything else is allowed for an ADMIN.
+        /// </summary>
+        public static readonly string[] AdminDenied = { Roles.AssignPermissions, Users.AssignPermissions };
+
+        /// <summary>Every permission declared in this file (nested classes + legacy flat constants), found by reflection,
+        /// so a permission added tomorrow is automatically given to the admins without touching a list.</summary>
+        public static string[] All()
+        {
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy;
+
+            var holders = new List<Type> { typeof(Permissions) };
+            holders.AddRange(typeof(Permissions).GetNestedTypes(BindingFlags.Public));
+
+            return holders
+                .SelectMany(t => t.GetFields(flags))
+                .Where(f => f.IsLiteral && !f.IsInitOnly && f.FieldType == typeof(string))
+                .Select(f => (string)f.GetRawConstantValue()!)
+                .Distinct()
+                .ToArray();
+        }
+
         public static readonly Dictionary<string, string[]> RolePermissions = new()
         {
-            ["ADMIN"] = new[] {
-                AdminDashboard, AdminUsersView, AdminUsersCreate, AdminUsersEdit, AdminUsersDelete,
-                AdminPointage, AdminScorecards, AdminAnalytics, AdminMap, AdminIAConfig, AdminImportLeads,
-                Files.View, Files.Upload, Files.Inject, Files.Delete, Files.Rename,
-                Campaigns.View, Campaigns.Create, Campaigns.Edit, Campaigns.Delete,
-                Suppliers.View, Suppliers.Create, Countries.View, LeadTypes.View,
-                Users.View, Users.Create, Users.Edit
-            },
+            // ADMIN = all permissions except the management of permissions (SuperAdmin only).
+            ["ADMIN"] = All().Except(AdminDenied).ToArray(),
             ["AGENT"] = new[] {
                 AgentDashboard, AgentAppel, AgentContacts, AgentHistorique, AgentPerformance, AgentAgenda,
                 Agents.View

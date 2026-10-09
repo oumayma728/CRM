@@ -9,6 +9,7 @@ using Backend.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.RateLimiting;
 using Backend.Attributes;
+using Backend.Authorization;
 using Backend.DTOs.Admin;
 using Backend.Services.Admin;
 
@@ -90,6 +91,10 @@ public class AuthController : ControllerBase
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null) return NotFound(new { detail = "Utilisateur introuvable." });
 
+        // An admin must not be able to rewrite the e-mail / password of the super admin and log in as him.
+        if (!UserManagementGuard.CanManage(User, user.Role))
+            return StatusCode(StatusCodes.Status403Forbidden, new { detail = UserManagementGuard.SuperAdminOnlyMessage });
+
         if (!string.IsNullOrWhiteSpace(dto.Name)) (user.Prenom, user.Nom) = SplitName(dto.Name);
         if (!string.IsNullOrWhiteSpace(dto.Email)) user.Email = dto.Email!;
         if (!string.IsNullOrWhiteSpace(dto.Password)) user.MotDePasse = BCrypt.Net.BCrypt.HashPassword(dto.Password);
@@ -102,6 +107,14 @@ public class AuthController : ControllerBase
     [SnakeCaseJson]
     public async Task<IActionResult> DeleteQuickUser(long userId)
     {
+        if (UserManagementGuard.IsSelf(User, userId))
+            return BadRequest(new { detail = UserManagementGuard.CannotDeactivateSelfMessage });
+
+        var targetRole = await _context.Users.AsNoTracking()
+            .Where(u => u.Id == userId).Select(u => u.Role).FirstOrDefaultAsync();
+        if (targetRole != null && !UserManagementGuard.CanManage(User, targetRole))
+            return StatusCode(StatusCodes.Status403Forbidden, new { detail = UserManagementGuard.SuperAdminOnlyMessage });
+
         try
         {
             await _adminService.DeleteUtilisateurAsync(userId);
@@ -228,6 +241,14 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> AdminResetPassword([FromBody] AdminResetPasswordRequest request)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        // The reply contains the new temporary password: resetting the super admin's password
+        // would hand the account over to the caller.
+        var targetRole = await _context.Users.AsNoTracking()
+            .Where(u => u.Id == request.UserId).Select(u => u.Role).FirstOrDefaultAsync();
+        if (targetRole != null && !UserManagementGuard.CanManage(User, targetRole))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = UserManagementGuard.SuperAdminOnlyMessage });
+
         try
         {
             var tempPassword = await _authService.AdminResetPasswordAsync(request.UserId);

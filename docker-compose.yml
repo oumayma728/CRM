@@ -30,6 +30,10 @@ services:
       Jwt__Secret: ${JWT_SECRET}
       Jwt__Issuer: ${JWT_ISSUER:-crm-api}
       Jwt__Audience: ${JWT_AUDIENCE:-crm-client}
+      # First start on an EMPTY database: the tables are created automatically and, if no super admin exists yet,
+      # one is created from these two variables (the password must be >= 12 characters and is changed at first login).
+      Bootstrap__AdminEmail: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      Bootstrap__AdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       Groq__ApiKey: ${GROQ_API_KEY:-}
       Ollama__BaseUrl: ${OLLAMA_URL:-http://host.docker.internal:11434}
       Whisper__Enabled: ${WHISPER_ENABLED:-true}

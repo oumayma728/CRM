@@ -40,7 +40,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin,ServiceTechnique")]
+        [Authorize(Roles = "ADMIN,SuperAdmin,TECH")]
         public async Task<ActionResult<LeadTypeResponseDto>> Create([FromBody] CreateLeadTypeDto dto)
         {
             if (!ModelState.IsValid)

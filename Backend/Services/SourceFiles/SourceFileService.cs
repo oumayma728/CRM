@@ -34,12 +34,6 @@ namespace Backend.Services.SourceFiles
             RegexOptions.Compiled | RegexOptions.CultureInvariant,
             TimeSpan.FromSeconds(1));
 
-        private static readonly string[] PhoneHeaderKeywords =
-        {
-            "telephone", "tel", "portable", "gsm", "mobile", "numero",
-            "phone", "phonenumber", "contact", "n"
-        };
-
         private static readonly Dictionary<string, string[]> FieldSynonyms = new(StringComparer.OrdinalIgnoreCase)
         {
             ["lastname"] = new[] { "nom", "familyname", "surname", "lastname", "last" },
@@ -776,18 +770,13 @@ namespace Backend.Services.SourceFiles
             IReadOnlyList<string> headers,
             Dictionary<string, string>? columnMapping)
         {
+            // 1) the user mapped the column by hand in the import screen: always wins
             var mappedColumns = BuildColumnMapFromMapping(headers, columnMapping);
             if (mappedColumns.TryGetValue("phonenumber", out var mappedIndex))
                 return mappedIndex;
 
-            for (var i = 0; i < headers.Count; i++)
-            {
-                var normalized = NormalizeColumnName(headers[i]);
-                if (HeaderMatchesAny(normalized, PhoneHeaderKeywords.Select(NormalizeColumnName), allowContains: true))
-                    return i;
-            }
-
-            return -1;
+            // 2) otherwise guess from the header names (see PhoneColumnDetector for the rules)
+            return PhoneColumnDetector.Find(headers);
         }
 
         private static Dictionary<string, int> BuildHeaderMap(

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json;
 using Backend.Data;
+using Backend.Helpers;
 using Backend.DTOs.Quality;
 using Backend.Entities;
 
@@ -201,7 +202,10 @@ public class QualityCrmController : ControllerBase
                 confirme = rdvs.Count(r => r.Statut == StatutRendezVous.CONFIRME),
                 annule = rdvs.Count(r => r.Statut == StatutRendezVous.ANNULE)
             },
-            salaryHistory = salaires.Select(s => new { s.Month, s.TotalSalary, s.QualityRate }),
+            // salary history: SuperAdmin only (an ADMIN or a QUALITE user gets an empty list)
+            salaryHistory = UserContextHelper.IsSuperAdmin(User)
+                ? salaires.Select(s => new { s.Month, s.TotalSalary, s.QualityRate }).ToList()
+                : salaires.Take(0).Select(s => new { s.Month, s.TotalSalary, s.QualityRate }).ToList(),
             avgScore = evals.Count > 0 ? Math.Round(evals.Average(e => e.GlobalScore), 1) : 0
         });
     }

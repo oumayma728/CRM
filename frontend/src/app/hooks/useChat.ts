@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Conversation, Message, WsMessage } from '../types/chat';
-import api from '../services/api';
+import api, { getToken } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -73,7 +73,10 @@ export function useChat() {
     const connectWs = () => {
       if (closed || !wsEnabled.current) return;
       try {
-        const ws = new WebSocket(`${WS_URL}/${myId}`);
+        // Browsers cannot add an "Authorization" header to a WebSocket, so the login token goes in the
+        // query string; the server (Program.cs, OnMessageReceived) reads it from there.
+        const token = getToken();
+        const ws = new WebSocket(`${WS_URL}/${myId}${token ? `?access_token=${encodeURIComponent(token)}` : ''}`);
         wsRef.current = ws;
 
         ws.onmessage = (event) => {

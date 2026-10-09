@@ -577,6 +577,9 @@ public class AdminService : IAdminService
         _context.Set<User>().Add(utilisateur);
         await _context.SaveChangesAsync();
 
+        // Keep the second user table in step (needed by the file-import / campaign modules: see AppUserMirror)
+        await AppUserMirror.EnsureAsync(_context, utilisateur.Id);
+
         // Send welcome email — true fire-and-forget so SMTP never blocks the response
         _ = Task.Run(async () =>
         {
