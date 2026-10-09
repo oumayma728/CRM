@@ -33,7 +33,7 @@ namespace Backend.Entities
         public int AuthorUserId { get; set; }
 
         [ForeignKey("AuthorUserId")]
-        public User? Author { get; set; }
+        public AppUser? Author { get; set; }
 
         [Column("note_type")]
         [MaxLength(50)]
@@ -50,7 +50,7 @@ namespace Backend.Entities
         public int? UpdatedByUserId { get; set; }
 
         [ForeignKey("UpdatedByUserId")]
-        public User? UpdatedBy { get; set; }
+        public AppUser? UpdatedBy { get; set; }
 
         [Column("updated_at")]
         public DateTime? UpdatedAt { get; set; }
@@ -62,7 +62,7 @@ namespace Backend.Entities
         public int? DeletedByUserId { get; set; }
 
         [ForeignKey("DeletedByUserId")]
-        public User? DeletedBy { get; set; }
+        public AppUser? DeletedBy { get; set; }
 
         [Column("deleted_at")]
         public DateTime? DeletedAt { get; set; }

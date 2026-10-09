@@ -31,4 +31,21 @@ public static class UserContextHelper
     public static bool IsAdmin(ClaimsPrincipal user) => GetRole(user) == "admin";
     public static bool IsAdminOrQualite(ClaimsPrincipal user) { var r = GetRole(user); return r == "admin" || r == "qualite"; }
     public static bool IsAgent(ClaimsPrincipal user) => GetRole(user) == "agent";
+
+    /// <summary>
+    /// An agent may only read or change HIS OWN data; admins and super admins may access anyone's.
+    /// Used on every route that takes an agent id, so that changing the number in the URL
+    /// (or in the request body) does not give access to a colleague's data.
+    /// </summary>
+    public static bool CanAccessAgentData(ClaimsPrincipal user, long agentId) =>
+        IsAdmin(user) || GetUserId(user) == agentId;
+
+    public static bool IsSuperAdmin(ClaimsPrincipal user) => user.IsInRole("SuperAdmin");
+
+    /// <summary>
+    /// Salaries are visible to the SuperAdmin and to the agent himself, NOT to the ADMIN role.
+    /// Used to blank the salary fields of data that admins are otherwise allowed to read.
+    /// </summary>
+    public static bool CanSeeSalary(ClaimsPrincipal user, long agentId) =>
+        IsSuperAdmin(user) || GetUserId(user) == agentId;
 }

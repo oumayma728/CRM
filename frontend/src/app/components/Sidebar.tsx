@@ -164,7 +164,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     },
   ];
 
-  const adminSections: NavSection[] = [
+  // Every entry of the admin menu. The ADMIN role sees all of it EXCEPT the pages reserved to the SuperAdmin
+  // (permissions, salaries): see SUPER_ADMIN_ONLY_PATHS below. The server refuses those routes to an ADMIN too.
+  const adminSectionsFull: NavSection[] = [
     {
       label: 'PRINCIPAL',
       items: [
@@ -243,12 +245,17 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     },
   ];
 
+  const SUPER_ADMIN_ONLY_PATHS = ['/admin/permissions', '/admin/salaries'];
+  const adminSections: NavSection[] = adminSectionsFull
+    .map(section => ({ ...section, items: section.items.filter(item => !SUPER_ADMIN_ONLY_PATHS.includes(item.path)) }))
+    .filter(section => section.items.length > 0);
+
   const superAdminSections: NavSection[] = [
     {
       label: 'SUPER ADMIN',
       items: [{ icon: Crown, label: 'Dashboard Super Admin', path: '/superadmin/dashboard', accent: 'purple' }],
     },
-    ...adminSections,
+    ...adminSectionsFull,
   ];
 
   const qualitySections: NavSection[] = [

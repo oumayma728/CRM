@@ -12,7 +12,7 @@ public class AgentSavedData
     public long AgentId { get; set; }
 
     [ForeignKey("AgentId")]
-    public Utilisateur? Agent { get; set; }
+    public User? Agent { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     [MaxLength(50)]
     public string DataType { get; set; } = "session";

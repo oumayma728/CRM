@@ -100,7 +100,14 @@ Générer une clé JWT sécurisée :
 openssl rand -base64 64
 ```
 
-### 3. Lancer le déploiement
+### 3. Premier démarrage (base vide)
+
+Au premier lancement, l'API **crée toutes les tables toute seule** si la base est vide, puis crée le **premier super admin**
+avec `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` (12 caractères minimum, 3 types de caractères ; le mot de passe
+est à changer à la première connexion). Aucun compte ni mot de passe par défaut n'existe. Si une base contient déjà des
+tables, rien n'est modifié. Détails : voir `CORRECTIONS_P0.md`.
+
+### 4. Lancer le déploiement
 
 ```bash
 chmod +x deploy.sh

@@ -17,8 +17,8 @@ public class Message
     public DateTime? ReadAt { get; set; }
 
     [ForeignKey("SenderId")]
-    public Utilisateur Sender { get; set; } = null!;
+    public User Sender { get; set; } = null!;
 
     [ForeignKey("ReceiverId")]
-    public Utilisateur Receiver { get; set; } = null!;
+    public User Receiver { get; set; } = null!;
 }

@@ -183,7 +183,7 @@ public class AnalyticsServiceTests
     public async Task GetPointageAsync_ReturnsTodaysPointage()
     {
         var user = new Agent { Id = 1, Prenom = "Agent", Nom = "1", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(user);
+        _context.Users.Add(user);
         _context.AdvancedAttendances.Add(new AdvancedAttendance { UserId = 1, Date = DateTime.UtcNow.Date, ClockIn = DateTime.UtcNow.AddHours(-4), Status = "active", CreatedAt = DateTime.UtcNow.AddHours(-4) });
         _context.Calls.Add(new Call { AgentName = "Agent 1", CallDate = DateTime.UtcNow.AddHours(-3), ScorePercentage = 80 });
         await _context.SaveChangesAsync();
@@ -211,7 +211,7 @@ public class AnalyticsServiceTests
     public async Task GetLiveAgentsAsync_ReturnsOnlineAgents()
     {
         var user = new Agent { Id = 1, Prenom = "Live", Nom = "Agent", Email = "l@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(user);
+        _context.Users.Add(user);
         _context.AdvancedAttendances.Add(new AdvancedAttendance { UserId = 1, Date = DateTime.UtcNow.Date, ClockIn = DateTime.UtcNow.AddHours(-2), Status = "active", CreatedAt = DateTime.UtcNow.AddHours(-2) });
         _context.Calls.Add(            new Call { AgentName = "Live Agent", CallDate = DateTime.UtcNow.AddHours(-1), ScorePercentage = 85f });
         await _context.SaveChangesAsync();

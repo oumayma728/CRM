@@ -120,9 +120,9 @@ public class QualiteController : ControllerBase
     {
         try
         {
-            // Query base Utilisateur (not _context.Agents) to avoid TPH column mapping issues
+            // Query base User (not _context.Agents) to avoid TPH column mapping issues
             // (TypeContrat value converter or missing columns would cause 500 on _context.Agents)
-            var agentsRaw = (await _context.Utilisateurs
+            var agentsRaw = (await _context.Users
                 .Where(u => u.Role == "AGENT")
                 .Select(u => new { u.Id, u.Nom, u.Prenom, u.Email })
                 .AsNoTracking()
@@ -173,7 +173,7 @@ public class QualiteController : ControllerBase
     [HttpGet("agent-performance/{agentId:long}")]
     public async Task<IActionResult> GetAgentPerformance(long agentId)
     {
-        var agent = await _context.Utilisateurs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentId);
+        var agent = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentId);
         if (agent == null) return NotFound(new { message = "Agent introuvable" });
 
         var now = DateTime.UtcNow;

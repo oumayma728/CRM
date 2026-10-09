@@ -35,7 +35,7 @@ public class AuthService : IAuthService
     // ── LOGIN ──────────────────────────────────────────────────────────────
     public async Task<LoginResponseDTO> LoginAsync(LoginDTO dto)
     {
-        var utilisateur = await _context.Set<Utilisateur>()
+        var utilisateur = await _context.Set<User>()
             .FirstOrDefaultAsync(u => u.Email == dto.Email && u.Actif);
 
         if (utilisateur == null)
@@ -89,7 +89,7 @@ public class AuthService : IAuthService
     // ── FIRST LOGIN ────────────────────────────────────────────────────────
     public async Task<LoginResponseDTO> FirstLoginAsync(FirstLoginDTO dto)
     {
-        var utilisateur = await _context.Set<Utilisateur>()
+        var utilisateur = await _context.Set<User>()
             .FirstOrDefaultAsync(u => u.Email == dto.Email && u.Actif);
 
         if (utilisateur == null)
@@ -133,7 +133,7 @@ public class AuthService : IAuthService
     // ── FORGOT PASSWORD ────────────────────────────────────────────────────
     public async Task ForgotPasswordAsync(string email)
     {
-        var utilisateur = await _context.Set<Utilisateur>()
+        var utilisateur = await _context.Set<User>()
             .FirstOrDefaultAsync(u => u.Email == email && u.Actif);
 
         // Don't reveal whether the email exists
@@ -151,7 +151,7 @@ public class AuthService : IAuthService
     // ── RESET PASSWORD (via token from email) ─────────────────────────────
     public async Task ResetPasswordAsync(string token, string newPassword)
     {
-        var utilisateur = await _context.Set<Utilisateur>()
+        var utilisateur = await _context.Set<User>()
             .FirstOrDefaultAsync(u =>
                 u.PasswordResetToken == token &&
                 u.PasswordResetTokenExpiry > DateTime.UtcNow &&
@@ -176,7 +176,7 @@ public class AuthService : IAuthService
     // ── ADMIN RESET PASSWORD ───────────────────────────────────────────────
     public async Task<string> AdminResetPasswordAsync(long userId)
     {
-        var utilisateur = await _context.Set<Utilisateur>()
+        var utilisateur = await _context.Set<User>()
             .FirstOrDefaultAsync(u => u.Id == userId && u.Actif);
 
         if (utilisateur == null)
@@ -200,7 +200,7 @@ public class AuthService : IAuthService
     // ── CHANGE PASSWORD (authenticated user) ──────────────────────────────
     public async Task ChangePasswordAsync(long userId, string oldPassword, string newPassword)
     {
-        var utilisateur = await _context.Set<Utilisateur>()
+        var utilisateur = await _context.Set<User>()
             .FirstOrDefaultAsync(u => u.Id == userId && u.Actif);
 
         if (utilisateur == null)
@@ -226,7 +226,7 @@ public class AuthService : IAuthService
     // ── REFRESH TOKEN ──────────────────────────────────────────────────────
     public async Task<LoginResponseDTO> RefreshTokenAsync(string refreshToken)
     {
-        var utilisateur = await _context.Set<Utilisateur>()
+        var utilisateur = await _context.Set<User>()
             .FirstOrDefaultAsync(u =>
                 u.RefreshToken == refreshToken &&
                 u.RefreshTokenExpiryTime > DateTime.UtcNow &&
@@ -260,7 +260,7 @@ public class AuthService : IAuthService
     // ── LOGOUT ─────────────────────────────────────────────────────────────
     public async Task LogoutAsync(long userId)
     {
-        var utilisateur = await _context.Set<Utilisateur>()
+        var utilisateur = await _context.Set<User>()
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (utilisateur != null)
@@ -272,7 +272,7 @@ public class AuthService : IAuthService
     }
 
     // ── TOKEN GENERATORS ───────────────────────────────────────────────────
-    private async Task<string> GenererTokenAsync(Utilisateur utilisateur, string? customRole = null)
+    private async Task<string> GenererTokenAsync(User utilisateur, string? customRole = null)
     {
         var jwtKey = _config["Jwt:Secret"]
             ?? throw new InvalidOperationException("Jwt:Secret manquant dans appsettings.json");
@@ -316,7 +316,7 @@ public class AuthService : IAuthService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    private string GenererToken(Utilisateur utilisateur, string? customRole = null)
+    private string GenererToken(User utilisateur, string? customRole = null)
     {
         var jwtKey = _config["Jwt:Secret"]
             ?? throw new InvalidOperationException("Jwt:Secret manquant dans appsettings.json");

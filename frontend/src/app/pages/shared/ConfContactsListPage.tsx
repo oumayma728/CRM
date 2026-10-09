@@ -1,39 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import { agentService, type Contact } from '../../services/agentService';
-import { Search, Building2, Phone, Mail, MapPin, User } from 'lucide-react';
+import { Search, Building2, Phone, Mail, MapPin, User, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const PAGE_SIZE = 50;
 
 export default function ConfContactsListPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
+  // Wait 300 ms after the last keystroke before asking the server (avoids one request per letter).
   useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(searchTerm.trim()); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  // The server returns ONE page at a time and does the searching itself.
+  useEffect(() => {
+    let cancelled = false;
     const fetchContacts = async () => {
       try {
         setLoading(true);
-        const data = await agentService.getAllContacts();
-        setContacts(data);
+        const data = await agentService.getContactsPage({ page, pageSize: PAGE_SIZE, search: debouncedSearch || undefined });
+        if (!cancelled) { setContacts(data.items); setTotal(data.total); }
       } catch (error) {
         console.error('Erreur chargement contacts:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchContacts();
-  }, []);
+    return () => { cancelled = true; };
+  }, [page, debouncedSearch]);
 
-  const filteredContacts = contacts.filter(contact => {
-    const search = searchTerm.toLowerCase();
-    return (
-      contact.source?.toLowerCase().includes(search) ||
-      `${contact.prenom ?? ''} ${contact.nom ?? ''}`.toLowerCase().includes(search) ||
-      contact.telephone?.includes(search) ||
-      contact.email?.toLowerCase().includes(search) ||
-      contact.adresse?.toLowerCase().includes(search)
-    );
-  });
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  if (loading) {
+  if (loading && contacts.length === 0 && !debouncedSearch) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
@@ -51,7 +56,7 @@ export default function ConfContactsListPage() {
 
       <div className="flex items-center justify-between">
         <div className="bg-primary/10 rounded-lg px-4 py-2">
-          <span className="text-primary font-medium">Total : {filteredContacts.length} contact{filteredContacts.length !== 1 ? 's' : ''}</span>
+          <span className="text-primary font-medium">Total : {total} contact{total !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
@@ -68,7 +73,7 @@ export default function ConfContactsListPage() {
       </div>
 
       {/* Table */}
-      {filteredContacts.length === 0 ? (
+      {contacts.length === 0 ? (
         <div className="glass-card text-center p-12">
           <User className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground">Aucun contact trouvé</p>
@@ -87,7 +92,7 @@ export default function ConfContactsListPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredContacts.map(contact => (
+                {contacts.map(contact => (
                   <tr key={contact.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                     <td className="p-4">
                       <div className="flex items-center gap-2">
@@ -120,6 +125,23 @@ export default function ConfContactsListPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border text-sm">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page <= 1 || loading}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border disabled:opacity-40 hover:bg-muted/50"
+            >
+              <ChevronLeft className="w-4 h-4" /> Précédent
+            </button>
+            <span className="text-muted-foreground">Page {page} sur {totalPages}</span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages || loading}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border disabled:opacity-40 hover:bg-muted/50"
+            >
+              Suivant <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

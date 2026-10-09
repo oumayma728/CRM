@@ -41,7 +41,7 @@ public class InactivityAlertServiceTests
     public async Task ExecuteAsync_NoInactiveUsers_DoesNothing()
     {
         var user = new Agent { Prenom = "Active", Nom = "User", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(user);
+        _context.Users.Add(user);
         _context.AdvancedAttendances.Add(new AdvancedAttendance
         {
             UserId = user.Id,
@@ -65,7 +65,7 @@ public class InactivityAlertServiceTests
     public async Task ExecuteAsync_WithInactiveUser_SendsAlert()
     {
         var user = new Agent { Prenom = "Inactive", Nom = "User", Email = "i@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(user);
+        _context.Users.Add(user);
         _context.AdvancedAttendances.Add(new AdvancedAttendance
         {
             UserId = user.Id,
@@ -97,7 +97,7 @@ public class InactivityAlertServiceTests
     public async Task ExecuteAsync_CompletedAttendance_Ignored()
     {
         var user = new Agent { Prenom = "Completed", Nom = "User", Email = "c@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(user);
+        _context.Users.Add(user);
         _context.AdvancedAttendances.Add(new AdvancedAttendance
         {
             UserId = user.Id,

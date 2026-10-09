@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
+using Backend.Helpers;
 using Backend.Entities;
 
 namespace Backend.Controllers;
@@ -53,7 +54,7 @@ public class AnalyticsCrmController : ControllerBase
     {
         try
         {
-            var agents = (await _context.Utilisateurs
+            var agents = (await _context.Users
                 .Where(u => u.Role == "AGENT")
                 .Select(u => new { u.Id, u.Nom, u.Prenom, u.Email })
                 .AsNoTracking()
@@ -83,7 +84,8 @@ public class AnalyticsCrmController : ControllerBase
                     rdvSigne = rdvs.Count(r => r.Statut == StatutRendezVous.SIGNE),
                     totalAppels = appels.Count,
                     avgScore = evals.Count > 0 ? Math.Round(evals.Average(e => e.GlobalScore), 1) : 0,
-                    salaireMois = salary?.TotalSalary ?? 0,
+                    // salaries are for the SuperAdmin only: an ADMIN gets 0 here
+                    salaireMois = UserContextHelper.IsSuperAdmin(User) ? (salary?.TotalSalary ?? 0) : 0,
                     conversionRate = rdvs.Count > 0 ? Math.Round((double)rdvs.Count(r => r.Statut == StatutRendezVous.CONFIRME) / rdvs.Count * 100, 1) : 0
                 });
             }
@@ -102,7 +104,7 @@ public class AnalyticsCrmController : ControllerBase
         try
         {
             var today = DateTime.UtcNow.Date;
-            var agents = (await _context.Utilisateurs
+            var agents = (await _context.Users
                 .Where(u => u.Role == "AGENT")
                 .Select(u => new { u.Id, u.Nom, u.Prenom, u.Email })
                 .AsNoTracking()
@@ -244,7 +246,7 @@ public class AnalyticsCrmController : ControllerBase
             .Distinct()
             .ToListAsync();
 
-        var agents = await _context.Utilisateurs
+        var agents = await _context.Users
             .Where(u => u.Role == "AGENT" && recentAppels.Contains(u.Id))
             .Select(u => new { u.Id, u.Prenom, u.Nom, u.Email })
             .AsNoTracking()

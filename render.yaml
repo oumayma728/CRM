@@ -36,6 +36,11 @@ services:
         value: "https://crm-frontend.onrender.com"
       - key: Groq__ApiKey
         sync: false
+      # First start on an empty database: creates the first super admin (password >= 12 chars, changed at first login).
+      - key: Bootstrap__AdminEmail
+        sync: false
+      - key: Bootstrap__AdminPassword
+        sync: false
 
 staticSites:
   - type: static

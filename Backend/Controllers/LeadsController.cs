@@ -1,12 +1,15 @@
 using Backend.Attributes;
 using Backend.DTOs.Lead;
 using Backend.Services.Leads;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Backend.Controllers;
 
+// Same roles as LeadsImportController: importing/listing leads is a back-office job.
 [SnakeCaseJson]
 [ApiController]
+[Authorize(Roles = "ADMIN,QUALITE,SuperAdmin")]
 [Route("api/leads")]
 public class LeadsController : ControllerBase
 {

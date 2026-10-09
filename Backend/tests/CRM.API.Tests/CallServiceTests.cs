@@ -48,7 +48,7 @@ public class CallServiceTests
     public async Task GetCallsAsync_AgentRole_FiltersByAgentName()
     {
         var user = new Agent { Id = 1, Prenom = "Agent", Nom = "A", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(user);
+        _context.Users.Add(user);
         _context.Calls.AddRange(
             new Call { AgentName = "Agent A", CallDate = DateTime.UtcNow, ScorePercentage = 80 },
             new Call { AgentName = "Agent B", CallDate = DateTime.UtcNow, ScorePercentage = 70 }
@@ -101,7 +101,7 @@ public class CallServiceTests
     public async Task GetCallByIdAsync_AgentNotOwnCall_ReturnsNull()
     {
         var user = new Agent { Id = 1, Prenom = "Agent", Nom = "A", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(user);
+        _context.Users.Add(user);
         var call = new Call { AgentName = "Agent B", CallDate = DateTime.UtcNow, ScorePercentage = 80 };
         _context.Calls.Add(call);
         await _context.SaveChangesAsync();
@@ -151,7 +151,7 @@ public class CallServiceTests
     public async Task SaveCallAsync_WithAnonymization_SavesCall()
     {
         var user = new Agent { Id = 1, Prenom = "Agent", Nom = "A", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(user);
+        _context.Users.Add(user);
         await _context.SaveChangesAsync();
         _mockAi.Setup(a => a.AnonymizeTranscriptAsync(It.IsAny<AnonymizeDto>()))
             .ReturnsAsync(new Backend.DTOs.Ai.AnonymizeResultDto { Anonymized = "[ANONYMIZED] notes" });
@@ -175,7 +175,7 @@ public class CallServiceTests
     public async Task SaveCallAsync_WithoutNotes_StillSaves()
     {
         var user = new Agent { Id = 1, Prenom = "Agent", Nom = "A", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(user);
+        _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
         var (success, callId, _) = await _sut.SaveCallAsync(1, new CallSaveDto

@@ -11,7 +11,8 @@ namespace Backend.Controllers;
 [SnakeCaseJson]
 [ApiController]
 [Route("api/salaries")]
-[Authorize(Roles = "ADMIN,QUALITE,SuperAdmin")]
+// Salaries are reserved to the SuperAdmin: ADMIN (and QUALITE) get a 403 on every route of this controller.
+[Authorize(Roles = "SuperAdmin")]
 public class SalaryController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
@@ -90,7 +91,7 @@ public class SalaryController : ControllerBase
         string? bestName = null;
         if (best != null)
         {
-            var agent = await _context.Utilisateurs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == best.AgentId);
+            var agent = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == best.AgentId);
             bestName = agent != null ? $"{agent.Prenom} {agent.Nom}" : null;
         }
         return Ok(new MonthlySummaryDto
@@ -117,7 +118,7 @@ public class SalaryController : ControllerBase
         var year = int.Parse(parts[0]);
         var monthNumber = int.Parse(parts[1]);
 
-        // Load only Agent entities (excludes other Utilisateur roles)
+        // Load only Agent entities (excludes other User roles)
         var agents = (await _context.Agents.AsNoTracking().ToListAsync())
             .DistinctBy(u => u.Email)
             .ToList();
@@ -383,7 +384,7 @@ public class SalaryController : ControllerBase
     [HttpGet("{agentId}")]
     public async Task<IActionResult> GetAgentSalary(long agentId, [FromQuery] string? month)
     {
-        var agent = await _context.Utilisateurs.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentId);
+        var agent = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == agentId);
         if (agent == null) return NotFound(new { error = "Agent introuvable" });
         month ??= DateTime.UtcNow.ToString("yyyy-MM");
         var current = await _context.SalairesAgents.AsNoTracking()

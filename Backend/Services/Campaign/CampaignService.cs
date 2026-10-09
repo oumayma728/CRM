@@ -153,7 +153,7 @@ namespace Backend.Services.Campaigns
                 // 3. Assign agents to campaign
                 if (dto.AgentsIds != null && dto.AgentsIds.Any())
                 {
-                    var validAgents = await _db.Users
+                    var validAgents = await _db.AppUsers
                         .Where(u => dto.AgentsIds.Contains(u.Id) && u.Role.Name == "Agent")
                         .Select(u => u.Id)
                         .ToListAsync();
@@ -461,7 +461,7 @@ namespace Backend.Services.Campaigns
                 .Where(ca => ca.CampaignId == campaignId && ca.IsActive)
                 .Select(ca => ca.UserId);
 
-            return await _db.Users
+            return await _db.AppUsers
                 .Include(u => u.Role)
                 .Where(u => u.Role.Name == "Agent"
                     && u.IsActive
@@ -869,7 +869,7 @@ namespace Backend.Services.Campaigns
                 throw new ArgumentException($"Campaign {campaignId} not found");
 
             // 2. Vérifier si l'utilisateur existe et est un Agent
-            var user = await _db.Users
+            var user = await _db.AppUsers
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Id == dto.AgentId);
             if (user == null)

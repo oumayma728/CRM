@@ -92,7 +92,7 @@ namespace Backend.Entities
         public int UploadedByUserId { get; set; }
 
         [ForeignKey("UploadedByUserId")]
-        public User? UploadedByUser { get; set; }
+        public AppUser? UploadedByUser { get; set; }
 
         [Column("parent_source_file_id")]
         public int? ParentSourceFileId { get; set; }

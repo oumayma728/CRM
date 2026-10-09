@@ -41,7 +41,7 @@ namespace Backend.Entities
         public int CreatedByUserId { get; set; }
 
         [ForeignKey("CreatedByUserId")]
-        public User? CreatedByUser { get; set; }
+        public AppUser? CreatedByUser { get; set; }
 
         // Soft delete
         [Column("is_deleted")]

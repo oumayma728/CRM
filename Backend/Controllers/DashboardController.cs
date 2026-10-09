@@ -1,10 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Backend.DTOs.Agent;
+using Backend.Helpers;
 using Backend.Services;
 
 namespace Backend.Controllers;
 
+// [Authorize]: login required for the 3 routes below; each one also checks that the agent id in the
+// URL is the caller's own id (or that the caller is an admin).
 [ApiController]
+[Authorize]
 [Route("api/agent")]
 [Produces("application/json")]
 public class DashboardController : ControllerBase
@@ -21,6 +26,7 @@ public class DashboardController : ControllerBase
     [ProducesResponseType(typeof(DashboardAgentDTO), 200)]
     public async Task<IActionResult> GetDashboard(long agentId)
     {
+        if (!UserContextHelper.CanAccessAgentData(User, agentId)) return Forbid();
         var data = await _dashboardService.GetDashboardAgentAsync(agentId);
         return Ok(data);
     }
@@ -36,6 +42,7 @@ public class DashboardController : ControllerBase
         [FromQuery] string? filtre = null,
         [FromQuery] string? recherche = null)
     {
+        if (!UserContextHelper.CanAccessAgentData(User, agentId)) return Forbid();
         var data = await _dashboardService.GetHistoriqueAsync(agentId, filtre, recherche);
         return Ok(data);
     }
@@ -45,6 +52,7 @@ public class DashboardController : ControllerBase
     [ProducesResponseType(typeof(AgendaAgentDTO), 200)]
     public async Task<IActionResult> GetAgenda(long agentId)
     {
+        if (!UserContextHelper.CanAccessAgentData(User, agentId)) return Forbid();
         var data = await _dashboardService.GetAgendaAsync(agentId);
         return Ok(data);
     }

@@ -30,8 +30,8 @@ public class ManualEvaluation
 
     // Navigation
     [ForeignKey(nameof(AgentId))]
-    public virtual Utilisateur? Agent { get; set; }
+    public virtual User? Agent { get; set; }
 
     [ForeignKey(nameof(EvaluatorId))]
-    public virtual Utilisateur? Evaluator { get; set; }
+    public virtual User? Evaluator { get; set; }
 }

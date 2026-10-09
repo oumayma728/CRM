@@ -112,10 +112,15 @@ export const agentService = {
     return response.data;
   },
   
-  // Récupérer tous les contacts
-  getAllContacts: async (): Promise<Contact[]> => {
-    const response = await api.get('/contact');
-    return response.data;
+  // Récupérer les contacts PAGE PAR PAGE (le serveur limite à 200 par page et renvoie le total
+  // dans l'en-tête X-Total-Count). La recherche se fait côté serveur.
+  getContactsPage: async (
+    params: { page?: number; pageSize?: number; search?: string } = {}
+  ): Promise<{ items: Contact[]; total: number }> => {
+    const response = await api.get('/contact', { params });
+    const items: Contact[] = response.data;
+    const total = Number(response.headers?.['x-total-count'] ?? items.length);
+    return { items, total };
   },
 
   // Dialer : contacts ordonnés + progression du jour

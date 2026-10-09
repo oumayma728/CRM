@@ -23,7 +23,7 @@ namespace Backend.Entities
         public int UserId { get; set; }
 
         [ForeignKey("UserId")]
-        public User? User { get; set; }
+        public AppUser? User { get; set; }
 
         [Column("assigned_at")]
         public DateTime AssignedAt { get; set; } = DateTime.UtcNow;

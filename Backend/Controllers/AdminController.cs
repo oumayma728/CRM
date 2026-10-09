@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Backend.Authorization;
 using Backend.Data;
 using Backend.DTOs.Admin;
 using Backend.Services.Admin;
@@ -96,6 +97,14 @@ public class AdminController : ControllerBase
     [HttpDelete("utilisateurs/{id}")]
     public async Task<IActionResult> DeleteUtilisateur(long id)
     {
+        if (UserManagementGuard.IsSelf(User, id))
+            return BadRequest(new { message = UserManagementGuard.CannotDeactivateSelfMessage });
+
+        var targetRole = await _context.Users.AsNoTracking()
+            .Where(u => u.Id == id).Select(u => u.Role).FirstOrDefaultAsync();
+        if (targetRole != null && !UserManagementGuard.CanManage(User, targetRole))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = UserManagementGuard.SuperAdminOnlyMessage });
+
         await _adminService.DeleteUtilisateurAsync(id);
         return NoContent();
     }

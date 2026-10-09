@@ -201,6 +201,7 @@ public class CallPerformanceController : ControllerBase
     }
 
     [HttpGet("agents-from-calls")]
+    [Authorize(Roles = "ADMIN,QUALITE,SuperAdmin")]
     public async Task<IActionResult> GetAgentsFromCalls()
     {
         try
@@ -220,7 +221,7 @@ public class CallPerformanceController : ControllerBase
     {
         try
         {
-            var agent = await _context.Utilisateurs.AsNoTracking()
+            var agent = await _context.Users.AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == id && u.Role == "AGENT");
             if (agent == null) return NotFound(new { error = "Agent not found" });
 

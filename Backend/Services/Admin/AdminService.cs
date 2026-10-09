@@ -29,7 +29,7 @@ public class AdminService : IAdminService
         var aujourd = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
 
         // Use base Utilisateur table — never _context.Agents (TPH materialization)
-        var totalAgents = await _context.Utilisateurs.CountAsync(u => u.Role == "AGENT");
+        var totalAgents = await _context.Users.CountAsync(u => u.Role == "AGENT");
 
         var agentsEnLigne = await _context.Pointages
             .Where(p => p.Date == aujourd && p.DernierAppel != null)
@@ -73,7 +73,7 @@ public class AdminService : IAdminService
 
             if (pauseAgentIds.Any())
             {
-                var nomMap = await _context.Utilisateurs
+                var nomMap = await _context.Users
                     .Where(u => pauseAgentIds.Contains(u.Id))
                     .Select(u => new { u.Id, Nom = u.Prenom + " " + u.Nom })
                     .ToDictionaryAsync(u => u.Id, u => u.Nom);
@@ -112,7 +112,7 @@ public class AdminService : IAdminService
         var aujourd = DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
 
         // Use Utilisateurs base table — never _context.Agents (TPH)
-        var agentsBase = await _context.Utilisateurs
+        var agentsBase = await _context.Users
             .Where(u => u.Role == "AGENT")
             .Select(u => new { u.Id, u.Nom, u.Prenom })
             .AsNoTracking()
@@ -188,7 +188,7 @@ public class AdminService : IAdminService
         var debutMois = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // Use Utilisateurs base table — never _context.Agents (TPH)
-        var agentsBase = (await _context.Utilisateurs
+        var agentsBase = (await _context.Users
             .Where(u => u.Role == "AGENT")
             .Select(u => new { u.Id, u.Nom, u.Prenom })
             .AsNoTracking()
@@ -246,7 +246,7 @@ public class AdminService : IAdminService
         var debutMois = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // Use Utilisateurs base table — never _context.Agents (TPH)
-        var agentsBase = (await _context.Utilisateurs
+        var agentsBase = (await _context.Users
             .Where(u => u.Role == "AGENT")
             .Select(u => new { u.Id, u.Nom, u.Prenom })
             .AsNoTracking()
@@ -296,13 +296,13 @@ public class AdminService : IAdminService
 
         // Load agent names via base Utilisateur (avoids TPH column mapping)
         var agentIds = pointagesRaw.Select(p => p.AgentId).Distinct().ToList();
-        var agentNoms = await _context.Utilisateurs
+        var agentNoms = await _context.Users
             .Where(u => agentIds.Contains(u.Id))
             .Select(u => new { u.Id, Nom = u.Prenom + " " + u.Nom })
             .AsNoTracking()
             .ToDictionaryAsync(u => u.Id, u => u.Nom);
 
-        var totalAgents = await _context.Utilisateurs.CountAsync(u => u.Role == "AGENT");
+        var totalAgents = await _context.Users.CountAsync(u => u.Role == "AGENT");
 
         var details = pointagesRaw.Select(p => new PointageDetailDTO
         {
@@ -405,7 +405,7 @@ public class AdminService : IAdminService
     public async Task<List<UtilisateurDTO>> GetUtilisateursAsync()
     {
         // Load into memory first so we can access derived type properties (Confirmatrice.Type)
-        var utilisateurs = await _context.Set<Utilisateur>().ToListAsync();
+        var utilisateurs = await _context.Set<User>().ToListAsync();
 
         return utilisateurs.Select(u => new UtilisateurDTO
         {
@@ -424,7 +424,7 @@ public class AdminService : IAdminService
 
     public async Task<UtilisateurDTO> CreateUtilisateurAsync(UtilisateurRequestDTO request)
     {
-        Utilisateur utilisateur;
+        User utilisateur;
         var plainPassword = request.MotDePasse; // capture before hashing
 
         // Rôle simplifié pour la base de données (max 13 caractères)
@@ -574,8 +574,11 @@ public class AdminService : IAdminService
                 throw new ArgumentException($"Rôle '{request.Role}' non reconnu");
         }
         
-        _context.Set<Utilisateur>().Add(utilisateur);
+        _context.Set<User>().Add(utilisateur);
         await _context.SaveChangesAsync();
+
+        // Keep the second user table in step (needed by the file-import / campaign modules: see AppUserMirror)
+        await AppUserMirror.EnsureAsync(_context, utilisateur.Id);
 
         // Send welcome email — true fire-and-forget so SMTP never blocks the response
         _ = Task.Run(async () =>
@@ -612,7 +615,7 @@ public class AdminService : IAdminService
 
     public async Task DeleteUtilisateurAsync(long id)
     {
-        var user = await _context.Set<Utilisateur>().FindAsync(id);
+        var user = await _context.Set<User>().FindAsync(id);
         if (user == null)
             throw new KeyNotFoundException($"Utilisateur {id} non trouvé.");
         
@@ -629,7 +632,7 @@ public class AdminService : IAdminService
         // Pour les confirmatrices, aucune propriété spécifique à nettoyer
         // car Type et Specialite doivent être conservés pour l'historique
         
-        _context.Set<Utilisateur>().Update(user);
+        _context.Set<User>().Update(user);
         await _context.SaveChangesAsync();
     }
 

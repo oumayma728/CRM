@@ -5,10 +5,18 @@ using System.Security.Claims;
 using Backend.DTOs.Agent;
 using Backend.Services.Agent;
 using Backend.Data;
+using Backend.Helpers;
 
 namespace Backend.Controllers;
 
+// [Authorize] at class level = EVERY action below requires a valid token by default.
+// (Before, only a few actions had it, so the others were open to anybody on the internet.)
+/// <summary>
+/// Agents who LOG IN (<c>Utilisateur</c> table, role AGENT): dashboard, calls, attendance, pay.
+/// Not to be confused with <see cref="AgentProfilesController"/> (api/Agents), the campaign-model agents.
+/// </summary>
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 [Produces("application/json")]
 public class AgentController : ControllerBase
@@ -24,27 +32,53 @@ public class AgentController : ControllerBase
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
 
-    /// <summary>Récupère tous les agents</summary>
+    /// <summary>
+    /// Récupère tous les agents. Les admins reçoivent la fiche complète (salaire, contrat...) ;
+    /// les autres rôles (ex. page « Créer une fiche contact ») ne reçoivent que id / nom / prénom.
+    /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<AgentDTO>), 200)]
     public async Task<IActionResult> GetAll()
     {
-        var agents = await _service.GetAllAgentsAsync();
-        return Ok(agents);
+        // .ToList(): the service returns a LAZY sequence (rebuilt each time it is read). Without it, HideSalary below
+        // would change objects that are thrown away, and the salaries would still be sent.
+        var agents = (await _service.GetAllAgentsAsync()).ToList();
+
+        if (UserContextHelper.IsAdmin(User))
+        {
+            // ADMIN sees the team but NOT the salaries; only the SuperAdmin gets the full record.
+            if (!UserContextHelper.IsSuperAdmin(User))
+                foreach (var a in agents) HideSalary(a);
+            return Ok(agents);
+        }
+
+        // Minimal projection: never expose salary, contract, e-mail or machine id to non-admins.
+        return Ok(agents.Select(a => new AgentDTO
+        {
+            Id = a.Id,
+            Nom = a.Nom,
+            Prenom = a.Prenom,
+            Role = a.Role,
+            Actif = a.Actif,
+        }));
     }
 
-    /// <summary>Récupère un agent par son ID</summary>
+    /// <summary>Récupère un agent par son ID (l'agent lui-même ou un admin)</summary>
     [HttpGet("{id:long}")]
     [ProducesResponseType(typeof(AgentDTO), 200)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> GetById(long id)
     {
+        if (!UserContextHelper.CanAccessAgentData(User, id)) return Forbid();
+
         var agent = await _service.GetAgentByIdAsync(id);
+        if (agent != null && !UserContextHelper.CanSeeSalary(User, id)) HideSalary(agent);
         return agent == null ? NotFound(new { message = $"Agent {id} introuvable." }) : Ok(agent);
     }
 
-    /// <summary>Crée un nouvel agent</summary>
+    /// <summary>Crée un nouvel agent (admin uniquement)</summary>
     [HttpPost]
+    [Authorize(Roles = "ADMIN,SuperAdmin")]
     [ProducesResponseType(typeof(AgentDTO), 201)]
     [ProducesResponseType(400)]
     [ProducesResponseType(409)]
@@ -52,9 +86,13 @@ public class AgentController : ControllerBase
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
+        // Only the SuperAdmin sets salaries: the salary field sent by an ADMIN is ignored.
+        if (!UserContextHelper.IsSuperAdmin(User)) dto.SalaireBase = 0;
+
         try
         {
             var created = await _service.CreateAgentAsync(dto);
+            if (!UserContextHelper.IsSuperAdmin(User)) HideSalary(created);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
         catch (InvalidOperationException ex)
@@ -63,20 +101,26 @@ public class AgentController : ControllerBase
         }
     }
 
-    /// <summary>Met à jour un agent</summary>
+    /// <summary>Met à jour un agent (admin uniquement)</summary>
     [HttpPut("{id:long}")]
+    [Authorize(Roles = "ADMIN,SuperAdmin")]
     [ProducesResponseType(typeof(AgentDTO), 200)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> Update(long id, [FromBody] UpdateAgentDTO dto)
     {
+        // Only the SuperAdmin can change a salary: for an ADMIN the field is ignored.
+        if (!UserContextHelper.IsSuperAdmin(User)) dto.SalaireBase = null;
+
         var updated = await _service.UpdateAgentAsync(id, dto);
+        if (updated != null && !UserContextHelper.IsSuperAdmin(User)) HideSalary(updated);
         return updated == null
             ? NotFound(new { message = $"Agent {id} introuvable." })
             : Ok(updated);
     }
 
-    /// <summary>Supprime un agent</summary>
+    /// <summary>Supprime un agent (admin uniquement)</summary>
     [HttpDelete("{id:long}")]
+    [Authorize(Roles = "ADMIN,SuperAdmin")]
     [ProducesResponseType(204)]
     [ProducesResponseType(404)]
     public async Task<IActionResult> Delete(long id)
@@ -93,17 +137,25 @@ public class AgentController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<AppelDTO>), 200)]
     public async Task<IActionResult> GetAppels(long id)
     {
+        if (!UserContextHelper.CanAccessAgentData(User, id)) return Forbid();
+
         var appels = await _service.GetAppelsParAgentAsync(id);
         return Ok(appels);
     }
 
-    /// <summary>Enregistre un appel avec qualification</summary>
+    /// <summary>
+    /// Enregistre un appel avec qualification.
+    /// Un agent ne peut enregistrer des appels que pour lui-même : l'id envoyé dans le corps de la
+    /// requête est comparé à celui du jeton (impossible de falsifier les appels d'un collègue).
+    /// </summary>
     [HttpPost("appels")]
+    [Authorize(Roles = "AGENT,ADMIN,SuperAdmin")]
     [ProducesResponseType(typeof(AppelDTO), 200)]
     [ProducesResponseType(400)]
     public async Task<IActionResult> EnregistrerAppel([FromBody] CreateAppelDTO dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
+        if (!UserContextHelper.CanAccessAgentData(User, dto.AgentId)) return Forbid();
 
         try
         {
@@ -132,10 +184,15 @@ public class AgentController : ControllerBase
     {
         if (annee < 2020 || mois < 1 || mois > 12)
             return BadRequest(new { message = "Année ou mois invalide." });
+        if (!UserContextHelper.CanAccessAgentData(User, id)) return Forbid();
 
         try
         {
             var perf = await _service.GetPerformanceAsync(id, annee, mois);
+            if (!UserContextHelper.CanSeeSalary(User, id))      // bonuses are part of the pay
+            {
+                perf.PrimeAssiduite = perf.PrimeMensuelle = perf.PrimeTrimestrielle = perf.TotalPrimes = 0;
+            }
             return Ok(perf);
         }
         catch (Exception ex)
@@ -157,6 +214,8 @@ public class AgentController : ControllerBase
     {
         if (annee < 2020 || mois < 1 || mois > 12)
             return BadRequest(new { message = "Année ou mois invalide." });
+        // estimated pay: the agent himself or the SuperAdmin (an ADMIN has no access to salaries)
+        if (!UserContextHelper.CanSeeSalary(User, id)) return Forbid();
 
         try
         {
@@ -179,6 +238,8 @@ public class AgentController : ControllerBase
         [FromQuery] DateTime? dateDebut,
         [FromQuery] DateTime? dateFin)
     {
+        if (!UserContextHelper.CanAccessAgentData(User, id)) return Forbid();
+
         var pointages = await _service.GetPointagesAsync(id, dateDebut, dateFin);
         return Ok(pointages);
     }
@@ -193,6 +254,7 @@ public class AgentController : ControllerBase
     public async Task<IActionResult> VerifierPC(long id, [FromBody] VerifierPCDTO dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
+        if (!UserContextHelper.CanAccessAgentData(User, id)) return Forbid();
 
         var agent = await _service.GetAgentByIdAsync(id);
         if (agent == null)
@@ -439,6 +501,13 @@ public class AgentController : ControllerBase
 
         await _context.SaveChangesAsync();
         return Ok(new { message = "Pause enregistrée" });
+    }
+
+    /// <summary>Blanks the pay fields of an agent record (used for readers who may not see salaries).</summary>
+    private static void HideSalary(AgentDTO a)
+    {
+        a.SalaireBase = 0;
+        a.PrimeAssiduite = 0;
     }
 }
 

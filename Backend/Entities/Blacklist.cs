@@ -18,7 +18,7 @@ namespace Backend.Entities
         public int AddedByUserId { get; set; }
 
         [ForeignKey("AddedByUserId")]
-        public User? AddedByUser { get; set; }
+        public AppUser? AddedByUser { get; set; }
 
         [Column("added_at")]
         public DateTime AddedAt { get; set; } = DateTime.UtcNow;

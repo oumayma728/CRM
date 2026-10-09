@@ -25,6 +25,6 @@ namespace Backend.Entities
         public ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
 
         [JsonIgnore]
-        public ICollection<User> Users { get; set; } = new List<User>();
+        public ICollection<AppUser> Users { get; set; } = new List<AppUser>();
     }
 }

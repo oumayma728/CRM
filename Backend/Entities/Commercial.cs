@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend.Entities;
 
-public class Commercial : Utilisateur
+public class Commercial : User
 {
     public string? Matricule { get; set; }
     public double TauxCommission { get; set; }

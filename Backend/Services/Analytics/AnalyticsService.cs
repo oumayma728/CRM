@@ -230,7 +230,7 @@ public class AnalyticsService : IAnalyticsService
     {
         var today = DateTime.UtcNow.Date;
         var now = DateTime.UtcNow;
-        var users = await _context.Utilisateurs.AsNoTracking()
+        var users = await _context.Users.AsNoTracking()
             .Where(u => u.Role == "AGENT")
             .ToListAsync();
 

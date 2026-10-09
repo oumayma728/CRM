@@ -26,7 +26,7 @@ public class AppointmentServiceTests
     public async Task GetAppointmentsAsync_NoFilter_ReturnsAll()
     {
         var agent = new Agent { Id = 1, Prenom = "Agent", Nom = "1", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(agent);
+        _context.Users.Add(agent);
         _context.CrmAppointments.AddRange(
             new CrmAppointment { AgentId = 1, ClientName = "Client A", AppointmentDate = DateTime.UtcNow, AppointmentTime = "10:00", Agent = agent },
             new CrmAppointment { AgentId = 1, ClientName = "Client B", AppointmentDate = DateTime.UtcNow.AddDays(1), AppointmentTime = "14:00", Agent = agent }
@@ -43,7 +43,7 @@ public class AppointmentServiceTests
     {
         var agent1 = new Agent { Id = 1, Prenom = "A1", Nom = "", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
         var agent2 = new Agent { Id = 2, Prenom = "A2", Nom = "", Email = "b@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.AddRange(agent1, agent2);
+        _context.Users.AddRange(agent1, agent2);
         _context.CrmAppointments.AddRange(
             new CrmAppointment { AgentId = 1, ClientName = "C1", AppointmentDate = DateTime.UtcNow, AppointmentTime = "10:00", Agent = agent1 },
             new CrmAppointment { AgentId = 2, ClientName = "C2", AppointmentDate = DateTime.UtcNow, AppointmentTime = "12:00", Agent = agent2 }
@@ -59,7 +59,7 @@ public class AppointmentServiceTests
     public async Task GetAppointmentByIdAsync_Existing_ReturnsDetail()
     {
         var agent = new Agent { Id = 1, Prenom = "A1", Nom = "", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(agent);
+        _context.Users.Add(agent);
         var appointment = new CrmAppointment { AgentId = 1, ClientName = "Client", AppointmentDate = DateTime.UtcNow, AppointmentTime = "09:00", Agent = agent };
         _context.CrmAppointments.Add(appointment);
         await _context.SaveChangesAsync();
@@ -107,7 +107,7 @@ public class AppointmentServiceTests
     public async Task UpdateAppointmentAsync_Existing_UpdatesAndRecalculates()
     {
         var agent = new Agent { Id = 1, Prenom = "A1", Nom = "", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(agent);
+        _context.Users.Add(agent);
         var appointment = new CrmAppointment { AgentId = 1, ClientName = "Old", AppointmentDate = DateTime.UtcNow, AppointmentTime = "09:00", Agent = agent, Revenus = 10000, Chauffage = "gaz" };
         _context.CrmAppointments.Add(appointment);
         await _context.SaveChangesAsync();
@@ -131,7 +131,7 @@ public class AppointmentServiceTests
     public async Task UpdateAppointmentAsync_InvalidStatus_ThrowsArgException()
     {
         var agent = new Agent { Id = 1, Prenom = "A1", Nom = "", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
-        _context.Utilisateurs.Add(agent);
+        _context.Users.Add(agent);
         var appointment = new CrmAppointment { AgentId = 1, ClientName = "C", AppointmentDate = DateTime.UtcNow, AppointmentTime = "09:00", Agent = agent };
         _context.CrmAppointments.Add(appointment);
         await _context.SaveChangesAsync();

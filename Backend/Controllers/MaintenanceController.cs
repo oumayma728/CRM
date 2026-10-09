@@ -23,7 +23,7 @@ public class MaintenanceController : ControllerBase
     {
         try
         {
-            return Ok(new { export_date = DateTime.UtcNow, calls = await _context.Calls.AsNoTracking().Take(1000).ToListAsync(), users = await _context.Utilisateurs.AsNoTracking().ToListAsync(), leads = await _context.Leads.AsNoTracking().ToListAsync() });
+            return Ok(new { export_date = DateTime.UtcNow, calls = await _context.Calls.AsNoTracking().Take(1000).ToListAsync(), users = await _context.Users.AsNoTracking().ToListAsync(), leads = await _context.Leads.AsNoTracking().ToListAsync() });
         }
         catch (Exception ex) { return Problem(ex.Message); }
     }
