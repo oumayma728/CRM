@@ -141,12 +141,15 @@ public class AIController : ControllerBase
     {
         // Données historiques : RDV bruts des 90 derniers jours
         var since = DateTime.UtcNow.AddDays(-90);
-        var history = await _context.RendezVous
+        // The database counts per day; the text formatting is done afterwards, in memory
+        // (DateTime.ToString cannot be translated to SQL: that was the HTTP 500).
+        var perDay = await _context.RendezVous
             .Where(r => r.DateRendezVous >= since)
             .GroupBy(r => r.DateRendezVous.Date)
-            .Select(g => new { date = g.Key.ToString("yyyy-MM-dd"), count = g.Count() })
-            .OrderBy(x => x.date)
+            .Select(g => new { Day = g.Key, Count = g.Count() })
+            .OrderBy(x => x.Day)
             .ToListAsync();
+        var history = perDay.Select(d => new { date = d.Day.ToString("yyyy-MM-dd"), count = d.Count }).ToList();
 
         try
         {

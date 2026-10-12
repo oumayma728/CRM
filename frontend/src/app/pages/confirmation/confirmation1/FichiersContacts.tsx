@@ -155,8 +155,8 @@ export default function FichiersContacts() {
             <h3 className="text-lg font-bold mb-4">Importer une liste de contacts</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Fichier CSV/Excel</label>
-                <input type="file" accept=".csv,.xlsx,.xls" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="w-full p-2 rounded" />
+                <label className="block text-sm font-medium mb-1">Fichier CSV</label>
+                <input type="file" accept=".csv" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="w-full p-2 rounded" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Nom de la campagne</label>

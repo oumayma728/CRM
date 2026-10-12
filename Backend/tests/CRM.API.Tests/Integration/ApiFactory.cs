@@ -39,6 +39,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         // appsettings.json no longer holds any secret: the tests bring their own (never used outside the tests)
         builder.UseSetting("Jwt:Secret", "test-only-jwt-secret-not-used-anywhere-else-0123456789");
         builder.UseSetting("RateLimiting:LoginPermitLimit", "1000");
+        builder.UseSetting("RateLimiting:LoginPerIpLimit", "1000000");   // the whole suite logs in from one "IP"
         builder.ConfigureServices(services =>
         {
             services.RemoveAll(typeof(DbContextOptions<ApplicationDbContext>));
@@ -48,6 +49,7 @@ public class ApiFactory : WebApplicationFactory<Program>
 
             using var scope = services.BuildServiceProvider().CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            if (db.Users.Any()) return;        // WithWebHostBuilder() builds a second host on the same in-memory database
             var hash = BCrypt.Net.BCrypt.HashPassword(Password);
             db.Users.AddRange(
                 new Admin { Id = Accounts.AdminId, Prenom = "Alice", Nom = "Admin", Email = Accounts.AdminEmail, MotDePasse = hash, Role = "ADMIN" },

@@ -57,7 +57,6 @@ export const adminService = {
   getAgentsSuivi: () => api.get('/admin/agents/suivi'),
   
   // Pointage
-  getPointage: (date?: string) => api.get(`/admin/pointage${date ? `?date=${date}` : ''}`),
   
   
   // Carte géographique

@@ -82,15 +82,33 @@ if (string.IsNullOrEmpty(connectionString))
 builder.Services.AddDbContext<Backend.Data.ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Rate limiting on authentication endpoints (feature/khaled1): 10 attempts / 2 min per client IP
-// (RateLimiting:LoginPermitLimit overrides the limit, e.g. for the E2E suite)
-var loginPermitLimit = builder.Configuration.GetValue("RateLimiting:LoginPermitLimit", 10);
+// Rate limiting on authentication endpoints: 5 attempts / minute PER ACCOUNT (the e-mail sent in the request),
+// not per IP address: a whole call center sits behind one office IP, so a per-IP limit locked out the other agents
+// (only 10 of 70 could log in at start-up). A generous per-IP ceiling remains as a safety net against
+// somebody trying thousands of different accounts.
+//   RateLimiting:LoginPermitLimit  = attempts per minute per account (default 5)
+//   RateLimiting:LoginPerIpLimit   = auth requests per minute per IP address (default 300)
+var loginPermitLimit = builder.Configuration.GetValue("RateLimiting:LoginPermitLimit", 5);
+var loginPerIpLimit = builder.Configuration.GetValue("RateLimiting:LoginPerIpLimit", 300);
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy("login", httpContext => RateLimitPartition.GetFixedWindowLimiter(
-        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = loginPermitLimit, Window = TimeSpan.FromMinutes(2), QueueLimit = 0 }));
+    options.AddPolicy("login", httpContext =>
+    {
+        // "login-account" is filled by the middleware just before UseRateLimiter (the e-mail of the request body)
+        if (httpContext.Items["login-account"] is string account)
+            return RateLimitPartition.GetFixedWindowLimiter("account:" + account,
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = loginPermitLimit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
+
+        // no e-mail in the request (e.g. reset-password only carries a token): fall back to the IP address
+        return RateLimitPartition.GetFixedWindowLimiter("ip:" + (httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"),
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = Math.Max(loginPermitLimit * 6, 30), Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
+    });
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        httpContext.Request.Path.StartsWithSegments("/api/auth") && HttpMethods.IsPost(httpContext.Request.Method)
+            ? RateLimitPartition.GetFixedWindowLimiter("ip:" + (httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"),
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = loginPerIpLimit, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })
+            : RateLimitPartition.GetNoLimiter("none"));
     options.OnRejected = async (context, ct) =>
     {
         var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfterValue)
@@ -236,6 +254,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // ── SignalR WebSocket JWT (le browser ne peut pas envoyer d'en-tête Authorization) ──
         options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
         {
+            // A deactivated (or deleted) account must stop working IMMEDIATELY, not when its token expires.
+            // One primary-key lookup per request.
+            OnTokenValidated = async context =>
+            {
+                var idClaim = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                              ?? context.Principal?.FindFirst("sub")?.Value;
+                if (!long.TryParse(idClaim, out var userId))
+                {
+                    context.Fail("Invalid token");
+                    return;
+                }
+                var db = context.HttpContext.RequestServices.GetRequiredService<Backend.Data.ApplicationDbContext>();
+                var stillActive = await db.Set<Backend.Entities.User>().AsNoTracking()
+                    .AnyAsync(u => u.Id == userId && u.Actif, context.HttpContext.RequestAborted);
+                if (!stillActive)
+                    context.Fail("Account disabled or deleted");
+            },
             OnMessageReceived = context =>
             {
                 var accessToken = context.Request.Query["access_token"];
@@ -315,6 +350,36 @@ app.Map("/ws/messages/{userId}", async (HttpContext context, string userId) =>
     finally { if (long.TryParse(userId, out var id)) manager.Remove(id); }
 }).RequireAuthorization();
 app.UseHttpsRedirection();
+
+// Tell the rate limiter WHICH ACCOUNT is behind an auth request (the "email" field of the JSON body),
+// so that the limit applies per account instead of per IP address.
+app.Use(async (context, next) =>
+{
+    if (HttpMethods.IsPost(context.Request.Method)
+        && context.Request.Path.StartsWithSegments("/api/auth")
+        && context.Request.ContentType?.Contains("json", StringComparison.OrdinalIgnoreCase) == true
+        && context.Request.ContentLength is > 0 and < 4096)
+    {
+        context.Request.EnableBuffering();
+        try
+        {
+            using var json = await System.Text.Json.JsonDocument.ParseAsync(context.Request.Body, cancellationToken: context.RequestAborted);
+            if (json.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+                foreach (var property in json.RootElement.EnumerateObject())
+                    if (property.NameEquals("email") || property.Name.Equals("email", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var email = property.Value.ValueKind == System.Text.Json.JsonValueKind.String ? property.Value.GetString() : null;
+                        if (!string.IsNullOrWhiteSpace(email))
+                            context.Items["login-account"] = email.Trim().ToLowerInvariant();
+                        break;
+                    }
+        }
+        catch (System.Text.Json.JsonException) { /* not JSON: the controller will answer 400 */ }
+        context.Request.Body.Position = 0;
+    }
+    await next();
+});
+
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -323,10 +388,20 @@ app.MapControllers();
 // ─── SIGNALR HUB ─────────────────────────────────────────────────────────
 app.MapHub<ChatHub>("/hubs/chat");
 
-app.MapGet("/api/health", async (Backend.Data.ApplicationDbContext db) =>
+app.MapGet("/api/health", async (Backend.Data.ApplicationDbContext db, CancellationToken requestAborted) =>
 {
-    var dbOk = await db.Database.CanConnectAsync();
-    return Results.Ok(new { status = dbOk ? "healthy" : "degraded", database = dbOk ? "connected" : "unreachable" });
+    // 503 (not 200) when the database does not answer, so that Docker / Render / the load balancer see the problem.
+    bool dbOk;
+    try
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(requestAborted);
+        timeout.CancelAfter(TimeSpan.FromSeconds(3));
+        dbOk = await db.Database.CanConnectAsync(timeout.Token);
+    }
+    catch { dbOk = false; }
+
+    var body = new { status = dbOk ? "healthy" : "unhealthy", database = dbOk ? "connected" : "unreachable" };
+    return dbOk ? Results.Ok(body) : Results.Json(body, statusCode: StatusCodes.Status503ServiceUnavailable);
 });
 
 // ─── INITIALISATION DE LA BASE (base vide, premier super admin, copie des comptes) ───────

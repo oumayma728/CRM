@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, ChevronDown, AlertCircle, Save, MapPin, Phone, User, RefreshCw } from 'lucide-react';
 import api from '../../services/crmApi';
+import { ClientInfoSheet } from '../../components/crm/ClientInfo';
 
 const STATUTS_COMMERCIAL = [
   { value: 'SIGNE', label: 'Signé', cls: 'bg-success/10 text-success' },
@@ -16,7 +17,7 @@ const STATUTS_COMMERCIAL = [
 ];
 
 interface RdvContact {
-  id: number; dateRendezVous: string; statut: string; typeProjet?: string;
+  id: number; dateCreation?: string; dateRendezVous: string; statut: string; typeProjet?: string;
   typeRendezVous?: string; commentaireCommercial?: string; aRecontacter: boolean;
   contact: {
     id: number; nom?: string; prenom?: string; telephone: string; numGSM?: string;
@@ -26,6 +27,8 @@ interface RdvContact {
     revenus?: string; fichage?: boolean; etudePV?: boolean; equipePV?: boolean;
     equipePAC?: boolean; etatToiture?: string; etatIsolation?: string;
     proprietaireDepuis?: string; ageChaudiere?: number; consommationChauffage?: string;
+    civilite?: string; estProprietaire?: boolean; fournisseurEnergie?: string; factureElectricite?: string;
+    surface15m2?: boolean; travauxEnCours?: boolean; projetDemenagement?: boolean; email?: string;
   };
   agent: { id: number; nom: string; prenom: string };
 }
@@ -165,31 +168,43 @@ export default function CommercialAgenda() {
 
                 <div className="p-6 space-y-5">
                   {/* Contact info */}
-                  <div className="grid grid-cols-2 gap-4 text-xs">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="w-3.5 h-3.5 text-primary" />
-                        <span>{selectedRdv.contact.telephone}{selectedRdv.contact.numGSM && ` / ${selectedRdv.contact.numGSM}`}</span>
-                      </div>
-                      {selectedRdv.contact.adresse && (
-                        <div className="flex items-start gap-2 text-muted-foreground">
-                          <MapPin className="w-3.5 h-3.5 mt-0.5 text-primary shrink-0" />
-                          <span>{selectedRdv.contact.adresse}, {selectedRdv.contact.codePostal} {selectedRdv.contact.ville}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <User className="w-3.5 h-3.5 text-primary" />
-                        <span>Agent : {selectedRdv.agent.prenom} {selectedRdv.agent.nom}</span>
-                      </div>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="w-3.5 h-3.5 text-primary" />
+                      <span>{selectedRdv.contact.telephone}{selectedRdv.contact.numGSM && ` / ${selectedRdv.contact.numGSM}`}</span>
                     </div>
-                    <div className="space-y-1 bg-muted/30 rounded-xl p-3">
-                      {selectedRdv.contact.projet && <p><span className="font-bold">Projet :</span> {selectedRdv.contact.projet}</p>}
-                      {selectedRdv.contact.surface && <p><span className="font-bold">Surface :</span> {selectedRdv.contact.surface} m²</p>}
-                      {selectedRdv.contact.nombrePersonnes && <p><span className="font-bold">Foyer :</span> {selectedRdv.contact.nombrePersonnes} pers.</p>}
-                      {selectedRdv.contact.modeChauffage && <p><span className="font-bold">Chauffage :</span> {selectedRdv.contact.modeChauffage}</p>}
-                      {selectedRdv.contact.revenus && <p><span className="font-bold">Revenus :</span> {selectedRdv.contact.revenus}</p>}
-                      {selectedRdv.contact.fichage !== undefined && <p><span className="font-bold">Fiché :</span> {selectedRdv.contact.fichage ? 'Oui' : 'Non'}</p>}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="w-3.5 h-3.5 text-primary" />
+                      <span>Agent : {selectedRdv.agent.prenom} {selectedRdv.agent.nom}</span>
                     </div>
+                  </div>
+
+                  {/* Fiche client : same information as the confirmation agendas */}
+                  <div className="bg-muted/30 rounded-xl p-4 space-y-3">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Fiche client</h3>
+                    <ClientInfoSheet data={{
+                      civilite: selectedRdv.contact.civilite, nom: selectedRdv.contact.nom, prenom: selectedRdv.contact.prenom,
+                      projet: selectedRdv.contact.projet || selectedRdv.typeProjet,
+                      dateCreation: selectedRdv.dateCreation, dateRendezVous: selectedRdv.dateRendezVous,
+                      adresse: selectedRdv.contact.adresse, codePostal: selectedRdv.contact.codePostal, ville: selectedRdv.contact.ville,
+                      gsm: selectedRdv.contact.numGSM || selectedRdv.contact.telephone,
+                      estProprietaire: selectedRdv.contact.estProprietaire, proprietaireDepuis: selectedRdv.contact.proprietaireDepuis,
+                      modeChauffage: selectedRdv.contact.modeChauffage, ageChaudiere: selectedRdv.contact.ageChaudiere,
+                      fournisseurEnergie: selectedRdv.contact.fournisseurEnergie, consommationChauffage: selectedRdv.contact.consommationChauffage,
+                      factureElectricite: selectedRdv.contact.factureElectricite, etatToiture: selectedRdv.contact.etatToiture,
+                      etudePV: selectedRdv.contact.etudePV, equipePV: selectedRdv.contact.equipePV,
+                      surface15m2: selectedRdv.contact.surface15m2, travauxEnCours: selectedRdv.contact.travauxEnCours,
+                      projetDemenagement: selectedRdv.contact.projetDemenagement, nombrePersonnes: selectedRdv.contact.nombrePersonnes,
+                    }} />
+                    {(selectedRdv.contact.revenus || selectedRdv.contact.professionMr || selectedRdv.contact.professionMme || selectedRdv.contact.credits || selectedRdv.contact.fichage !== undefined) && (
+                      <div className="pt-2 border-t border-border space-y-1 text-xs">
+                        {selectedRdv.contact.professionMr && <p><span className="font-bold">Profession Mr :</span> {selectedRdv.contact.professionMr}</p>}
+                        {selectedRdv.contact.professionMme && <p><span className="font-bold">Profession Mme :</span> {selectedRdv.contact.professionMme}</p>}
+                        {selectedRdv.contact.revenus && <p><span className="font-bold">Revenus :</span> {selectedRdv.contact.revenus}</p>}
+                        {selectedRdv.contact.credits && <p><span className="font-bold">Crédits :</span> {selectedRdv.contact.credits}</p>}
+                        {selectedRdv.contact.fichage !== undefined && selectedRdv.contact.fichage !== null && <p><span className="font-bold">Fiché :</span> {selectedRdv.contact.fichage ? 'Oui' : 'Non'}</p>}
+                      </div>
+                    )}
                   </div>
 
                   <hr className="border-border" />

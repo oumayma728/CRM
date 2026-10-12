@@ -1,4 +1,3 @@
-import SessionAttendanceWidget from '../../components/crm/SessionAttendanceWidget';
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, CheckCircle, XCircle, RefreshCw, AlertCircle } from 'lucide-react';
@@ -34,9 +33,6 @@ export default function CommercialDashboard() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="mb-4">
-        <SessionAttendanceWidget />
-      </div>
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
     </div>
   );

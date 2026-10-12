@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
+using Backend.Helpers;
+using System.Security.Claims;
 
 namespace Backend.Controllers;
 
@@ -18,12 +20,20 @@ public class ChatController : ControllerBase
         _context = context;
     }
 
-    /// <summary>Récupérer l'historique d'un canal (50 derniers messages)</summary>
+    private string Role => User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+
+    /// <summary>Récupérer l'historique d'un canal (50 derniers messages). Réservé à ceux qui peuvent LIRE ce canal.</summary>
     [HttpGet("{channel}")]
     public async Task<IActionResult> GetHistory(string channel, [FromQuery] int limit = 50)
     {
+        var id = ChatChannels.Normalize(channel);
+        if (id == null) return NotFound(new { message = "Canal inconnu." });
+        var confType = await ChatChannels.ConfirmatriceTypeAsync(_context, Role, UserContextHelper.GetUserId(User));
+        if (!ChatChannels.CanRead(Role, confType, id))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Vous n'avez pas accès à ce canal." });
+
         var messages = await _context.ChatMessages
-            .Where(m => m.Channel == channel.ToUpper())
+            .Where(m => m.Channel == id)
             .OrderByDescending(m => m.SentAt)
             .Take(Math.Min(limit, 200))
             .OrderBy(m => m.SentAt)
@@ -42,18 +52,23 @@ public class ChatController : ControllerBase
         return Ok(messages);
     }
 
-    /// <summary>Liste des canaux disponibles</summary>
+    /// <summary>
+    /// Canaux que l'utilisateur peut utiliser, avec ses droits : canRead (lire l'historique et recevoir en direct)
+    /// et canWrite (envoyer). Un canal peut être en écriture seule : on peut écrire au groupe d'un autre rôle sans le lire.
+    /// </summary>
     [HttpGet]
-    public IActionResult GetChannels()
+    public async Task<IActionResult> GetChannels()
     {
-        return Ok(new[]
-        {
-            new { id = "GENERAL",         label = "Général",           icon = "💬" },
-            new { id = "AGENTS",          label = "Agents",             icon = "📞" },
-            new { id = "CONFIRMATRICES",  label = "Confirmatrices",     icon = "✅" },
-            new { id = "QUALITE",         label = "Service Qualité",    icon = "⭐" },
-            new { id = "TECHNIQUE",       label = "Service Technique",  icon = "🔧" },
-            new { id = "ADMIN",           label = "Administration",     icon = "👑" },
-        });
+        var role = Role;
+        var confType = await ChatChannels.ConfirmatriceTypeAsync(_context, role, UserContextHelper.GetUserId(User));
+        return Ok(ChatChannels.All
+            .Select(c => new
+            {
+                id = c.Id, label = c.Label,
+                canRead = ChatChannels.CanRead(role, confType, c.Id),
+                canWrite = ChatChannels.CanWrite(role, confType, c.Id),
+            })
+            .Where(c => c.canRead || c.canWrite)
+            .ToList());
     }
 }

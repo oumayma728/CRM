@@ -89,6 +89,17 @@ public class ApplicationDbContext : DbContext
             .HasValue<Confirmatrice>("CONFIRMATRICE")
             .HasValue<Qualite>("QUALITE")
             .HasValue<Technique>("TECH");
+
+        // The import looks phones up by batch, and agents search contacts by phone: without an index = a full scan each time.
+        modelBuilder.Entity<Contact>()
+            .HasIndex(c => c.Telephone)
+            .HasDatabaseName("IX_Contacts_Telephone");
+
+        // One account per e-mail. There was no unique index: two accounts could share the same e-mail.
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Email)
+            .IsUnique()
+            .HasDatabaseName("UX_Utilisateur_Email");
         
         modelBuilder.Entity<Confirmatrice>()
             .Property(c => c.Type)
@@ -305,8 +316,14 @@ public class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
-        });
 
+
+            entity.HasIndex(e => new { e.UserId })
+            .IsUnique()
+              .HasFilter("\"Status\" IN ('active', 'break')")
+               .HasDatabaseName("UX_AdvancedAttendance_UnOuvertParJour");
+        });
+        
         modelBuilder.Entity<AttendanceBreak>(entity =>
         {
             entity.ToTable("AttendanceBreaks");

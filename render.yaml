@@ -36,6 +36,19 @@ services:
         value: "https://crm-frontend.onrender.com"
       - key: Groq__ApiKey
         sync: false
+      # E-mails (welcome / password reset): without sender + password they are skipped with a warning in the log.
+      - key: App__Url
+        value: "https://crm-frontend.onrender.com"
+      - key: Email__SmtpHost
+        value: smtp.gmail.com
+      - key: Email__SmtpPort
+        value: "587"
+      - key: Email__UseSsl
+        value: "true"
+      - key: Email__SenderEmail
+        sync: false
+      - key: Email__Password
+        sync: false
       # First start on an empty database: creates the first super admin (password >= 12 chars, changed at first login).
       - key: Bootstrap__AdminEmail
         sync: false

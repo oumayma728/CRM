@@ -43,6 +43,7 @@ public class CommercialController : ControllerBase
             .Select(r => new
             {
                 r.Id,
+                r.DateCreation,
                 r.DateRendezVous,
                 r.Statut,
                 r.TypeRendezVous,
@@ -66,7 +67,10 @@ public class CommercialController : ControllerBase
                     r.Contact.EtudePV, r.Contact.EquipePV, r.Contact.EquipePAC,
                     r.Contact.EtatToiture, r.Contact.EtatIsolation,
                     r.Contact.ProprietaireDepuis, r.Contact.AgeChaudiere,
-                    r.Contact.ConsommationChauffage
+                    r.Contact.ConsommationChauffage,
+                    r.Contact.Civilite, r.Contact.EstProprietaire, r.Contact.FournisseurEnergie,
+                    r.Contact.FactureElectricite, r.Contact.Surface15m2, r.Contact.TravauxEnCours,
+                    r.Contact.ProjetDemenagement, r.Contact.Email
                 },
                 Agent = new { r.Agent.Id, r.Agent.Nom, r.Agent.Prenom }
             })

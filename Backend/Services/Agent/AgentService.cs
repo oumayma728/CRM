@@ -394,7 +394,8 @@ public class AgentService : IAgentService
         var agent = await _context.Agents.FindAsync(agentId)
             ?? throw new KeyNotFoundException($"Agent {agentId} introuvable.");
 
-        var dateDebut = new DateTime(annee, mois, 1);
+        // UTC on purpose: PostgreSQL refuses a DateTime of Kind "Unspecified" (that was an HTTP 500)
+        var dateDebut = new DateTime(annee, mois, 1, 0, 0, 0, DateTimeKind.Utc);
         var dateFin   = dateDebut.AddMonths(1).AddDays(-1);
 
         var perf = await _context.Performances
@@ -421,7 +422,7 @@ public class AgentService : IAgentService
         double primeTrimestrielle = 0;
         if (mois % 3 == 0)
         {
-            var debutTrimestre = new DateTime(annee, mois - 2, 1);
+            var debutTrimestre = new DateTime(annee, mois - 2, 1, 0, 0, 0, DateTimeKind.Utc);
             int totalInstalls = await _context.Performances
                 .Where(p => p.AgentId == agentId
                          && p.DateDebut >= debutTrimestre

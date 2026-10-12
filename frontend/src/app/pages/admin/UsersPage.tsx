@@ -1,7 +1,7 @@
 import { API_BASE, getToken } from '../../services/api';
 import React, { useEffect, useState } from 'react';
 import { adminService } from '../../services/adminService';
-import { User, Plus, Edit, Trash2, Shield, Search, X, Users, UserCheck, UserCog, Headphones, Wrench, BadgeCheck, KeyRound, CalendarDays, Eye, Mail, Phone, Clock } from 'lucide-react';
+import { User, Plus, Edit, Trash2, Shield, Search, X, Users, UserCheck, UserCog, Headphones, Wrench, BadgeCheck, Briefcase, KeyRound, CalendarDays, Eye, Mail, Phone, Clock } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = API_BASE;
@@ -27,6 +27,7 @@ const roleOptions = [
   { value: 'confirmatriceclient', label: 'Confirmatrice Client', team: 'Validation Client', icon: UserCheck },
   { value: 'technique', label: 'Service Technique', team: 'Technique', icon: Wrench },
   { value: 'qualite', label: 'Service Qualité', team: 'Qualité', icon: BadgeCheck },
+  { value: 'commercial', label: 'Commercial', team: 'Commercial', icon: Briefcase },
   { value: 'admin', label: 'Administrateur', team: 'Administration', icon: Shield }
 ];
 
@@ -40,8 +41,8 @@ const getRoleLabel = (user: Utilisateur): string => {
     return 'Confirmatrice';
   }
   const labels: Record<string, string> = {
-    AGENT: 'Agent', ADMIN: 'Administrateur',
-    QUAL: 'Service Qualité', TECH: 'Service Technique',
+    SUPERADMIN: 'Super administrateur', ADMIN: 'Administrateur', AGENT: 'Agent',
+    QUALITE: 'Service Qualité', TECH: 'Service Technique', COMMERCIAL: 'Commercial',
   };
   return labels[role] || user.role;
 };
@@ -50,10 +51,12 @@ const getRoleColor = (user: Utilisateur): string => {
   const role = user.role?.toUpperCase();
   if (role === 'CONFIRMATRICE') return 'bg-primary/15 text-primary';
   const colors: Record<string, string> = {
+    SUPERADMIN: 'bg-destructive/15 text-destructive',
     AGENT: 'bg-primary/15 text-primary',
     ADMIN: 'bg-destructive/15 text-destructive',
-    QUAL: 'bg-success/15 text-success',
+    QUALITE: 'bg-success/15 text-success',
     TECH: 'bg-warning/15 text-warning',
+    COMMERCIAL: 'bg-primary/15 text-primary',
   };
   return colors[role] || 'bg-muted text-foreground';
 };

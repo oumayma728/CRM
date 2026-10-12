@@ -10,7 +10,6 @@ public interface IAdminService
     Task<List<AgentStatutDTO>> GetAgentsStatutAsync();
     Task<List<ScorecardAgentDTO>> GetScorecardsAgentsAsync();
     Task<List<AgentSuiviDTO>> GetAgentsSuiviAsync();
-    Task<PointageAdminDTO> GetPointageAsync(DateTime date);
     Task<CarteGeographiqueDTO> GetCarteGeographiqueAsync(string pays = "all");
     Task<ConfigurationIADTO> GetConfigurationIAAsync();
     Task UpdateConfigurationIAAsync(ConfigurationIADTO config);

@@ -5,9 +5,12 @@ import {
   Filter, MoreVertical, Star, StarOff, Briefcase,
   MessageCircle, Clock, Award, TrendingUp,
   ChevronRight, Eye, Edit, Trash2, Download,
-  Grid, List, X, CheckCircle, AlertCircle, Loader2
+  Grid, List, X, CheckCircle, AlertCircle, Loader2, ChevronLeft
 } from 'lucide-react';
-import api from '../../services/api';
+import { agentService } from '../../services/agentService';
+
+// Le serveur renvoie les contacts PAGE PAR PAGE (50 par page) et ne montre à un agent que SES contacts.
+const PAGE_SIZE = 50;
 
 interface Contact {
   id: number;
@@ -52,7 +55,11 @@ export default function ContactsListPage() {
   const [favorites, setFavorites] = useState<number[]>([]);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);          // premier chargement seulement
+  const [refreshing, setRefreshing] = useState(false);   // changement de page / recherche
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const navigate = useNavigate();
   
   const [newContact, setNewContact] = useState({
@@ -62,12 +69,24 @@ export default function ContactsListPage() {
 });
 
   useEffect(() => {
-    loadContacts();
     const savedFavorites = localStorage.getItem('favoriteContacts');
     if (savedFavorites) {
       setFavorites(JSON.parse(savedFavorites));
     }
   }, []);
+
+  // La recherche est faite par le serveur : on attend 300 ms après la dernière frappe, puis retour page 1
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    loadContacts();
+  }, [page, debouncedSearch]);
 
   // Verrouillage du scroll de la page quand un modal est ouvert (conserve la position)
   useEffect(() => {
@@ -114,29 +133,42 @@ export default function ContactsListPage() {
     showNotificationMessage('Contact ajouté avec succès !');
   };
 
+  const toStatus = (statut?: string): string => {
+    const st = (statut || '').toUpperCase();
+    if (st === 'A_APPELER' || st === '') return 'nouveau';
+    if (st === 'TRAITE') return 'inactif';
+    return 'actif';
+  };
+
   const loadContacts = async () => {
-    setLoading(true);
+    setRefreshing(true);
     try {
-      const data = await api.getLeads();
-      const mapped: Contact[] = (data || []).map((lead: any, idx: number) => ({
-        id: lead.id || idx + 1,
-        company: lead.name || lead.company || '',
-        contact: lead.name || lead.contact || '',
-        role: lead.role || '',
-        phone: lead.phone || '',
-        email: lead.email || '',
-        city: lead.city || '',
-        industry: lead.industry || '',
-        status: lead.status === 'actif' ? 'actif' : lead.status === 'inactif' ? 'inactif' : 'nouveau',
-        lastContact: lead.last_contact || lead.lastContact || new Date().toISOString().split('T')[0],
-        deals: lead.deals ?? 0,
-        revenue: lead.revenue ?? 0,
+      const { items, total: totalCount } = await agentService.getContactsPage({
+        page,
+        pageSize: PAGE_SIZE,
+        search: debouncedSearch || undefined,
+      });
+      const mapped: Contact[] = items.map(c => ({
+        id: c.id,
+        company: `${c.prenom ?? ''} ${c.nom ?? ''}`.trim() || c.telephone || '',
+        contact: c.telephone || '',
+        role: c.projet || '',
+        phone: c.telephone || '',
+        email: c.email || '',
+        city: c.ville || '',
+        industry: c.source || '',
+        status: toStatus(c.statut),
+        lastContact: c.dateDernierAppel ? c.dateDernierAppel.split('T')[0] : '',
+        deals: 0,      // pas de notion d'affaires / chiffre d'affaires dans le modèle contact d'un centre d'appels
+        revenue: 0,
       }));
       setContactsList(mapped);
+      setTotal(totalCount);
     } catch (e) {
       console.error('Error loading contacts:', e);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -144,16 +176,10 @@ export default function ContactsListPage() {
   const statuses = ['all', 'actif', 'inactif', 'nouveau'];
 
   const filteredContacts = contactsList.filter(contact => {
-    const matchesSearch =
-      contact.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.role.toLowerCase().includes(searchTerm.toLowerCase());
-    
     const matchesStatus = filterStatus === 'all' || contact.status === filterStatus;
     const matchesIndustry = filterIndustry === 'all' || contact.industry === filterIndustry;
     
-    return matchesSearch && matchesStatus && matchesIndustry;
+    return matchesStatus && matchesIndustry;
   });
 
   const handleOpenModal = (contact: Contact) => {
@@ -384,7 +410,7 @@ export default function ContactsListPage() {
   );
 
   const stats = {
-    total: contactsList.length,
+    total,
     actifs: contactsList.filter(c => c.status === 'actif').length,
     revenuTotal: contactsList.reduce((sum, c) => sum + c.revenue, 0),
     affairesTotal: contactsList.reduce((sum, c) => sum + c.deals, 0)
@@ -513,7 +539,7 @@ export default function ContactsListPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Rechercher par nom, société, ville ou rôle..."
+                  placeholder="Rechercher par nom, téléphone, e-mail ou source..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground font-medium shadow-sm"
@@ -616,6 +642,26 @@ export default function ContactsListPage() {
                 className="mt-4 text-primary hover:underline"
               >
                 Effacer les filtres
+              </button>
+            </div>
+          )}
+
+          {total > PAGE_SIZE && (
+            <div className="flex items-center justify-between px-4 py-3 bg-card rounded-2xl border border-border text-sm">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1 || refreshing}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border disabled:opacity-40 hover:bg-muted/50"
+              >
+                <ChevronLeft className="w-4 h-4" /> Précédent
+              </button>
+              <span className="text-muted-foreground">Page {page} sur {Math.max(1, Math.ceil(total / PAGE_SIZE))}</span>
+              <button
+                onClick={() => setPage(p => Math.min(Math.max(1, Math.ceil(total / PAGE_SIZE)), p + 1))}
+                disabled={page >= Math.ceil(total / PAGE_SIZE) || refreshing}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border disabled:opacity-40 hover:bg-muted/50"
+              >
+                Suivant <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           )}

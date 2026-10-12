@@ -139,8 +139,8 @@ describe('AuthContext', () => {
 
 describe('homePathFor', () => {
   it.each([
-    [{ role: 'superadmin' }, '/superadmin/dashboard'],
-    [{ role: 'admin' }, '/admin/realtime'],
+    [{ role: 'superadmin' }, '/admin/dashboard'],
+    [{ role: 'admin' }, '/admin/dashboard'],
     [{ role: 'agent' }, '/agent/dashboard'],
     [{ role: 'qualite' }, '/qualite/dashboard'],
     [{ role: 'commercial' }, '/commercial/dashboard'],

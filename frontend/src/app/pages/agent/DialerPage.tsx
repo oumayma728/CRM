@@ -194,6 +194,8 @@ export default function DialerPage() {
   const [dateRappel, setDateRappel]     = useState('');
   const [besoin, setBesoin]             = useState('');
   const [submitting, setSubmitting]     = useState(false);
+  // Garde synchrone : un double clic part avant le re-rendu qui désactive le bouton
+  const submittingRef = useRef(false);
 
   // ── AI ─────────────────────────────────────────────────────────────────────
   const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
@@ -331,6 +333,8 @@ export default function DialerPage() {
   // ── Qualification submit ───────────────────────────────────────────────────
   const handleSubmitQualif = async () => {
     if (!contact || !qualifAction) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       let qualification = '';
@@ -359,6 +363,7 @@ export default function DialerPage() {
     } catch {
       toast.error("Erreur lors de l'enregistrement");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

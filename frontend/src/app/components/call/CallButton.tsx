@@ -1,35 +1,13 @@
 import React from 'react';
 import { Phone, PhoneOff, Clock, SkipForward } from 'lucide-react';
 import { useCallContext } from '../../contexts/CallContext';
-import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 export function CallButton() {
   const { callState, callDuration, cooldownRemaining, startCall, endCall, skipCooldown } = useCallContext();
-  const { user } = useAuth();
-  const navigate = useNavigate();
 
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-  // ── Admin & Qualité: navigate to CallWorkspace ────────────
-  const isAdminOrQualite = user?.role === 'admin' || user?.role === 'qualite';
-
-  if (isAdminOrQualite) {
-    return (
-      <div className="relative">
-        <button
-          onClick={() => navigate(user?.role === 'admin' ? '/admin/calls' : '/qualite/calls')}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30 transition-all shadow-lg shadow-emerald-500/10"
-          title="Centre d'appels"
-        >
-          <Phone size={16} />
-          <span className="text-xs font-black uppercase tracking-wider">Appeler</span>
-        </button>
-      </div>
-    );
-  }
-
-  // ── Agent: original behaviour (kept intact) ───────────────
+  // The navbar only shows this button to agents (see Navbar.tsx).
   if (callState === 'idle') {
     return (
       <button

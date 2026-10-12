@@ -1,6 +1,7 @@
 using Backend.Data;
 using Backend.DTOs;
 using Backend.Entities;
+using Backend.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -108,6 +109,11 @@ public class AttendanceService : IAttendanceService
             stale.ClockOut ??= DateTime.UtcNow;
         }
 
+        // Close yesterday's forgotten session in its OWN save, BEFORE inserting today's: the unique index allows a single
+        // open session per agent, and one SaveChanges could run the INSERT before the UPDATE and refuse the clock-in.
+        if (staleSessions.Count > 0)
+            await _context.SaveChangesAsync();
+
         // Check if already clocked in today
         var existing = await _context.AdvancedAttendances
             .Where(a => a.UserId == userId && a.Date == today && (a.Status == "active" || a.Status == "break"))
@@ -129,7 +135,13 @@ public class AttendanceService : IAttendanceService
             Status = "active"
         };
         _context.AdvancedAttendances.Add(attendance);
-        await _context.SaveChangesAsync();
+        try { await _context.SaveChangesAsync(); }
+        catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex))
+        {
+            // a second click / a second tab clocked in at the very same moment: the unique index kept only one
+            _context.Entry(attendance).State = EntityState.Detached;
+            return new ClockResultDto { Success = false, Message = "Vous êtes déjà pointé(e) — statut : actif." };
+        }
 
         return new ClockResultDto { Success = true, AttendanceId = attendance.Id, Message = "Pointage d'entrée enregistré" };
     }

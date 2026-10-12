@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.DTOs.Admin;
 using Backend.Entities;
+using Backend.Helpers;
 using Backend.Services.Email;
 using AdminEntity = Backend.Entities.Admin;
 using AgentEntity = Backend.Entities.Agent;
@@ -280,70 +281,6 @@ public class AdminService : IAdminService
         return agents;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 5. POINTAGE
-    // ─────────────────────────────────────────────────────────────────────────
-
-    public async Task<PointageAdminDTO> GetPointageAsync(DateTime date)
-    {
-        // Load full Pointage entities — Pauses is [Owned] so it loads with the parent.
-        // Avoid .Select(p => new { ..., Pauses = p.Pauses }) which EF Core cannot translate.
-        var dateUtc = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
-        var pointagesRaw = await _context.Pointages
-            .Where(p => p.Date == dateUtc)
-            .AsNoTracking()
-            .ToListAsync();
-
-        // Load agent names via base Utilisateur (avoids TPH column mapping)
-        var agentIds = pointagesRaw.Select(p => p.AgentId).Distinct().ToList();
-        var agentNoms = await _context.Users
-            .Where(u => agentIds.Contains(u.Id))
-            .Select(u => new { u.Id, Nom = u.Prenom + " " + u.Nom })
-            .AsNoTracking()
-            .ToDictionaryAsync(u => u.Id, u => u.Nom);
-
-        var totalAgents = await _context.Users.CountAsync(u => u.Role == "AGENT");
-
-        var details = pointagesRaw.Select(p => new PointageDetailDTO
-        {
-            AgentNom = agentNoms.TryGetValue(p.AgentId, out var nom) ? nom : "Inconnu",
-            Arrivee = p.PremierAppel?.ToString("HH:mm") ?? "-",
-            PremierAppel = p.PremierAppel?.ToString("HH:mm") ?? "-",
-            DernierAppel = p.DernierAppel?.ToString("HH:mm") ?? "-",
-            Depart = p.DernierAppel?.ToString("HH:mm") ?? "-",
-            Pauses = p.Pauses != null && p.Pauses.Any()
-                ? $"{p.Pauses.Sum(ps => ps.DureeSecondes) / 60}min"
-                : "-",
-            TempsProductif = p.TotalSecondesTravaillees.HasValue
-                ? $"{p.TotalSecondesTravaillees.Value / 3600}h {(p.TotalSecondesTravaillees.Value % 3600) / 60}m"
-                : "-",
-            Statut = p.PremierAppel?.Hour > 9 ? "Retard" : "À l'heure"
-        }).ToList();
-
-        var presents = pointagesRaw.Count;
-        var retards = details.Count(d => d.Statut == "Retard");
-
-        var tempsTotal = pointagesRaw.Where(p => p.TotalSecondesTravaillees.HasValue)
-            .Select(p => (double)(p.TotalSecondesTravaillees ?? 0))
-            .DefaultIfEmpty(0)
-            .Average();
-
-        var pausesTotal = pointagesRaw
-            .SelectMany(p => p.Pauses ?? new List<Pause>())
-            .Select(p => (double)p.DureeSecondes)
-            .DefaultIfEmpty(0)
-            .Average();
-
-        return new PointageAdminDTO
-        {
-            Presents = presents,
-            TotalAgents = totalAgents,
-            Retards = retards,
-            TempsMoyen = $"{(int)tempsTotal / 3600}h {(int)(tempsTotal % 3600) / 60}m",
-            PausesMoyennes = $"{(int)pausesTotal / 60}min",
-            Details = details
-        };
-    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // 6. CARTE GÉOGRAPHIQUE
@@ -426,6 +363,10 @@ public class AdminService : IAdminService
     {
         User utilisateur;
         var plainPassword = request.MotDePasse; // capture before hashing
+
+        request.Email = request.Email.Trim();
+        if (await _context.Set<User>().AnyAsync(u => u.Email == request.Email))
+            throw new InvalidOperationException("Cet email est déjà utilisé.");
 
         // Rôle simplifié pour la base de données (max 13 caractères)
         string roleDb = request.Role.ToLower() switch
@@ -575,7 +516,11 @@ public class AdminService : IAdminService
         }
         
         _context.Set<User>().Add(utilisateur);
-        await _context.SaveChangesAsync();
+        try { await _context.SaveChangesAsync(); }
+        catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex))
+        {
+            throw new InvalidOperationException("Cet email est déjà utilisé.");
+        }
 
         // Keep the second user table in step (needed by the file-import / campaign modules: see AppUserMirror)
         await AppUserMirror.EnsureAsync(_context, utilisateur.Id);

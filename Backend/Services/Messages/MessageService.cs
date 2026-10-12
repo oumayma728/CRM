@@ -1,5 +1,7 @@
 using Backend.Data;
 using Backend.DTOs.Messages;
+using Backend.Entities;
+using Backend.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Services.Messages;
@@ -32,9 +34,30 @@ public class MessageService : IMessageService
             .ToListAsync();
     }
 
+    /// <summary>
+    /// A private message follows the SAME rules as the group chat (see ChatChannels): it is allowed only if the sender
+    /// may write to the group of the receiver's role. So an agent cannot write to another agent, and only admins can
+    /// write to the Confirmatrices client and the Commerciaux.
+    /// </summary>
     public async Task<MessageDto> SendMessageAsync(int senderId, SendMessageDto dto)
     {
-        var msg = new Backend.Entities.Message { SenderId = senderId, ReceiverId = dto.ReceiverId, Content = dto.Content, IsUrgent = dto.IsUrgent };
+        var content = (dto.Content ?? "").Trim();
+        if (content.Length == 0) throw new ArgumentException("Le message est vide.");
+        if (content.Length > ChatChannels.MaxMessageLength)
+            throw new ArgumentException($"Message trop long (maximum {ChatChannels.MaxMessageLength} caractères).");
+
+        var sender = await _context.Set<User>().AsNoTracking().FirstOrDefaultAsync(u => u.Id == senderId)
+                     ?? throw new UnauthorizedAccessException("Expéditeur inconnu.");
+        var receiver = await _context.Set<User>().AsNoTracking().FirstOrDefaultAsync(u => u.Id == dto.ReceiverId && u.Actif)
+                       ?? throw new ArgumentException("Destinataire introuvable.");
+
+        var senderType = (sender as Confirmatrice)?.Type.ToString();
+        var receiverType = (receiver as Confirmatrice)?.Type.ToString();
+        var targetGroup = ChatChannels.IsAdmin(receiver.Role) ? "ADMIN" : ChatChannels.OwnChannel(receiver.Role, receiverType);
+        if (targetGroup == null || !ChatChannels.CanWrite(sender.Role, senderType, targetGroup))
+            throw new UnauthorizedAccessException("Vous ne pouvez pas écrire à ce destinataire.");
+
+        var msg = new Backend.Entities.Message { SenderId = senderId, ReceiverId = dto.ReceiverId, Content = content, IsUrgent = dto.IsUrgent };
         _context.Messages.Add(msg);
         await _context.SaveChangesAsync();
         var saved = await _context.Messages.AsNoTracking().Include(m => m.Sender).Include(m => m.Receiver).FirstAsync(m => m.Id == msg.Id);

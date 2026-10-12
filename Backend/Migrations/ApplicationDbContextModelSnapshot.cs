@@ -55,7 +55,10 @@ namespace CRM.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_AdvancedAttendance_UnOuvertParJour")
+                        .HasFilter("\"Status\" IN ('active', 'break')");
 
                     b.ToTable("AdvancedAttendances", (string)null);
                 });
@@ -1376,6 +1379,9 @@ namespace CRM.API.Migrations
                     b.Property<long?>("AgentId")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("Civilite")
+                        .HasColumnType("text");
+
                     b.Property<string>("CodePostal")
                         .HasColumnType("text");
 
@@ -1424,6 +1430,9 @@ namespace CRM.API.Migrations
                     b.Property<bool?>("EquipePV")
                         .HasColumnType("boolean");
 
+                    b.Property<bool?>("EstProprietaire")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("EtatIsolation")
                         .HasColumnType("text");
 
@@ -1433,11 +1442,17 @@ namespace CRM.API.Migrations
                     b.Property<bool?>("EtudePV")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("FactureElectricite")
+                        .HasColumnType("text");
+
                     b.Property<bool?>("Fichage")
                         .HasColumnType("boolean");
 
                     b.Property<long?>("FichierImportId")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("FournisseurEnergie")
+                        .HasColumnType("text");
 
                     b.Property<string>("ModeChauffage")
                         .HasColumnType("text");
@@ -1466,6 +1481,9 @@ namespace CRM.API.Migrations
                     b.Property<string>("Projet")
                         .HasColumnType("text");
 
+                    b.Property<bool?>("ProjetDemenagement")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("ProprietaireDepuis")
                         .HasColumnType("timestamp with time zone");
 
@@ -1492,9 +1510,15 @@ namespace CRM.API.Migrations
                     b.Property<double?>("Surface")
                         .HasColumnType("double precision");
 
+                    b.Property<bool?>("Surface15m2")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Telephone")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool?>("TravauxEnCours")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("TypeRendezVous")
                         .HasColumnType("text");
@@ -1507,6 +1531,9 @@ namespace CRM.API.Migrations
                     b.HasIndex("AgentId");
 
                     b.HasIndex("FichierImportId");
+
+                    b.HasIndex("Telephone")
+                        .HasDatabaseName("IX_Contacts_Telephone");
 
                     b.ToTable("Contacts");
                 });
@@ -3156,6 +3183,10 @@ namespace CRM.API.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Utilisateur_Email");
 
                     b.ToTable("Utilisateur", (string)null);
 

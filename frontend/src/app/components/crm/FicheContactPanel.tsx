@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  X, Phone, PhoneCall, User, MapPin, Calendar, Flame,
-  Home, Zap, Users, Lock, CheckCircle, MessageSquare,
+  X, Phone, PhoneCall, User,
+  Home, Users, Lock, CheckCircle, MessageSquare,
   ArrowRight, BadgeCheck
 } from 'lucide-react';
 import { api } from '../../services/crmApi';
+import { ClientInfoSheet } from './ClientInfo';
 
 export interface RdvDetail {
   id: number;
   contactId: number;
+  civilite?: string;
   contactNom: string;
   contactPrenom: string;
   telephone: string;
@@ -28,10 +30,16 @@ export interface RdvDetail {
   commentaireAgent?: string;
   commentaireConfirmation?: string;
   projet?: string;
+  estProprietaire?: boolean;
   proprietaireDepuis?: string;
   modeChauffage?: string;
   consommationChauffage?: string;
   ageChaudiere?: number;
+  fournisseurEnergie?: string;
+  factureElectricite?: string;
+  surface15m2?: boolean;
+  travauxEnCours?: boolean;
+  projetDemenagement?: boolean;
   etudePV?: boolean;
   equipePV?: boolean;
   equipePAC?: boolean;
@@ -173,11 +181,6 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
   // Workflow : conf client EBI → confirmer totalement
   const isWorkflowConfClient = agendaType === 'EBI' && rdv.statut === 'CONFIRME_CONF_CALL';
 
-  const formatDate = (d?: string) => {
-    if (!d) return '—';
-    return new Date(d).getFullYear().toString();
-  };
-
   return (
     <div className="flex flex-col bg-card">
       {/* Header — sticky par rapport au conteneur scrollable parent */}
@@ -251,12 +254,6 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
             <User size={13} className="text-muted-foreground flex-shrink-0" />
             <span>Agent : <span className="font-medium">{rdv.agentNom || '—'}</span></span>
           </div>
-          {rdv.adresse && (
-            <div className="flex items-start gap-2">
-              <MapPin size={13} className="text-muted-foreground flex-shrink-0 mt-0.5" />
-              <span>{rdv.adresse}{rdv.codePostal ? `, ${rdv.codePostal}` : ''}{rdv.ville ? ` ${rdv.ville}` : ''}</span>
-            </div>
-          )}
           {rdv.email && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <span className="text-xs">✉</span>
@@ -275,41 +272,43 @@ export default function FicheContactPanel({ rdv, agendaType, updateEndpoint, ret
           </div>
         )}
 
-        {/* Qualification logement */}
+        {/* Fiche client : les infos recueillies par l'agent */}
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
-            <Home size={12} /> Logement
+            <Home size={12} /> Fiche client
           </p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-foreground">
-            <Row label="Propriétaire depuis" value={formatDate(rdv.proprietaireDepuis)} />
-            <Row label="Mode chauffage" value={rdv.modeChauffage} />
-            <Row label="Conso. chauffage" value={rdv.consommationChauffage} />
-            <Row label="Âge chaudière" value={rdv.ageChaudiere ? `${rdv.ageChaudiere} ans` : undefined} />
-            <Row label="État toiture" value={rdv.etatToiture} />
-            <Row label="État isolation" value={rdv.etatIsolation} />
-            <Row label="Surface" value={rdv.surface ? `${rdv.surface} m²` : undefined} />
-          </div>
-          <div className="flex flex-wrap gap-2 mt-1.5">
-            {rdv.etudePV   && <Badge label="Étude PV" color="yellow" />}
-            {rdv.equipePV  && <Badge label="Équipé PV" color="green" />}
-            {rdv.equipePAC && <Badge label="Équipé PAC" color="blue" />}
-          </div>
+          <ClientInfoSheet data={{
+            civilite: rdv.civilite, nom: rdv.contactNom, prenom: rdv.contactPrenom, projet: rdv.projet,
+            dateCreation: rdv.dateCreation, dateRendezVous: rdv.dateRendezVous,
+            adresse: rdv.adresse, codePostal: rdv.codePostal, ville: rdv.ville, gsm: rdv.numGSM,
+            estProprietaire: rdv.estProprietaire, proprietaireDepuis: rdv.proprietaireDepuis,
+            modeChauffage: rdv.modeChauffage, ageChaudiere: rdv.ageChaudiere,
+            fournisseurEnergie: rdv.fournisseurEnergie, consommationChauffage: rdv.consommationChauffage,
+            factureElectricite: rdv.factureElectricite, etatToiture: rdv.etatToiture,
+            etudePV: rdv.etudePV, equipePV: rdv.equipePV, surface15m2: rdv.surface15m2,
+            travauxEnCours: rdv.travauxEnCours, projetDemenagement: rdv.projetDemenagement,
+            nombrePersonnes: rdv.nombrePersonnes,
+          }} />
         </div>
 
-        {/* Foyer */}
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
-            <Users size={12} /> Foyer
-          </p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-foreground">
-            <Row label="Nbre personnes" value={rdv.nombrePersonnes?.toString()} />
-            <Row label="Profession Mr" value={rdv.professionMr} />
-            <Row label="Profession Mme" value={rdv.professionMme} />
-            <Row label="Crédits" value={rdv.credits} />
-            <Row label="Revenus" value={rdv.revenus} />
-            <Row label="Fichage" value={rdv.fichage === true ? 'Oui' : rdv.fichage === false ? 'Non' : undefined} />
+        {/* Autres informations (hors fiche d'agenda) */}
+        {(rdv.etatIsolation || rdv.surface || rdv.equipePAC || rdv.professionMr || rdv.professionMme || rdv.credits || rdv.revenus || rdv.fichage !== undefined && rdv.fichage !== null) && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
+              <Users size={12} /> Autres informations
+            </p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-foreground">
+              <Row label="État isolation" value={rdv.etatIsolation} />
+              <Row label="Surface" value={rdv.surface ? `${rdv.surface} m²` : undefined} />
+              <Row label="Équipé PAC" value={rdv.equipePAC === true ? 'Oui' : rdv.equipePAC === false ? 'Non' : undefined} />
+              <Row label="Profession Mr" value={rdv.professionMr} />
+              <Row label="Profession Mme" value={rdv.professionMme} />
+              <Row label="Crédits" value={rdv.credits} />
+              <Row label="Revenus" value={rdv.revenus} />
+              <Row label="Fichage" value={rdv.fichage === true ? 'Oui' : rdv.fichage === false ? 'Non' : undefined} />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Qualification confirmatrice */}
         <div className={`rounded-lg border p-3 space-y-3 ${isPastRdv ? 'border-border bg-muted opacity-60' : hasCalled ? 'border-primary/30 bg-primary/5 dark:bg-primary/10' : 'border-border bg-muted'}`}>
@@ -435,13 +434,4 @@ function Row({ label, value }: { label: string; value?: string }) {
       <span className="text-xs font-medium truncate">{value}</span>
     </>
   );
-}
-
-function Badge({ label, color }: { label: string; color: 'yellow' | 'green' | 'blue' }) {
-  const cls = {
-    yellow: 'bg-warning/15 text-warning',
-    green: 'bg-success/15 text-success',
-    blue: 'bg-primary/15 text-primary',
-  }[color];
-  return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>{label}</span>;
 }

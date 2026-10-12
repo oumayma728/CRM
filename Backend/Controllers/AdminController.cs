@@ -51,14 +51,6 @@ public class AdminController : ControllerBase
         return Ok(suivi);
     }
 
-    [HttpGet("pointage")]
-    [Authorize(Roles = "ADMIN,SuperAdmin,TECH")]
-    public async Task<IActionResult> GetPointage([FromQuery] DateTime? date)
-    {
-        var pointage = await _adminService.GetPointageAsync(date ?? DateTime.Today);
-        return Ok(pointage);
-    }
-
     [HttpGet("carte-geographique")]
     public async Task<IActionResult> GetCarteGeographique([FromQuery] string pays = "all")
     {
@@ -90,8 +82,19 @@ public class AdminController : ControllerBase
     [HttpPost("utilisateurs")]
     public async Task<IActionResult> CreateUtilisateur([FromBody] UtilisateurRequestDTO request)
     {
-        var user = await _adminService.CreateUtilisateurAsync(request);
-        return CreatedAtAction(nameof(GetUtilisateurs), new { id = user.Id }, user);
+        try
+        {
+            var user = await _adminService.CreateUtilisateurAsync(request);
+            return CreatedAtAction(nameof(GetUtilisateurs), new { id = user.Id }, user);
+        }
+        catch (InvalidOperationException ex)   // e-mail already used
+        {
+            return Conflict(new { message = ex.Message, detail = ex.Message });
+        }
+        catch (ArgumentException ex)           // unknown role
+        {
+            return BadRequest(new { message = ex.Message, detail = ex.Message });
+        }
     }
 
     [HttpDelete("utilisateurs/{id}")]

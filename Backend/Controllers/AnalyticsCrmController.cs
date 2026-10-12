@@ -58,6 +58,7 @@ public class AnalyticsCrmController : ControllerBase
                 .Where(u => u.Role == "AGENT")
                 .Select(u => new { u.Id, u.Nom, u.Prenom, u.Email })
                 .AsNoTracking()
+                .OrderBy(u => u.Id)
                 .Take(50)
                 .ToListAsync())
                 .DistinctBy(u => u.Email)
@@ -108,6 +109,7 @@ public class AnalyticsCrmController : ControllerBase
                 .Where(u => u.Role == "AGENT")
                 .Select(u => new { u.Id, u.Nom, u.Prenom, u.Email })
                 .AsNoTracking()
+                .OrderBy(u => u.Id)
                 .Take(30)
                 .ToListAsync())
                 .DistinctBy(u => u.Email)
@@ -264,7 +266,8 @@ public class AnalyticsCrmController : ControllerBase
     public async Task<IActionResult> GetComparison()
     {
         var now = DateTime.UtcNow;
-        var currentMonth = new DateTime(now.Year, now.Month, 1);
+        // PostgreSQL ("timestamp with time zone") only accepts UTC dates: a DateTime of Kind "Unspecified" was the HTTP 500
+        var currentMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var prevMonth = currentMonth.AddMonths(-1);
 
         var rdvCurrent = await _context.RendezVous.AsNoTracking().Where(r => r.DateCreation >= currentMonth).CountAsync();
