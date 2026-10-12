@@ -1,659 +1,675 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { adminService } from '../../services/adminService';
+import api from '../../services/crmApi';
+import { useAuth } from '../../contexts/AuthContext';
 import {
-  TrendingUp, TrendingDown, Users, Phone,
-  Target, Download, RefreshCw,
-  ArrowUp, ArrowDown, Activity, AlertTriangle,
-  BarChart3, Brain, Zap, ArrowUpRight, FileText,
-  PlayCircle, Search
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line
+} from 'recharts';
+import {
+  AlertTriangle, Users, Phone, Calendar, TrendingUp, TrendingDown, Shield,
+  Activity, MapPin, RefreshCw, BarChart3, LayoutGrid, Target, AlertCircle
 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import api from '../../services/api';
-import { useChartTheme } from '../../hooks/useChartTheme';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-import toast from 'react-hot-toast';
 
-interface KPIData {
-  totalCalls: number;
-  avgScore: number;
-  conversionRate: number;
-  activeAgents: number;
-  callsToday: number;
-  pendingFollowups: number;
-  avgCallDuration: number;
-}
+// ONE dashboard for admin and super admin (it replaces "Supervision Live", the old "Dashboard" and "Dashboard Super Admin").
+// The live pointage is not repeated here: it has its own page ("Pointage").
+type TabId = 'overview' | 'analytics' | 'performance';
 
-interface ComparisonData {
-  day: { current: any; previous: any; evolution: number; score_evol: number };
-  week: { current: any; previous: any; evolution: number; score_evol: number };
-  month: { current: any; previous: any; evolution: number; score_evol: number };
-}
+const TABS: { id: TabId; label: string; icon: any }[] = [
+  { id: 'overview', label: "Vue d'ensemble", icon: LayoutGrid },
+  { id: 'analytics', label: 'Analytique Avancé', icon: BarChart3 },
+  { id: 'performance', label: 'Performance des appels', icon: TrendingUp },
+];
 
-const KPI_ICONS = {
-  calls: { icon: Phone, color: 'text-blue-500', bg: 'bg-blue-500/10', grad: 'from-blue-500 to-cyan-400' },
-  score: { icon: Target, color: 'text-emerald-500', bg: 'bg-emerald-500/10', grad: 'from-emerald-500 to-teal-400' },
-  conversion: { icon: TrendingUp, color: 'text-purple-500', bg: 'bg-purple-500/10', grad: 'from-purple-500 to-fuchsia-400' },
-  agents: { icon: Users, color: 'text-orange-500', bg: 'bg-orange-500/10', grad: 'from-orange-500 to-amber-400' },
+const tooltipStyle = {
+  backgroundColor: 'var(--card)',
+  border: '1px solid var(--border)',
+  borderRadius: '8px',
+  fontSize: '12px',
 };
 
-export default function DashboardPage() {
-  const chartTheme = useChartTheme();
-  const [loading, setLoading] = useState(true);
-  const [kpis, setKpis] = useState<KPIData>({
-    totalCalls: 0, avgScore: 0, conversionRate: 0,
-    activeAgents: 0, callsToday: 0, pendingFollowups: 0, avgCallDuration: 0
-  });
-  const [comparison, setComparison] = useState<ComparisonData | null>(null);
-  const [agents, setAgents] = useState<any[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [dateRange, setDateRange] = useState('today');
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [exporting, setExporting] = useState(false);
+interface DashboardData {
+  agentsEnLigne: number;
+  totalAgents: number;
+  enAppel: number;
+  appelsDuJour: number;
+  tauxConversion: number;
+  alertes: { agentNom: string; message: string; type: string }[];
+  performanceHoraire: { heure: string; appels: number; conversions: number }[];
+}
 
-  // Agent Management State
-  const [showModal, setShowModal] = useState(false);
-  const [editingAgent, setEditingAgent] = useState<any>(null);
-  const [searchClient, setSearchClient] = useState("");
-  const [selectedAgent, setSelectedAgent] = useState("");
-  const [selectedProject, setSelectedProject] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [formData, setFormData] = useState({
-    username: '', password: '', name: '', role: 'agent', email: ''
-  });
+interface AgentStatut {
+  id: number;
+  nom: string;
+  prenom: string;
+  statut: string;
+  dureeAppel: string;
+  appels: number;
+  conversions: number;
+  score: number;
+}
+
+interface PerfData {
+  currentMonth: { totalCalls: number; conversions: number; conversionRate: number; refusals: number; refusalRate: number; avgDuration: number };
+  previousMonth: { totalCalls: number; conversions: number; conversionRate: number; refusals: number; refusalRate: number; avgDuration: number };
+  evolution: { totalCalls: number; conversions: number; conversionRate: number; refusalRate: number; avgDuration: number };
+  monthlyData: { month: string; calls: number; conversions: number; refusals: number }[];
+  rendementStatus: string;
+  mistakes: string[];
+}
+
+// shape returned by GET /api/analytics/comparison, after the camelCase conversion of crmApi (the old Dashboard read period.current.total, which does not exist: it always showed 0)
+interface PeriodComparison { total: number; avgScore: number; previous: number | null; evolution: number; scoreEvol: number }
+interface Comparison { day: PeriodComparison; week: PeriodComparison; month: PeriodComparison }
+
+export default function DashboardPage() {
+  const { user } = useAuth();
+  const isSuperAdmin = String(user?.role ?? '').toLowerCase() === 'superadmin';   // salaries and permissions: super admin only
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [comparison, setComparison] = useState<Comparison | null>(null);
+  const [loadError, setLoadError] = useState(false);
+
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [agents, setAgents] = useState<AgentStatut[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [overview, setOverview] = useState<any>(null);
+  const [agentsPerf, setAgentsPerf] = useState<any[]>([]);
+  const [geo, setGeo] = useState<any>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+
+  const [perf, setPerf] = useState<PerfData | null>(null);
+  const [perfLoading, setPerfLoading] = useState(true);
+
+  const loadAnalytics = async () => {
+    setAnalyticsLoading(true);
+    const [ovRes, agRes, geoRes] = await Promise.allSettled([
+      api.get('/analytics/overview'),
+      api.get('/analytics/agents-performance'),
+      api.get('/analytics/geo'),
+    ]);
+    if (ovRes.status === 'fulfilled') setOverview(ovRes.value.data);
+    else console.error('overview error:', (ovRes as PromiseRejectedResult).reason?.response?.data ?? (ovRes as PromiseRejectedResult).reason);
+    if (agRes.status === 'fulfilled') setAgentsPerf(agRes.value.data);
+    else console.error('agents-performance error:', (agRes as PromiseRejectedResult).reason?.response?.data ?? (agRes as PromiseRejectedResult).reason);
+    if (geoRes.status === 'fulfilled') setGeo(geoRes.value.data);
+    else console.error('geo error:', (geoRes as PromiseRejectedResult).reason?.response?.data ?? (geoRes as PromiseRejectedResult).reason);
+    setAnalyticsLoading(false);
+  };
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [dateRange]);
+    loadAnalytics();
+  }, []);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const [overviewRes, agentsRes, comparisonRes, appointmentsRes] = await Promise.all([
-        api.getAnalyticsOverview(),
-        api.getAgents(),
-        api.getGlobalComparison(),
-        api.getAppointments()
-      ]);
+  useEffect(() => {
+    setPerfLoading(true);
+    api.get('/performance/comparison')
+      .then(r => setPerf(r.data))
+      .catch(() => {})
+      .finally(() => setPerfLoading(false));
+  }, []);
 
-      setKpis({
-        totalCalls: overviewRes.total_calls || 0,
-        avgScore: overviewRes.avg_score || 0,
-        conversionRate: overviewRes.conversion_rate || 0,
-        activeAgents: overviewRes.active_agents || 0,
-        callsToday: overviewRes.calls_today || 0,
-        pendingFollowups: overviewRes.pending_followups || 0,
-        avgCallDuration: overviewRes.avg_duration || 0
-      });
+  // day / week / month compared with the previous period (was on the old "Dashboard")
+  useEffect(() => {
+    api.get('/analytics/comparison').then(r => setComparison(r.data)).catch(() => setComparison(null));
+  }, []);
 
-      setComparison(comparisonRes);
-      setAgents(agentsRes);
-      setAppointments(Array.isArray(appointmentsRes) ? appointmentsRes : []);
-
-      if (overviewRes.hourly && overviewRes.hourly.length > 0) {
-        setChartData(overviewRes.hourly.map((h: any) => ({
-          name: `${h.hour}h`,
-          calls: h.appels,
-          convs: Math.round(h.appels * 0.3)
-        })));
-      }
-    } catch (error) {
-      console.error('Fetch error:', error);
-      toast.error(`Erreur: ${error instanceof Error ? error.message : 'chargement du tableau de bord'}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generatePDF = async () => {
-    if (!comparison) {
-      alert('Aucune donnée disponible pour générer le PDF');
-      return;
-    }
-
-    setExporting(true);
-    try {
-      const doc = new jsPDF();
-      const now = new Date().toLocaleString('fr-FR');
-
-      doc.setFontSize(22);
-      doc.setTextColor(30, 41, 59);
-      doc.text("RAPPORT DE PERFORMANCE CRM AI", 14, 22);
-
-      doc.setFontSize(10);
-      doc.setTextColor(100, 116, 139);
-      doc.text(`Genere le : ${now}`, 14, 30);
-      doc.text("Analyse comparative de l'activite du centre", 14, 35);
-
-      const tableData = [
-        ["Periode", "Appels (Actuel)", "Evolution", "Score Moyen", "Evol. Score"],
-        ["Aujourd'hui", comparison.day.current.total, `${comparison.day.evolution}%`, `${comparison.day.current.avg_score}%`, `${comparison.day.score_evol}%`],
-        ["Cette Semaine", comparison.week.current.total, `${comparison.week.evolution}%`, `${comparison.week.current.avg_score}%`, `${comparison.week.score_evol}%`],
-        ["Ce Mois", comparison.month.current.total, `${comparison.month.evolution}%`, `${comparison.month.current.avg_score}%`, `${comparison.month.score_evol}%`],
-      ];
-
-      (doc as any).autoTable({
-        startY: 45,
-        head: [tableData[0]],
-        body: tableData.slice(1),
-        theme: 'grid',
-        headStyles: { fillStyle: '#6366f1', textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-      });
-
-      if (agents.length > 0) {
-        doc.setFontSize(16);
-        doc.setTextColor(30, 41, 59);
-        doc.text("Performance par Agent", 14, (doc as any).lastAutoTable.finalY + 15);
-
-        const agentTableData = agents.map((a: any) => [
-          a.name || a.username || 'N/A',
-          a.role || 'agent',
-          `${a.score || 70}%`,
-          "Bon"
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [dashboardRes, agentsRes] = await Promise.all([
+          adminService.getDashboard(),
+          adminService.getAgentsStatut()
         ]);
-
-        (doc as any).autoTable({
-          startY: (doc as any).lastAutoTable.finalY + 5,
-          head: [["Nom", "Role", "Score", "Statut"]],
-          body: agentTableData,
-          theme: 'striped',
-        });
+        setDashboard(dashboardRes.data);
+        setAgents(agentsRes.data);
+        setLoadError(false);
+      } catch (error) {
+        console.error('Erreur chargement dashboard:', error);
+        // never show invented numbers: say that the data could not be loaded
+        setDashboard(null);
+        setAgents([]);
+        setLoadError(true);
+      } finally {
+        setLoading(false);
       }
+    };
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
-      doc.save(`Rapport_Performance_${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error('PDF generation error:', error);
-      alert('Erreur lors de la generation du PDF');
-    } finally {
-      setExporting(false);
+  const getStatutColor = (statut: string) => {
+    switch (statut?.toLowerCase()) {
+      case 'en_appel': return 'bg-success/15 text-success';
+      case 'disponible': return 'bg-primary/15 text-primary';
+      case 'pause': return 'bg-warning/15 text-warning';
+      case 'hors_ligne': return 'bg-destructive/15 text-destructive';
+      default: return 'bg-muted text-foreground';
     }
   };
 
-  const handleEdit = (agent: any) => {
-    setEditingAgent(agent);
-    setFormData({
-      username: agent.username,
-      password: '',
-      name: agent.name,
-      role: agent.role,
-      email: agent.email || ''
-    });
-    setShowModal(true);
-  };
-
-  const handleDelete = async (userId: number) => {
-    if (!window.confirm('Voulez-vous vraiment supprimer cet agent ?')) return;
-    try {
-      await api.deleteUser(userId);
-      fetchDashboardData();
-    } catch (err: any) {
-      alert(err.message);
+  const getStatutLabel = (statut: string) => {
+    switch (statut?.toLowerCase()) {
+      case 'en_appel': return 'En appel';
+      case 'disponible': return 'Disponible';
+      case 'pause': return 'En pause';
+      case 'hors_ligne': return 'Hors ligne';
+      default: return statut || 'Inconnu';
     }
   };
 
-  const handleSubmit = async () => {
-    try {
-      if (editingAgent) {
-        await api.updateUser(editingAgent.id, formData);
-      } else {
-        await api.createUser(formData);
-      }
-      setShowModal(false);
-      fetchDashboardData();
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  const filteredAppointments = appointments.filter((item: any) => {
-    const clientMatch =
-      item.client_name
-        ?.toLowerCase()
-        .includes(searchClient.toLowerCase());
-
-    const agentMatch =
-      selectedAgent === "" ||
-      item.agent_name === selectedAgent;
-
-    const projectMatch =
-      selectedProject === "" ||
-      item.project_type === selectedProject;
-
-    const from = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
-    const to = dateTo ? new Date(`${dateTo}T23:59:59`) : null;
-    const hasDateFilter = !!(from || to);
-    const itemDate = item.appointment_date
-      ? new Date(item.appointment_date)
-      : item.created_at
-        ? new Date(item.created_at)
-        : null;
-    let dateMatch = true;
-    if (hasDateFilter) {
-      if (!itemDate || isNaN(itemDate.getTime())) {
-        dateMatch = false;
-      } else {
-        if (from && itemDate < from) dateMatch = false;
-        if (to && itemDate > to) dateMatch = false;
-      }
-    }
-
-    return clientMatch && agentMatch && projectMatch && dateMatch;
-  });
-
-  const statusBadge = (status?: string) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'confirmed' || s === 'confirme') return 'badge-premium';
-    if (s === 'cancelled' || s === 'refus') return 'badge-refuse';
-    return 'badge-attente';
-  };
-
-  const statusLabel = (status?: string) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'confirmed' || s === 'confirme') return 'Confirmé';
-    if (s === 'cancelled' || s === 'refus') return 'Refusé';
-    return 'En attente';
-  };
-
-  const kpiCards = [
-    { label: 'Appels Totaux', value: kpis.totalCalls, key: 'calls' },
-    { label: 'Score Moyen', value: `${kpis.avgScore}%`, key: 'score' },
-    { label: 'Conversion', value: `${kpis.conversionRate}%`, key: 'conversion' },
-    { label: 'Agents Actifs', value: kpis.activeAgents, key: 'agents' },
-  ] as const;
+  const perfStatCard = (label: string, current: number, previous: number, evo: number, unit = '') => (
+    <div className="glass-card p-5">
+      <p className="text-sm text-muted-foreground mb-1">{label}</p>
+      <p className="text-2xl font-bold">{current}{unit}</p>
+      <div className="flex items-center gap-2 mt-1">
+        <span className="text-xs text-muted-foreground">Mois préc. {previous}{unit}</span>
+        <span className={`text-xs font-medium flex items-center gap-0.5 ${evo >= 0 ? 'text-success' : 'text-destructive'}`}>
+          {evo >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+          {Math.abs(evo)}%
+        </span>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground">
-            Vue d'ensemble <span className="text-gradient-primary">Dashboard</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Pilotage de l'activité en temps réel</p>
+    <><div className="p-6 space-y-6">
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-black italic tracking-tighter text-foreground">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">Activité du centre en temps réel et sur la durée</p>
+          </div>
+          {isSuperAdmin && (
+            <Link
+              to="/admin/permissions"
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg transition-colors"
+            >
+              <Shield className="w-4 h-4" />
+              Gérer les permissions
+            </Link>
+          )}
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={generatePDF}
-            disabled={exporting || loading}
-            className="h-10 px-4 bg-emerald-500 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/25 hover:opacity-90 hover:-translate-y-[1px] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 cursor-pointer"
-          >
-            {exporting ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Generation...
-              </>
+
+        {/* Navbar interne */}
+        <div className="glass-card flex items-center gap-1 p-1 overflow-x-auto">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'overview' && (
+        <>
+        {loadError && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
+            <p className="text-sm text-destructive flex-1">Impossible de charger les statistiques en direct. Les chiffres ci-dessous ne sont pas à jour.</p>
+          </div>
+        )}
+        {/* Stat Cards */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="glass-card p-4 animate-pulse">
+                <div className="h-4 bg-muted rounded w-24 mb-2" />
+                <div className="h-8 bg-muted rounded w-16" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="glass-card p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Agents en ligne</p>
+                <Users className="w-4 h-4 text-success" />
+              </div>
+              <p className="text-3xl font-bold text-foreground">
+                {dashboard?.agentsEnLigne ?? 0}
+                <span className="text-sm font-normal text-muted-foreground ml-1">/ {dashboard?.totalAgents ?? 0}</span>
+              </p>
+            </div>
+
+            <div className="glass-card p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">En appel</p>
+                <Phone className="w-4 h-4 text-primary" />
+              </div>
+              <p className="text-3xl font-bold text-foreground">{dashboard?.enAppel ?? 0}</p>
+            </div>
+
+            <div className="glass-card p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Appels du jour</p>
+                <Calendar className="w-4 h-4 text-primary" />
+              </div>
+              <p className="text-3xl font-bold text-foreground">{dashboard?.appelsDuJour ?? 0}</p>
+            </div>
+
+            <div className="glass-card p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Taux conversion</p>
+                <TrendingUp className="w-4 h-4 text-warning" />
+              </div>
+              <p className="text-3xl font-bold text-foreground">{dashboard?.tauxConversion?.toFixed(1) ?? 0}%</p>
+            </div>
+          </div>
+        )}
+
+        {/* Day / week / month compared with the previous period */}
+        {comparison && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { title: "Aujourd'hui vs hier", period: comparison.day },
+              { title: 'Cette semaine vs la précédente', period: comparison.week },
+              { title: 'Ce mois vs le précédent', period: comparison.month },
+            ].map((item, i) => {
+              const positive = (item.period?.evolution ?? 0) >= 0;
+              return (
+                <div key={i} className="glass-card p-4">
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">{item.title}</h4>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xl font-black text-foreground tabular-nums">{item.period?.total ?? 0} appels</div>
+                      <div className={`flex items-center gap-1 text-xs font-bold mt-1 ${positive ? 'text-success' : 'text-destructive'}`}>
+                        {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                        {(item.period?.evolution ?? 0) > 0 ? '+' : ''}{item.period?.evolution ?? 0}% volume
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-bold text-primary tabular-nums">{item.period?.avgScore ?? 0}%</div>
+                      <div className={`text-[10px] font-bold mt-1 ${(item.period?.scoreEvol ?? 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
+                        {(item.period?.scoreEvol ?? 0) > 0 ? '+' : ''}{item.period?.scoreEvol ?? 0}% qualité
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Performance chart + Alertes */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Chart 
+          <div className="glass-card lg:col-span-2 p-4">
+            <h2 className="text-sm font-semibold text-foreground mb-4">Performance horaire</h2>
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={dashboard?.performanceHoraire ?? []}>
+                <defs>
+                  <linearGradient id="appelsGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-chart-1)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--color-chart-1)" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="convsGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-chart-4)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--color-chart-4)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="heure" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+                <YAxis tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    fontSize: '12px'
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <Area type="monotone" dataKey="appels" name="Appels" stroke="var(--color-chart-1)" fill="url(#appelsGrad)" strokeWidth={2} />
+                <Area type="monotone" dataKey="conversions" name="Conversions" stroke="var(--color-chart-4)" fill="url(#convsGrad)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+*/}
+          {/* Alertes */}
+          <div className="glass-card p-4">
+            <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-warning" />
+              Alertes actives
+            </h2>
+            {(dashboard?.alertes ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Aucune alerte</p>
             ) : (
-              <>
-                <FileText className="w-3.5 h-3.5" />
-                Export PDF
-              </>
+              <div className="space-y-2">
+                {(dashboard?.alertes ?? []).map((alerte, i) => (
+                  <div
+                    key={i}
+                    className={`rounded-lg p-3 text-sm ${
+                      alerte.type === 'offline'
+                        ? 'bg-destructive/10 border border-destructive/30'
+                        : 'bg-warning/10 border border-warning/30'
+                    }`}
+                  >
+                    <p className="font-medium text-foreground">{alerte.agentNom}</p>
+                    <p className="text-muted-foreground mt-0.5">{alerte.message}</p>
+                  </div>
+                ))}
+              </div>
             )}
-          </button>
-          <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
-            className="h-10 px-4 bg-card border border-border rounded-xl text-xs font-bold uppercase tracking-widest text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer transition-colors hover:border-primary/40"
-          >
-            <option value="today">Aujourd'hui</option>
-            <option value="week">Cette semaine</option>
-            <option value="month">Ce mois</option>
-          </select>
+          </div>
+        </div>
+
+        {/* Agents en temps réel */}
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="px-4 py-3 border-b border-border">
+            <h2 className="text-sm font-semibold text-foreground">Agents — statut en temps réel</h2>
+          </div>
+          {loading ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">Chargement...</div>
+          ) : agents.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">Aucun agent trouvé</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left px-4 py-2 text-muted-foreground font-medium">Agent</th>
+                    <th className="text-left px-4 py-2 text-muted-foreground font-medium">Statut</th>
+                    <th className="text-left px-4 py-2 text-muted-foreground font-medium">Durée appel</th>
+                    <th className="text-right px-4 py-2 text-muted-foreground font-medium">Appels</th>
+                    <th className="text-right px-4 py-2 text-muted-foreground font-medium">Conversions</th>
+                    <th className="text-right px-4 py-2 text-muted-foreground font-medium">Score</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {agents.map((agent) => (
+                    <tr key={agent.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 font-medium text-foreground">
+                        {agent.prenom} {agent.nom}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getStatutColor(agent.statut)}`}>
+                          {getStatutLabel(agent.statut)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{agent.dureeAppel || '—'}</td>
+                      <td className="px-4 py-3 text-right text-foreground">{agent.appels}</td>
+                      <td className="px-4 py-3 text-right text-foreground">{agent.conversions}</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={`font-semibold ${
+                          agent.score >= 80 ? 'text-success' :
+                          agent.score >= 60 ? 'text-warning' : 'text-destructive'
+                        }`}>
+                          {agent.score}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        </>
+        )}
+
+        {activeTab === 'analytics' && (
+        <>
+        {/* ── Analytique Avancé (fusionné depuis Analytique Appels + Analytics Avancé) ── */}
+        <div className="flex items-center justify-between border-l-4 border-primary pl-4 pt-2">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Analytique Avancé</h2>
+            <p className="text-sm text-muted-foreground">Statuts RDV, performance par agent, répartition géographique</p>
+          </div>
           <button
-            onClick={fetchDashboardData}
-            className="p-2.5 bg-card border border-border rounded-xl hover:bg-accent hover:border-primary/40 transition-all text-primary cursor-pointer"
-            aria-label="Actualiser"
+            onClick={loadAnalytics}
+            className="px-3 py-2 bg-muted text-foreground text-xs font-medium rounded-lg border border-border hover:bg-primary/5 hover:border-primary/30 transition-all flex items-center gap-2"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3 h-3 ${analyticsLoading ? 'animate-spin' : ''}`} /> Actualiser
           </button>
         </div>
-      </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
-        {kpiCards.map((kpi, i) => {
-          const style = KPI_ICONS[kpi.key];
-          const Icon = style.icon;
-          return (
-            <div key={i} className="glass-card-hover p-5 relative overflow-hidden group">
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-gradient-to-br opacity-[0.06] group-hover:opacity-[0.12] transition-opacity duration-300" />
-              <div className={`w-11 h-11 rounded-xl ${style.bg} flex items-center justify-center mb-3 ${style.color} transition-transform duration-300 group-hover:scale-110`}>
-                <Icon className="w-5 h-5" />
-              </div>
-              <div className="text-2xl font-black text-foreground tabular-nums">{loading ? '...' : kpi.value}</div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">{kpi.label}</div>
-              <div className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r ${style.grad} opacity-0 group-hover:opacity-100 transition-opacity`} />
-            </div>
-          );
-        })}
-      </div>
+        {analyticsLoading ? (
+          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+            <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Chargement des analytics...
+          </div>
+        ) : (
+          <>
+            {/* Statuts RDV + Métriques clés */}
+            {overview && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="glass-card p-6">
+                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-primary" /> Statuts RDV
+                  </h3>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Confirmés', value: overview.rdvConfirmes },
+                          { name: 'Signés', value: overview.rdvSignes },
+                          { name: 'Annulés', value: overview.rdvAnnules },
+                        ]}
+                        cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value"
+                        label={({ name, value }) => `${name}: ${value}`}>
+                        {['var(--color-chart-1)', 'var(--color-chart-4)', 'var(--color-chart-5)'].map((color, i) => <Cell key={i} fill={color} />)}
+                      </Pie>
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
 
-      {/* Comparison Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 stagger-children">
-        {comparison && [
-          { title: 'Aujourd\'hui vs Hier', period: comparison.day },
-          { title: 'Cette Semaine vs Précédente', period: comparison.week },
-          { title: 'Ce Mois vs Précédent', period: comparison.month },
-        ].map((item, i) => {
-          const positive = (item.period?.evolution ?? 0) >= 0;
-          return (
-            <div key={i} className="glass-card p-4">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">{item.title}</h4>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xl font-black text-foreground tabular-nums">{item.period?.current?.total ?? 0} appels</div>
-                  <div className={`flex items-center gap-1 text-xs font-bold mt-1 ${positive ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {item.period.evolution > 0 ? '+' : ''}{item.period?.evolution ?? 0}% volume
+                <div className="glass-card p-6">
+                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-success" /> Métriques Clés
+                  </h3>
+                  <div className="space-y-3">
+                    {[
+                      { label: 'Total RDV', value: overview.totalRdv, icon: Calendar },
+                      { label: "Appels aujourd'hui", value: overview.appelsToday, icon: Phone },
+                      { label: 'Score qualité moyen', value: `${overview.avgQualityScore}/100`, icon: TrendingUp },
+                      { label: 'RDV confirmés', value: overview.rdvConfirmes, icon: Activity },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <item.icon className="w-4 h-4 text-primary" />
+                          <span className="text-sm text-muted-foreground">{item.label}</span>
+                        </div>
+                        <span className="text-sm font-bold text-foreground">{item.value}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold text-primary tabular-nums">{item.period?.current?.avg_score ?? 0}%</div>
-                  <div className={`text-[10px] font-bold mt-1 ${item.period.score_evol >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {item.period.score_evol > 0 ? '+' : ''}{item.period?.score_evol ?? 0}% qualité
-                  </div>
-                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chart */}
-        <div className="lg:col-span-2 glass-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Activité vs Conversions</h3>
-            </div>
-            <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest opacity-50">
-              <div className="flex items-center gap-1.5"><div className="w-2 h-2 bg-primary rounded-full" /> Appels</div>
-              <div className="flex items-center gap-1.5"><div className="w-2 h-2 bg-emerald-500 rounded-full" /> RDV</div>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="colorCalls" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 10, fill: chartTheme.textColor }} axisLine={false} tickLine={false} stroke={chartTheme.textColor} />
-              <YAxis tick={{ fontSize: 10, fill: chartTheme.textColor }} axisLine={false} tickLine={false} stroke={chartTheme.textColor} />
-              <Tooltip contentStyle={chartTheme.tooltipStyle} />
-              <Area type="monotone" dataKey="calls" stroke="hsl(var(--primary))" strokeWidth={3} fill="url(#colorCalls)" />
-              <Area type="monotone" dataKey="convs" stroke="#10b981" strokeWidth={3} fill="transparent" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* AI Insights Sidebar */}
-        <div className="space-y-4">
-          <div className="glass-card p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                <Brain className="w-4 h-4 text-purple-400" />
-              </div>
-              <h3 className="text-sm font-black uppercase tracking-widest text-foreground">AI Intelligence</h3>
-            </div>
-            <div className="space-y-4">
-              <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-xl">
-                <p className="text-[10px] font-black text-blue-400 uppercase mb-1">Prédiction</p>
-                <p className="text-xs font-medium leading-relaxed">Pic d'appels prévu demain à 14:00. Prévoyez 2 agents supplémentaires.</p>
-              </div>
-              <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
-                <p className="text-[10px] font-black text-emerald-400 uppercase mb-1">Performance</p>
-                <p className="text-xs font-medium leading-relaxed">Taux de conversion en hausse de 4% ce matin. Très bonne dynamique d'équipe.</p>
-              </div>
-              <button
-                onClick={() => {
-                  const report = `Rapport IA du ${new Date().toLocaleDateString('fr-FR')} :
-                     - Total Appels: ${kpis.totalCalls}
-                     - Meilleur Agent: ${agents.length > 0 ? agents.sort((a, b) => (b.score || 0) - (a.score || 0))[0].name : 'N/A'}
-                     - Pic d'activité: ${chartData.length > 0 ? chartData.sort((a, b) => b.calls - a.calls)[0].name : 'N/A'}
-                     - Recommandation: Concentrer les effectifs sur le créneau de l'après-midi.`;
-                  alert(report);
-                }}
-                className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/25 hover:opacity-90 hover:-translate-y-[1px] transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                Générer Rapport IA <Zap className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-
-          <div className="glass-card p-6 flex-1">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Récapitulatif Rapide</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-medium text-muted-foreground">Appels Aujourd'hui</span>
-                <span className="text-xs font-black tabular-nums">{kpis.callsToday}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-medium text-muted-foreground">Durée Moyenne</span>
-                <span className="text-xs font-black tabular-nums">{kpis.avgCallDuration} min</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-medium text-muted-foreground">Relances en attente</span>
-                <span className="px-2 py-0.5 bg-orange-500/10 text-orange-500 rounded-full text-[10px] font-black uppercase tabular-nums">{kpis.pendingFollowups}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Historique Production */}
-      <div className="glass-card overflow-hidden">
-        <div className="px-6 py-4 border-b border-border flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">HISTORIQUE PRODUCTION</h3>
-            <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-black tabular-nums">
-              {filteredAppointments.length}
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Rechercher client..."
-                value={searchClient}
-                onChange={(e) => setSearchClient(e.target.value)}
-                className="pl-9 pr-3 py-2 rounded-xl border border-border bg-background/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-            </div>
-
-            <select
-              value={selectedAgent}
-              onChange={(e) => setSelectedAgent(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-border bg-background/50 text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-            >
-              <option value="">Tous les agents</option>
-              {[...new Set(appointments.map((a: any) => a.agent_name))].map((agent: any) => (
-                <option key={agent} value={agent}>{agent}</option>
-              ))}
-            </select>
-
-            <select
-              value={selectedProject}
-              onChange={(e) => setSelectedProject(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-border bg-background/50 text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-            >
-              <option value="">Tous les projets</option>
-              {[...new Set(appointments.map((a: any) => a.project_type))].map((project: any) => (
-                <option key={project} value={project}>{project}</option>
-              ))}
-            </select>
-
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-border bg-background/50 text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-              title="Date de début"
-            />
-
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-border bg-background/50 text-xs cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-              title="Date de fin"
-            />
-
-            {(dateFrom || dateTo) && (
-              <button
-                onClick={() => { setDateFrom(""); setDateTo(""); }}
-                className="px-3 py-2 rounded-xl border border-border bg-background/50 text-xs font-bold text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors cursor-pointer"
-                title="Réinitialiser les dates"
-              >
-                ✕
-              </button>
             )}
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted/30 border-b border-border">
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">GSM</th>
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Client</th>
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Projet</th>
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Date RDV</th>
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Création du RDV</th>
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Agent</th>
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Statut</th>
-                <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground">Enregistrement</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredAppointments.map((item: any, index: number) => (
-                <tr key={item.id || index} className="hover:bg-primary/[0.03] transition-colors">
-                  <td className="px-4 py-4 font-mono text-xs text-muted-foreground">{item.client_phone}</td>
-                  <td className="px-4 py-4 font-semibold">{item.client_name}</td>
-                  <td className="px-4 py-4 text-xs">{item.project_type}</td>
-                  <td className="px-4 py-4 text-xs tabular-nums">{item.appointment_date}</td>
-                  <td className="px-4 py-4 text-xs text-muted-foreground tabular-nums">
-                    {item.created_at
-                      ? new Date(item.created_at).toLocaleDateString('fr-FR', {
-                          day: '2-digit', month: '2-digit', year: 'numeric',
-                          hour: '2-digit', minute: '2-digit'
-                        })
-                      : '-'}
-                  </td>
-                  <td className="px-4 py-4 text-xs">{item.agent_name}</td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusBadge(item.status)}`}>
-                      {statusLabel(item.status)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <button
-                      onClick={() => toast('Aucun enregistrement disponible pour ce RDV', { icon: '🔇' })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 hover:border-primary/40 transition-colors text-xs font-medium cursor-pointer"
-                      title="Écouter l'enregistrement"
-                    >
-                      <PlayCircle className="w-3.5 h-3.5" />
-                      Lecture
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredAppointments.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center">
-                    <div className="text-muted-foreground text-sm">Aucun RDV trouvé</div>
-                    <p className="text-xs text-muted-foreground/60 mt-1">Ajustez vos filtres ou réessayez plus tard</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
-      {/* Modal Add/Edit */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-scale">
-          <div className="bg-card border border-border w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-fade-in-scale duration-300">
-            <div className="p-6 border-b border-border bg-muted/20">
-              <h3 className="text-sm font-black uppercase tracking-[0.2em] text-foreground">
-                {editingAgent ? 'Modifier l\'agent' : 'Ajouter un agent'}
-              </h3>
-            </div>
-            <div className="p-8 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nom complet</label>
-                  <input
-                    className="w-full px-4 py-2.5 bg-background/50 text-foreground placeholder:text-muted-foreground border border-border rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
-                    placeholder="Jean Dupont"
-                    value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                  />
+            {/* Performance par agent */}
+            {agentsPerf.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="glass-card p-6">
+                  <h3 className="text-sm font-semibold text-foreground mb-4">Score moyen par agent</h3>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={agentsPerf.slice(0, 10)}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
+                      <XAxis dataKey="nom" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Bar dataKey="avgScore" name="Score Qualité" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Login (Pseudo)</label>
-                  <input
-                    className="w-full px-4 py-2.5 bg-background/50 text-foreground placeholder:text-muted-foreground border border-border rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
-                    placeholder="jdupont"
-                    value={formData.username}
-                    onChange={e => setFormData({ ...formData, username: e.target.value })}
-                  />
+
+                <div className="glass-card p-6">
+                  <h3 className="text-sm font-semibold text-foreground mb-4">RDV par agent</h3>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={agentsPerf.slice(0, 10)}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
+                      <XAxis dataKey="nom" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+                      <YAxis />
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Legend />
+                      <Bar dataKey="rdvConfirme" name="Confirmés" fill="var(--color-chart-4)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="rdvSigne" name="Signés" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="rdvAnnule" name="Annulés" fill="var(--color-chart-5)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="lg:col-span-2 bg-card rounded-xl border border-border overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border">
+                    <h3 className="text-sm font-semibold text-foreground">Classement agents</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          {['Agent', 'Appels', 'Total RDV', 'Confirmés', 'Signés', 'Score Qual.', ...(isSuperAdmin ? ['Salaire Mois'] : []), 'Conversion'].map(h => (
+                            <th key={h} className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {agentsPerf.map((a: any) => (
+                          <tr key={a.agentId} className="hover:bg-muted/30 transition-colors">
+                            <td className="px-3 py-3 font-medium text-foreground">{a.nom}</td>
+                            <td className="px-3 py-3">{a.totalAppels}</td>
+                            <td className="px-3 py-3">{a.totalRdv}</td>
+                            <td className="px-3 py-3 text-success font-semibold">{a.rdvConfirme}</td>
+                            <td className="px-3 py-3 text-primary font-semibold">{a.rdvSigne}</td>
+                            <td className="px-3 py-3">
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${a.avgScore >= 70 ? 'bg-success/10 text-success' : a.avgScore >= 50 ? 'bg-warning/10 text-warning' : 'bg-destructive/10 text-destructive'}`}>
+                                {a.avgScore}
+                              </span>
+                            </td>
+                            {isSuperAdmin && <td className="px-3 py-3 font-mono">{a.salaireMois?.toFixed(2) || '0.00'} €</td>}
+                            <td className="px-3 py-3">{a.conversionRate}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email professionnel</label>
-                <input
-                  type="email"
-                  className="w-full px-4 py-2.5 bg-background/50 text-foreground placeholder:text-muted-foreground border border-border rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
-                  value={formData.email}
-                  onChange={e => setFormData({ ...formData, email: e.target.value })}
-                />
+            )}
+
+            {/* Répartition géographique */}
+            {geo && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="glass-card p-6">
+                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-primary" /> Top villes
+                  </h3>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={geo.byVille?.slice(0, 10) || []}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
+                      <XAxis dataKey="ville" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+                      <YAxis />
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Bar dataKey="count" name="Contacts" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="glass-card p-6">
+                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-success" /> Top départements
+                  </h3>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={geo.byDepartement?.slice(0, 10) || []}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
+                      <XAxis dataKey="departement" tick={{ fontSize: 12 }} />
+                      <YAxis />
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Bar dataKey="count" name="Contacts" fill="var(--color-chart-4)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Mot de passe</label>
-                <input
-                  type="password"
-                  className="w-full px-4 py-2.5 bg-background/50 text-foreground placeholder:text-muted-foreground border border-border rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary/20 focus:border-primary/40 outline-none transition-all"
-                  placeholder={editingAgent ? "•••••••• (vide pour garder)" : "8 caractères min."}
-                  value={formData.password}
-                  onChange={e => setFormData({ ...formData, password: e.target.value })}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Rôle système</label>
-                <select
-                  className="w-full px-4 py-2.5 bg-background/50 text-foreground border border-border rounded-xl text-xs font-bold outline-none cursor-pointer focus:ring-2 focus:ring-primary/20 transition-all"
-                  value={formData.role}
-                  onChange={e => setFormData({ ...formData, role: e.target.value })}
-                >
-                  <option value="agent">Conseiller Client (Agent)</option>
-                  <option value="qualite">Service Qualité (Superviseur)</option>
-                  <option value="admin">Administrateur Système</option>
-                </select>
-              </div>
-            </div>
-            <div className="p-6 bg-muted/20 border-t border-border flex justify-end gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-6 py-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted rounded-xl transition-all cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/25 hover:opacity-90 transition-all cursor-pointer"
-              >
-                {editingAgent ? 'Sauvegarder' : 'Créer l\'agent'}
-              </button>
-            </div>
+            )}
+          </>
+        )}
+        </>
+        )}
+
+        {activeTab === 'performance' && (
+        <>
+        {/* ── Performance des appels ── */}
+        <div className="flex items-center justify-between border-l-4 border-primary pl-4 pt-2">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Performance des appels</h2>
+            <p className="text-sm text-muted-foreground">Évolution mensuelle des appels, conversions et refus</p>
           </div>
+          {perf && (
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${perf.rendementStatus === 'augmenté' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+              Rendement {perf.rendementStatus}
+            </span>
+          )}
         </div>
-      )}
-    </div>
+
+        {perfLoading ? (
+          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+            <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Chargement de la performance...
+          </div>
+        ) : (
+          <>
+            {perf?.mistakes.map((m, i) => (
+              <div key={i} className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-destructive" />
+                <p className="text-sm text-destructive">{m}</p>
+              </div>
+            ))}
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {perf && (
+                <>
+                  {perfStatCard('Appels', perf.currentMonth.totalCalls, perf.previousMonth.totalCalls, perf.evolution.totalCalls)}
+                  {perfStatCard('Conversions', perf.currentMonth.conversions, perf.previousMonth.conversions, perf.evolution.conversions)}
+                  {perfStatCard('Taux conversion', perf.currentMonth.conversionRate, perf.previousMonth.conversionRate, perf.evolution.conversionRate, '%')}
+                  {perfStatCard('Refus', perf.currentMonth.refusalRate, perf.previousMonth.refusalRate, perf.evolution.refusalRate, '%')}
+                </>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="glass-card p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><Phone className="w-4 h-4" /> Appels mensuels</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={perf?.monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Bar dataKey="calls" fill="var(--color-primary, #6366f1)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="glass-card p-6">
+                <h3 className="font-semibold mb-4 flex items-center gap-2"><Target className="w-4 h-4" /> Conversions mensuelles</h3>
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={perf?.monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Line type="monotone" dataKey="conversions" stroke="var(--color-chart-4)" strokeWidth={2} dot={{ r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </>
+        )}
+        </>
+        )}
+
+      </div></>
   );
 }

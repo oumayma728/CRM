@@ -37,6 +37,8 @@ public class MessagesController : ControllerBase
     {
         if (dto == null) return BadRequest(new { error = "Request body is required" });
         try { return Ok(await _messageService.SendMessageAsync(UserContextHelper.GetUserId(User), dto)); }
+        catch (UnauthorizedAccessException ex) { return StatusCode(StatusCodes.Status403Forbidden, new { error = ex.Message }); }   // not allowed to write to this role
+        catch (ArgumentException ex) { return BadRequest(new { error = ex.Message }); }                                              // empty / too long / unknown receiver
         catch (Exception ex) { return Problem(ex.Message); }
     }
 

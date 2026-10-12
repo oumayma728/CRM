@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Clock, LogIn, LogOut, Calendar, AlertTriangle, CheckCircle, Coffee } from 'lucide-react';
 import api from '../../services/crmApi';
-import SessionAttendanceWidget from '../../components/crm/SessionAttendanceWidget';
+import AttendanceWidget from '../../components/crm/AttendanceWidget';
 
 interface BreakRecord {
   id: number;
@@ -60,6 +60,7 @@ export default function MonHistoriquePointagePage() {
   const totalLate       = sessions.filter(s => s.estEnRetard).length;
   const totalCompleted  = sessions.filter(s => s.status === 'completed').length;
   const totalBreakMins  = sessions.reduce((acc, s) => acc + (s.totalBreakMinutes ?? 0), 0);
+  const totalPenalties  = sessions.reduce((acc, s) => acc + (s.penaliteSalaire ?? 0), 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -68,7 +69,7 @@ export default function MonHistoriquePointagePage() {
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-black italic tracking-tighter text-foreground">
             <Clock className="w-6 h-6 text-primary" />
-            Mon Historique de Pointage
+            Mon Pointage
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">Pointage en direct et historique de vos sessions</p>
         </div>
@@ -86,7 +87,7 @@ export default function MonHistoriquePointagePage() {
 
       {/* Live clock-in/out widget */}
       <div className="max-w-sm">
-        <SessionAttendanceWidget label="Pointage du jour" />
+        <AttendanceWidget />
       </div>
 
       {/* Stat cards */}
@@ -105,6 +106,7 @@ export default function MonHistoriquePointagePage() {
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Retards</p>
           </div>
           <p className={`text-3xl font-bold ${totalLate > 0 ? 'text-warning' : ''}`}>{totalLate}</p>
+          {totalPenalties > 0 && <p className="text-xs text-warning mt-1">Pénalités : -{totalPenalties.toFixed(0)} TND</p>}
         </div>
         <div className="glass-card p-4">
           <div className="flex items-center gap-1 mb-1">

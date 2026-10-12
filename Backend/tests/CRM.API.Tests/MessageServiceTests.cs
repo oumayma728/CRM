@@ -25,8 +25,9 @@ public class MessageServiceTests
     [Fact]
     public async Task SendMessageAsync_ValidDto_SavesAndReturnsDto()
     {
+        // an agent writes to a Qualité user (agent -> agent is now refused: see PrivateMessageRulesTests)
         var sender = new Agent { Id = 1, Prenom = "Alice", Nom = "", Email = "a@b.com", MotDePasse = "hash", Role = "AGENT" };
-        var receiver = new Agent { Id = 2, Prenom = "Bob", Nom = "", Email = "b@b.com", MotDePasse = "hash", Role = "AGENT" };
+        var receiver = new Qualite { Id = 2, Prenom = "Bob", Nom = "", Email = "b@b.com", MotDePasse = "hash", Role = "QUALITE" };
         _context.Users.AddRange(sender, receiver);
         await _context.SaveChangesAsync();
 

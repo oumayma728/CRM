@@ -103,7 +103,7 @@ export default function FichierContacts() {
               <label className="block text-sm text-muted-foreground mb-1">Fichier CSV</label>
               <input
                 type="file"
-                accept=".csv,.xlsx"
+                accept=".csv"
                 onChange={e => setFile(e.target.files?.[0] || null)}
                 className="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:bg-primary file:text-white hover:file:opacity-90"
               />

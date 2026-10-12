@@ -46,6 +46,23 @@ public static class FichierImportHelper
         await using (var stream = new FileStream(filePath, FileMode.Create))
             await file.CopyToAsync(stream);
 
+        try
+        {
+            var fichier = await ImportCopiedFileAsync(context, filePath, originalName, campagne, importateur);
+            // nothing imported (no valid phone...): a useless copy is not kept on disk
+            if (fichier.NombreContactsImportes == 0) TryDelete(filePath);
+            return fichier;
+        }
+        catch
+        {
+            TryDelete(filePath);      // refused or crashed import: the copy is not kept
+            throw;
+        }
+    }
+
+    private static async Task<FichierImport> ImportCopiedFileAsync(
+        ApplicationDbContext context, string filePath, string originalName, string? campagne, string? importateur)
+    {
         var (rows, delimiter, headerError) = ReadRows(filePath);
         if (headerError != null) throw new ArgumentException(headerError);
 
@@ -62,6 +79,11 @@ public static class FichierImportHelper
         // All-or-nothing on a real database: a crash in the middle must not leave half a file imported.
         await using var tx = context.Database.IsRelational() ? await context.Database.BeginTransactionAsync() : null;
 
+        // One import at a time: two people importing the SAME file at the same moment would both find "no such phone
+        // in the database yet" and insert every contact twice. The lock is released by the commit / rollback.
+        if (tx != null && context.Database.IsNpgsql())
+            await context.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(43, 1)");
+
         context.FichiersImport.Add(fichier);
         await context.SaveChangesAsync();                       // gives fichier.Id
 
@@ -71,10 +93,6 @@ public static class FichierImportHelper
         context.Entry(fichier).State = EntityState.Detached;
 
         var seenPhones = new HashSet<string>();
-        // Phones already in the database, loaded ONCE (a HashSet answers in O(1)). The first version asked the
-        // database "which of these 1000 phones exist?" for every batch: on a table without index on Telephone that is
-        // a full scan per batch, so the import got slower and slower (228 s for 50,000 lines instead of seconds).
-        var knownPhones = (await context.Contacts.AsNoTracking().Select(c => c.Telephone).ToListAsync()).ToHashSet();
         var errors = new List<string>();
         var batch = new List<Contact>(InsertBatchSize);
         int imported = 0, invalid = 0, duplicates = 0;
@@ -83,8 +101,13 @@ public static class FichierImportHelper
         {
             if (batch.Count == 0) return;
 
-            // Add() returns false when the phone is already known (database, or inserted by a previous batch)
-            var toInsert = batch.Where(c => knownPhones.Add(c.Telephone)).ToList();
+            // Ask the database about THIS batch only (up to 1000 phones, answered by the index IX_Contacts_Telephone):
+            // the whole Contacts table is no longer loaded in memory (it would not scale to millions of contacts).
+            // Duplicates inside the file were already removed by seenPhones.
+            var phones = batch.Select(c => c.Telephone).ToList();
+            var existing = (await context.Contacts.AsNoTracking()
+                .Where(c => phones.Contains(c.Telephone)).Select(c => c.Telephone).ToListAsync()).ToHashSet();
+            var toInsert = batch.Where(c => !existing.Contains(c.Telephone)).ToList();
             duplicates += batch.Count - toInsert.Count;
 
             context.Contacts.AddRange(toInsert);
@@ -147,6 +170,11 @@ public static class FichierImportHelper
 
         if (tx != null) await tx.CommitAsync();
         return fichier;
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { if (File.Exists(path)) File.Delete(path); } catch { /* best effort */ }
     }
 
     /// <summary>JSON answer shared by the upload endpoints (real numbers, not just "success").</summary>

@@ -5,6 +5,8 @@ public class Contact
     public long Id { get; set; }
 
     // ── Identité ──────────────────────────────────────────────────────────
+    /// <summary>Civilité : Mr | Mme | Ms | Mlle</summary>
+    public string? Civilite { get; set; }
     public string? Nom { get; set; }
     public string? Prenom { get; set; }
     public string Telephone { get; set; } = string.Empty;  // numéro fixe principal
@@ -44,10 +46,15 @@ public class Contact
     public string? TypeRendezVous { get; set; }
 
     // ── Info propriété ────────────────────────────────────────────────────
+    /// <summary>Propriétaire du logement (oui/non). Si oui, ProprietaireDepuis donne l'année d'achat.</summary>
+    public bool? EstProprietaire { get; set; }
     public DateTime? ProprietaireDepuis { get; set; }
     public string? ModeChauffage { get; set; }
     public string? ConsommationChauffage { get; set; }
     public int? AgeChaudiere { get; set; }
+    public string? FournisseurEnergie { get; set; }
+    /// <summary>Facture d'électricité (montant, tel que saisi : ex. 180)</summary>
+    public string? FactureElectricite { get; set; }
 
     // ── Énergie / travaux ─────────────────────────────────────────────────
     public bool? EtudePV { get; set; }
@@ -56,6 +63,10 @@ public class Contact
     public string? EtatToiture { get; set; }
     public string? EtatIsolation { get; set; }
     public double? Surface { get; set; }                   // en m²
+    /// <summary>Au moins 15 m² disponibles (oui/non)</summary>
+    public bool? Surface15m2 { get; set; }
+    public bool? TravauxEnCours { get; set; }
+    public bool? ProjetDemenagement { get; set; }
 
     // ── Situation personnelle ─────────────────────────────────────────────
     public int? NombrePersonnes { get; set; }

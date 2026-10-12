@@ -19,32 +19,25 @@ import ContactPage from './pages/agent/ContactPage';
 import PerformancePage from './pages/agent/PerformancePage';
 import AgendaPage from './pages/agent/AgendaPage';
 import ContactsListPage from './pages/agent/ContactsListPage';
-import AgentMessagesPage from './pages/agent/MessagesPage';
 import CallLogPage from './pages/agent/CallLogPage';
 import DialerPage from './pages/agent/DialerPage';
 import HistoryPage from './pages/agent/HistoryPage';
-import MonPointagePage from './pages/agent/MonPointagePage';
 import MesRdvPage from './pages/agent/MesRdvPage';
-import PerformanceCrmPage from './pages/agent/PerformanceCrmPage';
 
 // Admin - Modernized Pages
 import DashboardPage from './pages/admin/DashboardPage';
 import ScoringPage from './pages/admin/ScoringPage';
-import RealTimePage from './pages/admin/RealTimePage';
 import LeadsPage from './pages/admin/LeadsPage';
 import AgendaPageAdmin from './pages/admin/AgendaPage';
 import SettingsPage from './pages/admin/SettingsPage';
 import MapPage from './pages/admin/MapPage';
 import AdminPerformancePage from './pages/admin/PerformancePage';
-import AdminMessagesPage from './pages/admin/MessagesPage';
 
 // Admin - Legacy
-import ScorecardsPage from './pages/admin/ScorecardsPage';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
 import PipelinePage from './pages/admin/PipelinePage';
 import UsersPage from './pages/admin/UsersPage';
 import IntegrationsPage from './pages/admin/IntegrationsPage';
-import AgentStatsPage from './pages/admin/AgentStatsPage';
 import AgentsPage from './pages/admin/AgentsPage';
 import GDPRPage from './pages/admin/GDPRPage';
 import ReportsPage from './pages/admin/ReportsPage';
@@ -64,7 +57,6 @@ import InjectionPage from './pages/admin/InjectionPage';
 import FichiersEnAttentePage from './pages/admin/FichiersEnAttentePage';
 import PermissionPage from './pages/admin/PermissionPage';
 import ClientsPage from './pages/admin/ClientsPage';
-import SuperAdminDashboard from './pages/admin/SuperAdminDashboard';
 
 // Shared (all roles)
 import MonHistoriquePointagePage from './pages/shared/MonHistoriquePointagePage';
@@ -103,7 +95,6 @@ import CommercialAgenda from './pages/commercial/CommercialAgenda';
 import TechniqueDashboard from './pages/technique/TechniqueDashboard';
 import ListeAgents from './pages/technique/ListeAgents';
 import FichierContacts from './pages/technique/FichierContacts';
-import PointageTech from './pages/technique/Pointage';
 import GererAcces from './pages/technique/GererAcces';
 import CompteCalendrier from './pages/technique/CompteCalendrier';
 import EvaluationTech from './pages/technique/EvaluationTech';
@@ -195,14 +186,13 @@ function AppRoutes() {
         <Route path="/agent/performance" element={<PerformancePage />} />
         <Route path="/agent/agenda" element={<AgendaPage />} />
       <Route path="/agent/contacts" element={<ContactsListPage />} />
-      <Route path="/agent/messages" element={<AgentMessagesPage />} />
+      <Route path="/agent/messages" element={<Navigate to="/chat" replace />} />
       <Route path="/agent/audio-analysis" element={<AnalysisPage />} />
         <Route path="/agent/call-log" element={<CallLogPage />} />
         <Route path="/agent/dialer" element={<DialerPage />} />
         <Route path="/agent/history" element={<HistoryPage />} />
-        <Route path="/agent/pointage" element={<MonPointagePage />} />
+        <Route path="/agent/pointage" element={<MonHistoriquePointagePage />} />
         <Route path="/agent/mes-rdv" element={<MesRdvPage />} />
-        <Route path="/agent/performance-crm" element={<PerformanceCrmPage />} />
 
         {/* Shared (every role) */}
         <Route path="/chat" element={<TeamChatPage />} />
@@ -218,7 +208,7 @@ function AppRoutes() {
 <Route element={<AdminRoute><Layout /></AdminRoute>}>
 
 <Route path="/admin/dashboard" element={<DashboardPage />} />
-      <Route path="/admin/realtime" element={<RealTimePage />} />
+      <Route path="/admin/realtime" element={<Navigate to="/admin/dashboard" replace />} />
       <Route path="/admin/pointage" element={<PointagePage />} />
 <Route path="/admin/performance" element={<AdminPerformancePage />} />
 <Route path="/admin/map" element={<MapPage />} />
@@ -227,14 +217,14 @@ function AppRoutes() {
 <Route path="/admin/scoring" element={<ScoringPage />} />
 <Route path="/admin/analysis" element={<AnalysisPage />} />
 <Route path="/admin/ai-config" element={<SettingsPage />} />
-<Route path="/admin/messages" element={<AdminMessagesPage />} />
+<Route path="/admin/messages" element={<Navigate to="/chat" replace />} />
 <Route path="/admin/settings" element={<SettingsPage />} />
-<Route path="/admin/scorecards" element={<ScorecardsPage />} />
+<Route path="/admin/scorecards" element={<Navigate to="/admin/agents?section=stats" replace />} />
 <Route path="/admin/analytics" element={<AnalyticsPage />} />
 <Route path="/admin/pipeline" element={<PipelinePage />} />
 <Route path="/admin/users" element={<UsersPage />} />
 <Route path="/admin/integrations" element={<IntegrationsPage />} />
-      <Route path="/admin/agent-stats" element={<AgentStatsPage />} />
+      <Route path="/admin/agent-stats" element={<Navigate to="/admin/agents?section=stats" replace />} />
       <Route path="/admin/agents" element={<AgentsPage />} />
 <Route path="/admin/gdpr" element={<GDPRPage />} />
 <Route path="/admin/reports" element={<ReportsPage />} />
@@ -270,7 +260,7 @@ function AppRoutes() {
       <Route path="/qualite/calendar" element={<QualityCalendarPage />} />
       <Route path="/qualite/chatbot" element={<ChatbotPage />} />
       <Route path="/qualite/analysis" element={<AnalysisPage />} />
-        <Route path="/qualite/messages" element={<AdminMessagesPage />} />
+        <Route path="/qualite/messages" element={<Navigate to="/chat" replace />} />
         <Route path="/qualite/calls" element={<CallWorkspace />} />
         <Route path="/qualite/calendrier" element={<RdvCalendarPage />} />
         <Route path="/qualite/agenda-refus" element={<AgendaRefusEquipe />} />
@@ -279,10 +269,8 @@ function AppRoutes() {
         <Route path="/qualite/mon-historique-pointage" element={<MonHistoriquePointagePage />} />
       </Route>
 
-      {/* 👑 SUPER ADMIN */}
-      <Route element={<SuperAdminRoute><Layout /></SuperAdminRoute>}>
-        <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
-      </Route>
+      {/* the old Super Admin dashboard address now lands on the one Dashboard */}
+      <Route path="/superadmin/dashboard" element={<Navigate to="/admin/dashboard" replace />} />
 
       {/* 📞 CONFIRMATRICE 1 */}
       <Route path="/confirmation1" element={<RoleRoute roles={['confirmatrice']} confType="CONF1"><Layout /></RoleRoute>}>
@@ -337,7 +325,7 @@ function AppRoutes() {
         <Route path="dashboard" element={<TechniqueDashboard />} />
         <Route path="agents" element={<ListeAgents />} />
         <Route path="fichiers" element={<FichierContacts />} />
-        <Route path="pointage" element={<PointageTech />} />
+        <Route path="pointage" element={<PointagePage />} />
         <Route path="monpointage" element={<MonHistoriquePointagePage />} />
         <Route path="acces" element={<GererAcces />} />
         <Route path="calendrier" element={<CompteCalendrier />} />

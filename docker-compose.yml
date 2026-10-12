@@ -34,6 +34,14 @@ services:
       # one is created from these two variables (the password must be >= 12 characters and is changed at first login).
       Bootstrap__AdminEmail: ${BOOTSTRAP_ADMIN_EMAIL:-}
       Bootstrap__AdminPassword: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      # E-mails (welcome / password reset). Empty sender or password = e-mails are skipped with a warning in the log.
+      App__Url: ${APP_URL:-http://localhost}
+      Email__SmtpHost: ${SMTP_HOST:-smtp.gmail.com}
+      Email__SmtpPort: ${SMTP_PORT:-587}
+      Email__UseSsl: ${SMTP_USE_SSL:-true}
+      Email__SenderEmail: ${SMTP_SENDER_EMAIL:-}
+      Email__SenderName: ${SMTP_SENDER_NAME:-EBI Call Center}
+      Email__Password: ${SMTP_PASSWORD:-}
       Groq__ApiKey: ${GROQ_API_KEY:-}
       Ollama__BaseUrl: ${OLLAMA_URL:-http://host.docker.internal:11434}
       Whisper__Enabled: ${WHISPER_ENABLED:-true}

@@ -218,6 +218,7 @@ public class QualityCrmController : ControllerBase
             .Where(u => u.Role == "AGENT")
             .Select(u => new { u.Id, u.Nom, u.Prenom, u.Email })
             .AsNoTracking()
+            .OrderBy(u => u.Id)
             .Take(20)
             .ToListAsync())
             .DistinctBy(u => u.Email)

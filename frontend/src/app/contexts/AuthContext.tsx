@@ -90,8 +90,8 @@ function toUser(d: SessionPayload, token: string | null): User {
 export function homePathFor(user: Pick<User, 'role' | 'typeConfirmatrice'> | null): string {
   if (!user) return '/login';
   switch (user.role) {
-    case 'superadmin': return '/superadmin/dashboard';
-    case 'admin': return '/admin/realtime';
+    case 'superadmin': return '/admin/dashboard';
+    case 'admin': return '/admin/dashboard';
     case 'qualite': return '/qualite/dashboard';
     case 'commercial': return '/commercial/dashboard';
     case 'tech': return '/technique/dashboard';

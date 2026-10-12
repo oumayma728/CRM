@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.DTOs.Confirmation;
 using Backend.Entities;
+using Backend.Helpers;
 
 namespace Backend.Services.Confirmation;
 
@@ -209,24 +210,5 @@ public class ConfirmationService : IConfirmationService
         return MapToRdvConfirmationDTO(rdv);
     }
 
-    private RdvConfirmationDTO MapToRdvConfirmationDTO(RendezVous rdv)
-    {
-        return new RdvConfirmationDTO
-        {
-            Id = rdv.Id,
-            ContactId = rdv.Contact?.Id ?? 0,
-            ContactNom = rdv.Contact?.Nom ?? "",
-            ContactPrenom = rdv.Contact?.Prenom ?? "",
-            Telephone = rdv.Contact?.Telephone ?? "",
-            NumGSM = rdv.Contact?.NumGSM,
-            Source = rdv.Contact?.Source ?? "",
-            AgentId = rdv.AgentId,
-            AgentNom = rdv.Agent != null ? $"{rdv.Agent.Prenom} {rdv.Agent.Nom}" : "",
-            DateCreation = rdv.DateCreation,
-            DateRendezVous = rdv.DateRendezVous,
-            Statut = rdv.Statut.ToString(),
-            CommentaireAgent = rdv.Commentaire,
-            CommentaireConfirmation = rdv.CommentaireConfirmation,
-        };
-    }
+    private RdvConfirmationDTO MapToRdvConfirmationDTO(RendezVous rdv) => RdvMapper.ToConfirmationDto(rdv);
 }

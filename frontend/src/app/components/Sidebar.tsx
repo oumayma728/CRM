@@ -116,7 +116,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const normalizedRole = user?.role?.toLowerCase().replace(/[\s\_\-]/g, '');
   const confType = user?.typeConfirmatrice?.toUpperCase();
 
-  const teamChat: NavItem = { icon: MessagesSquare, label: 'Chat Équipe', path: '/chat', accent: 'purple' };
+  const teamChat: NavItem = { icon: MessagesSquare, label: 'Messages', path: '/chat', accent: 'purple' };
   const chatbot: NavItem = { icon: Brain, label: 'Chatbot IA', path: '/chatbot', accent: 'blue' };
   const createContact: NavItem = { icon: FileText, label: 'Créer une fiche contact', path: '/create-contact' };
 
@@ -126,7 +126,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       items: [
         { icon: LayoutDashboard, label: 'Tableau de bord', path: '/agent/dashboard', accent: 'blue' },
         { icon: TrendingUp, label: 'Performance', path: '/agent/performance', accent: 'green' },
-        { icon: BarChart3, label: 'Performance CRM', path: '/agent/performance-crm' },
         { icon: Clock, label: 'Mon Pointage', path: '/agent/pointage', accent: 'orange' },
       ],
     },
@@ -151,7 +150,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     {
       label: 'COMMUNICATION',
       items: [
-        { icon: MessageCircle, label: 'Messages', path: '/agent/messages', accent: 'purple' },
         teamChat,
       ],
     },
@@ -170,7 +168,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     {
       label: 'PRINCIPAL',
       items: [
-        { icon: Activity, label: 'Supervision Live', path: '/admin/realtime', accent: 'green' },
         { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard', accent: 'blue' },
         { icon: Clock, label: 'Pointage', path: '/admin/pointage', accent: 'orange' },
         { icon: FileBarChart, label: 'Rapport de pointage', path: '/admin/pointage/rapport' },
@@ -183,10 +180,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       items: [
         { icon: Users, label: 'Utilisateurs', path: '/admin/users', accent: 'blue' },
         { icon: UserCheck, label: 'Gestion des agents', path: '/admin/agents' },
-        { icon: ClipboardCheck, label: 'Scorecards agents', path: '/admin/scorecards' },
-        { icon: BarChart3, label: 'Stats agents', path: '/admin/agent-stats' },
         { icon: TrendingUp, label: 'Performance', path: '/admin/performance' },
-        { icon: CalendarDays, label: 'Agendas confirmatrices', path: '/admin/confirmatrices-agendas' },
         { icon: Shield, label: 'Permissions', path: '/admin/permissions' },
       ],
     },
@@ -195,8 +189,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       items: [
         { icon: Database, label: 'Gestion fichiers', path: '/admin/injection', accent: 'orange' },
         { icon: Inbox, label: 'Fichiers en attente', path: '/admin/fichiers-en-attente' },
-        { icon: Upload, label: 'Import leads', path: '/admin/import-leads' },
-        { icon: Target, label: 'Leads & CRM', path: '/admin/leads' },
         { icon: Building2, label: 'Clients', path: '/admin/clients' },
         { icon: GitBranch, label: 'Pipeline', path: '/admin/pipeline' },
         { icon: RotateCcw, label: 'Relances', path: '/admin/followups' },
@@ -208,7 +200,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     {
       label: 'ANALYTIQUE',
       items: [
-        { icon: BarChart3, label: 'Analytique', path: '/admin/analytics', accent: 'blue' },
         { icon: MapIcon, label: 'Carte géographique', path: '/admin/map' },
         { icon: FileText, label: 'Rapports', path: '/admin/reports' },
       ],
@@ -232,7 +223,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       label: 'COMMUNICATION',
       items: [
         { icon: Phone, label: "Centre d'appels", path: '/admin/calls', accent: 'green' },
-        { icon: Mail, label: 'Messages', path: '/admin/messages', accent: 'blue' },
         teamChat,
       ],
     },
@@ -251,10 +241,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     .filter(section => section.items.length > 0);
 
   const superAdminSections: NavSection[] = [
-    {
-      label: 'SUPER ADMIN',
-      items: [{ icon: Crown, label: 'Dashboard Super Admin', path: '/superadmin/dashboard', accent: 'purple' }],
-    },
     ...adminSectionsFull,
   ];
 
@@ -292,7 +278,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       label: 'COMMUNICATION',
       items: [
         { icon: Phone, label: "Centre d'appels", path: '/qualite/calls', accent: 'green' },
-        { icon: Mail, label: 'Messages', path: '/qualite/messages', accent: 'blue' },
         teamChat,
       ],
     },

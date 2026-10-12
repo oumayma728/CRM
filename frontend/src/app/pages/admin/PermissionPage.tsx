@@ -1130,7 +1130,6 @@ const ENDPOINT_MAP: { method: string; path: string; permission: string; descript
   { method: 'DELETE', path: '/api/SourceFiles/{id}',          permission: 'Files.Delete',            description: 'Supprimer fichier source' },
   { method: 'GET',    path: '/api/SourceFiles/search',        permission: 'Files.Search',            description: 'Recherche fichiers' },
   { method: 'GET',    path: '/api/admin/dashboard',           permission: 'Admin.Dashboard',         description: 'Dashboard admin' },
-  { method: 'GET',    path: '/api/admin/pointage',            permission: 'Admin.Pointage',          description: 'Pointage agents' },
   { method: 'GET',    path: '/api/admin/scorecards',          permission: 'Admin.Scorecards',        description: 'Scorecards agents' },
   { method: 'GET',    path: '/api/admin/analytics',           permission: 'Admin.Analytics',         description: 'Analytique appels' },
   { method: 'GET',    path: '/api/admin/users',               permission: 'Users.View',              description: 'Liste utilisateurs' },

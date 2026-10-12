@@ -17,23 +17,20 @@ public class EmailService : IEmailService
     public async Task SendWelcomeEmailAsync(
         string toEmail, string nom, string prenom, string role, string plainPassword)
     {
+        if (!IsSmtpConfigured(_config))
+        {
+            _logger.LogWarning("SMTP is not configured (Email:SenderEmail / Email:Password): welcome e-mail for {Email} not sent", toEmail);
+            return;
+        }
         var host     = _config["Email:SmtpHost"]    ?? throw new InvalidOperationException("Email:SmtpHost manquant");
         var port     = int.Parse(_config["Email:SmtpPort"] ?? "587");
-        var useSsl   = bool.Parse(_config["Email:UseSsl"]  ?? "false");
+        var useSsl   = UseSsl(_config, port);
         var sender   = _config["Email:SenderEmail"] ?? throw new InvalidOperationException("Email:SenderEmail manquant");
         var senderName = _config["Email:SenderName"] ?? "EBI Call Center";
         var password = _config["Email:Password"]    ?? throw new InvalidOperationException("Email:Password manquant");
         var appUrl   = _config["App:Url"]           ?? "http://localhost:5173";
 
-        var roleLabel = role.ToUpper() switch
-        {
-            "CONFIRMATRICE" => "Confirmatrice",
-            "AGENT"         => "Agent",
-            "ADMIN"         => "Administrateur",
-            "TECH"          => "Service Technique",
-            "QUAL"          => "Service Qualité",
-            _               => role
-        };
+        var roleLabel = RoleLabel(role);
 
         var subject = "Bienvenue sur EBI Call Center – Vos identifiants de connexion";
         var body    = BuildHtmlEmail(prenom, nom, toEmail, plainPassword, roleLabel, appUrl);
@@ -64,12 +61,48 @@ public class EmailService : IEmailService
         }
     }
 
+    /// <summary>The placeholders of the sample appsettings ("VOTRE_EMAIL@gmail.com") count as "not configured".</summary>
+    public static bool IsSmtpConfigured(IConfiguration config)
+    {
+        var sender = config["Email:SenderEmail"];
+        var password = config["Email:Password"];
+        return !string.IsNullOrWhiteSpace(sender) && !string.IsNullOrWhiteSpace(password)
+            && !sender.Contains("VOTRE_", StringComparison.OrdinalIgnoreCase)
+            && !password.Contains("VOTRE_", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Gmail / Office 365 on port 587 REQUIRE STARTTLS ("EnableSsl" of SmtpClient). The old default was "false", which
+    /// gave "Must issue a STARTTLS command first" for every account created. Now: SSL unless the setting says otherwise,
+    /// or the (old, unencrypted) port 25 is used.
+    /// </summary>
+    public static bool UseSsl(IConfiguration config, int port) =>
+        bool.TryParse(config["Email:UseSsl"], out var configured) ? configured : port != 25;
+
+    /// <summary>Label shown in the welcome e-mail, from the REAL role values stored in the database.</summary>
+    public static string RoleLabel(string role) => (role ?? "").ToUpperInvariant() switch
+    {
+        "SUPERADMIN"    => "Super administrateur",
+        "ADMIN"         => "Administrateur",
+        "AGENT"         => "Agent",
+        "CONFIRMATRICE" => "Confirmatrice",
+        "QUALITE"       => "Service Qualité",
+        "TECH"          => "Service Technique",
+        "COMMERCIAL"    => "Commercial",
+        _               => role ?? ""
+    };
+
     public async Task SendPasswordResetEmailAsync(
         string toEmail, string nom, string prenom, string resetToken)
     {
+        if (!IsSmtpConfigured(_config))
+        {
+            _logger.LogWarning("SMTP is not configured: password reset e-mail for {Email} not sent", toEmail);
+            return;
+        }
         var host       = _config["Email:SmtpHost"]    ?? throw new InvalidOperationException("Email:SmtpHost manquant");
         var port       = int.Parse(_config["Email:SmtpPort"] ?? "587");
-        var useSsl     = bool.Parse(_config["Email:UseSsl"]  ?? "false");
+        var useSsl     = UseSsl(_config, port);
         var sender     = _config["Email:SenderEmail"] ?? throw new InvalidOperationException("Email:SenderEmail manquant");
         var senderName = _config["Email:SenderName"]  ?? "EBI Call Center";
         var password   = _config["Email:Password"]    ?? throw new InvalidOperationException("Email:Password manquant");

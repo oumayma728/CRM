@@ -76,10 +76,18 @@ public class AuthController : ControllerBase
             return BadRequest(new { detail = "Cet email est déjà utilisé." });
 
         var (prenom, nom) = SplitName(dto.Name);
-        var created = await _adminService.CreateUtilisateurAsync(new UtilisateurRequestDTO
+        Backend.DTOs.Admin.UtilisateurDTO created;
+        try
         {
-            Nom = nom, Prenom = prenom, Email = email, MotDePasse = dto.Password!, Role = dto.Role ?? "agent",
-        });
+            created = await _adminService.CreateUtilisateurAsync(new UtilisateurRequestDTO
+            {
+                Nom = nom, Prenom = prenom, Email = email, MotDePasse = dto.Password!, Role = dto.Role ?? "agent",
+            });
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            return BadRequest(new { detail = ex.Message });
+        }
         return Ok(new { success = true, message = "Utilisateur créé", user_id = created.Id });
     }
 

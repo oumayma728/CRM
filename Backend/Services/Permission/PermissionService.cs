@@ -133,6 +133,7 @@ namespace Backend.Services.Permission
         {
             var users = await _context.Set<User>()
                 .Where(u => u.Actif)
+                .OrderBy(u => u.Nom).ThenBy(u => u.Prenom).ThenBy(u => u.Id)
                 .Take(100)
                 .ToListAsync();
 
@@ -153,6 +154,7 @@ namespace Backend.Services.Permission
         {
             return await _context.Set<User>()
                 .Where(u => u.Actif)
+                .OrderBy(u => u.Nom).ThenBy(u => u.Prenom).ThenBy(u => u.Id)
                 .Take(200)
                 .Select(u => new PermissionTargetUserDto
                 {

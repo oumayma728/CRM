@@ -74,20 +74,7 @@ public class ContactController : ControllerBase
 
         Response.Headers["X-Total-Count"] = total.ToString();
 
-        var result = contacts.Select(c => new ContactDTO
-        {
-            Id = c.Id,
-            Nom = c.Nom,
-            Prenom = c.Prenom,
-            Telephone = c.Telephone,
-            Email = c.Email,
-            Adresse = c.Adresse,
-            Source = c.Source,
-            Statut = c.Statut,
-            AgentId = c.AgentId,
-            AgentNom = c.Agent != null ? $"{c.Agent.Prenom} {c.Agent.Nom}" : null,
-            DateRappelPlanifie = c.DateRappelPlanifie
-        });
+        var result = contacts.Select(ContactMapper.ToDto);
 
         return Ok(result);
     }
@@ -107,22 +94,7 @@ public class ContactController : ControllerBase
 
         if (!CanTouch(contact)) return Forbid();
 
-        var result = new ContactDTO
-        {
-            Id = contact.Id,
-            Nom = contact.Nom,
-            Prenom = contact.Prenom,
-            Telephone = contact.Telephone,
-            Email = contact.Email,
-            Adresse = contact.Adresse,
-            Source = contact.Source,
-            Statut = contact.Statut,
-            AgentId = contact.AgentId,
-            AgentNom = contact.Agent != null ? $"{contact.Agent.Prenom} {contact.Agent.Nom}" : null,
-            DateRappelPlanifie = contact.DateRappelPlanifie
-        };
-
-        return Ok(result);
+        return Ok(ContactMapper.ToDto(contact));
     }
 
     /// <summary>Crée un nouveau contact</summary>
@@ -134,68 +106,21 @@ public class ContactController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        // Conversion fichage : "oui" → true, "non" → false, autrement null
-        bool? fichageBool = dto.Fichage?.ToLowerInvariant() switch
-        {
-            "oui" => true,
-            "non" => false,
-            _ => null
-        };
-
-        // Conversion propriétaire depuis : année (int) → DateTime UTC
-        DateTime? proprietaireDepuis = dto.ProprietaireDepuis is > 1900
-            ? new DateTime(dto.ProprietaireDepuis.Value, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-            : null;
-
         var contact = new Contact
         {
-            Nom = dto.Nom,
-            Prenom = dto.Prenom,
             Telephone = dto.Telephone,
-            Email = dto.Email,
-            Adresse = dto.Adresse,
             Source = dto.Source,
             AgentId = dto.AgentId,
             Statut = "A_APPELER",
             DateImport = DateTime.UtcNow,
-            // Logement
-            ProprietaireDepuis = proprietaireDepuis,
-            ModeChauffage = dto.ModeChauffage,
-            ConsommationChauffage = dto.ConsommationChauffage,
-            AgeChaudiere = dto.AgeChaudiere,
-            EtatToiture = dto.EtatToiture,
-            EtatIsolation = dto.EtatIsolation,
-            Surface = dto.Surface,
-            // Énergie
-            EtudePV = dto.EtudePV,
-            EquipePV = dto.EquipePV,
-            EquipePAC = dto.EquipePAC,
-            // Foyer
-            NombrePersonnes = dto.NbPersonnes,
-            ProfessionMr = dto.ProfessionMr,
-            ProfessionMme = dto.ProfessionMme,
-            Credits = dto.Credits,
-            Revenus = dto.Revenus,
-            Fichage = fichageBool,
         };
+        // The whole fiche client (identity, address, logement, energie, foyer) goes through one mapper
+        ContactMapper.ApplyFiche(contact, dto);
 
         _context.Contacts.Add(contact);
         await _context.SaveChangesAsync();
 
-        var result = new ContactDTO
-        {
-            Id = contact.Id,
-            Nom = contact.Nom,
-            Prenom = contact.Prenom,
-            Telephone = contact.Telephone,
-            Email = contact.Email,
-            Adresse = contact.Adresse,
-            Source = contact.Source,
-            Statut = contact.Statut,
-            AgentId = contact.AgentId
-        };
-
-        return CreatedAtAction(nameof(GetById), new { id = contact.Id }, result);
+        return CreatedAtAction(nameof(GetById), new { id = contact.Id }, ContactMapper.ToDto(contact));
     }
 
     /// <summary>Met à jour un contact</summary>
@@ -210,29 +135,13 @@ public class ContactController : ControllerBase
 
         if (!CanTouch(contact)) return Forbid();
 
-        contact.Nom = dto.Nom ?? contact.Nom;
-        contact.Prenom = dto.Prenom ?? contact.Prenom;
         contact.Telephone = dto.Telephone;
-        contact.Email = dto.Email ?? contact.Email;
-        contact.Adresse = dto.Adresse ?? contact.Adresse;
-        contact.Source = dto.Source;
+        if (!string.IsNullOrWhiteSpace(dto.Source)) contact.Source = dto.Source;
+        ContactMapper.ApplyFiche(contact, dto);
 
         await _context.SaveChangesAsync();
 
-        var result = new ContactDTO
-        {
-            Id = contact.Id,
-            Nom = contact.Nom,
-            Prenom = contact.Prenom,
-            Telephone = contact.Telephone,
-            Email = contact.Email,
-            Adresse = contact.Adresse,
-            Source = contact.Source,
-            Statut = contact.Statut,
-            AgentId = contact.AgentId
-        };
-
-        return Ok(result);
+        return Ok(ContactMapper.ToDto(contact));
     }
 
     /// <summary>Supprime un contact (admin uniquement)</summary>

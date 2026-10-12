@@ -320,9 +320,10 @@ public class CallAnalysisController : ControllerBase
     {
         var query = _context.Calls.AsQueryable();
         if (dto.Limit > 0)
-            query = query.Take(dto.Limit);
+            query = query.OrderByDescending(c => c.Id).Take(dto.Limit);
         else
             query = query.Where(c => string.IsNullOrEmpty(c.Summary) || c.Summary.Length < 50)
+                .OrderByDescending(c => c.Id)
                 .Take(dto.BatchSize > 0 ? dto.BatchSize : 50);
 
         var calls = await query.ToListAsync();

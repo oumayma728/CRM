@@ -38,8 +38,10 @@ public class TechniqueController : ControllerBase
         var todayUtc     = DateTime.SpecifyKind(today, DateTimeKind.Utc);
         var tomorrowUtc  = DateTime.SpecifyKind(today.AddDays(1), DateTimeKind.Utc);
 
-        var pointagesAujourd = await _context.Pointages
-            .Where(p => p.Date >= todayUtc && p.Date < tomorrowUtc)
+        // people who clocked in today (the real attendance table; the old "Pointages" only holds the dialer pauses)
+        var pointagesAujourd = await _context.AdvancedAttendances
+            .Where(a => a.Date >= todayUtc && a.Date < tomorrowUtc)
+            .Select(a => a.UserId).Distinct()
             .CountAsync();
 
         var evalsRecentes = await _context.Evaluations
@@ -232,21 +234,6 @@ public class TechniqueController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // 5. POINTAGE — délègue au service admin (même données, même format)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    [HttpGet("pointage")]
-    public async Task<IActionResult> GetPointage([FromQuery] string? date = null)
-    {
-        var targetDate = date != null
-            ? DateTime.SpecifyKind(DateTime.Parse(date).Date, DateTimeKind.Utc)
-            : DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Utc);
-
-        var pointage = await _adminService.GetPointageAsync(targetDate);
-        return Ok(pointage);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

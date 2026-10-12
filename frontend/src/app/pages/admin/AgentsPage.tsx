@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import AgentsStatsPanel from './AgentsStatsPanel';
 import {
   Users, UserPlus, Trash2, Edit2, Loader2, Mail,
   X, CheckCircle, AlertCircle, User as UserIcon,
@@ -26,7 +28,7 @@ interface AgentPerf {
   sentiment_distribution?: { POSITIVE: number; NEGATIVE: number; NEUTRAL: number };
 }
 
-export default function AgentsPage() {
+function AgentsList() {
   const chartTheme = useChartTheme();
   const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -200,16 +202,7 @@ const filteredAgents = agents.filter(a =>
             Suivi et administration de l'équipe commerciale
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="group relative overflow-hidden flex items-center gap-3 px-6 py-3.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-2xl font-bold uppercase tracking-wider text-sm shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all hover:scale-[1.02]"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative flex items-center gap-2">
-            <UserPlus className="w-5 h-5" />
-            Nouvel Agent
-          </div>
-        </button>
+
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -587,6 +580,44 @@ const filteredAgents = agents.filter(a =>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── "Gestion des agents": ONE page, a side navigation with two sections ──────────────────────────────
+// "Agents" = the list and its actions ; "Stats agents" = ranking + follow-up + detail of one agent
+// (it replaces the two menu entries "Scorecards agents" and "Stats agents"; the section is kept in the address: ?section=stats)
+const SECTIONS = [
+  { id: 'agents', label: 'Agents' },
+  { id: 'stats', label: 'Stats agents' },
+] as const;
+
+export default function AgentsPage() {
+  const [params, setParams] = useSearchParams();
+  const section = params.get('section') === 'stats' ? 'stats' : 'agents';
+
+  return (
+    <div className="flex flex-col md:flex-row gap-6">
+      <nav aria-label="Gestion des agents" className="md:w-52 shrink-0">
+        <div className="md:sticky md:top-4 bg-card border border-border rounded-xl p-2 space-y-1">
+          <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Gestion des agents</p>
+          {SECTIONS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setParams(item.id === 'stats' ? { section: 'stats' } : {}, { replace: true })}
+              aria-current={section === item.id ? 'page' : undefined}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                section === item.id ? 'bg-primary text-primary-foreground font-medium' : 'text-foreground hover:bg-muted'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </nav>
+      <div className="flex-1 min-w-0">
+        {section === 'stats' ? <AgentsStatsPanel /> : <AgentsList />}
+      </div>
     </div>
   );
 }

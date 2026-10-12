@@ -29,7 +29,15 @@ export interface Contact {
   situationPro?: string;
   revenusMensuels?: number;
   nombrePersonnes?: number;
-  proprietaireDepuis?: string;
+  proprietaireDepuis?: string | number;
+  civilite?: string;
+  estProprietaire?: boolean;
+  fournisseurEnergie?: string;
+  consommationChauffage?: string;
+  factureElectricite?: string;
+  surface15m2?: boolean;
+  travauxEnCours?: boolean;
+  projetDemenagement?: boolean;
   nombreNRP?: number;
   scoreIA?: number;
   creneauOptimalIA?: string;

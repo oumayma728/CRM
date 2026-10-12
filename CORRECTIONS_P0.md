@@ -396,3 +396,171 @@ sans rapport avec ces corrections ; `npm run build` et `tsc` (hors fichiers de t
 2. Lance l'application : les tables et le premier super admin sont créés tout seuls (regarde le journal).
 3. Connecte-toi avec cet e-mail et ce mot de passe : l'écran te demande d'en choisir un nouveau.
 4. Retire `BOOTSTRAP_ADMIN_PASSWORD` de la configuration.
+
+---
+
+## 8. Corrections ajoutées ensuite (liste « P1 »)
+
+| Problème | Correction | Où |
+|---|---|---|
+| Le sélecteur de fichier proposait `.xlsx`, mais seul le CSV est accepté par le serveur | `accept=".csv"` (en attendant de savoir si le client veut Excel) | `FichierContacts.tsx`, `FichiersContacts.tsx`, `FichiersContacts2.tsx` |
+| Requêtes `Take(n)` sans tri (résultats instables, avertissement EF 10102) | `OrderBy` avant chaque `Take` | `PermissionService`, `AnalyticsCrmController`, `QualityCrmController`, `CallAnalysisController`, `MaintenanceController` |
+| Deux pointages ouverts pour le même agent | Index unique filtré `UX_AdvancedAttendance_UnOuvertParJour` (UserId, statut actif ou pause : un seul pointage ouvert par agent) + message clair si deux clics arrivent en même temps + la session oubliée la veille est fermée AVANT d'insérer celle du jour | `ApplicationDbContext`, `AttendanceService` |
+| Plusieurs comptes avec le même e-mail (aucun contrôle à la création !) | Contrôle à la création (409) + index unique `UX_Utilisateur_Email` | `AdminService`, `AdminController`, `AuthController`, `ApplicationDbContext` |
+| Un double clic enregistre l'appel deux fois | Garde synchrone (`useRef`) dans le gestionnaire de qualification | `ContactPage.tsx`, `DialerPage.tsx` |
+| Seulement 10 connexions sur 70 au démarrage | Limite **par compte** (5 par minute) au lieu de par IP, plafond de sécurité par IP (300/min) | `Program.cs` |
+| Compte désactivé encore actif des heures | Le compte est vérifié (une lecture par clé primaire) à chaque requête | `Program.cs` (`OnTokenValidated`) |
+| Santé « OK » base coupée | `/api/health` répond 503 si la base ne répond pas en 3 s | `Program.cs` |
+| Prévision IA en erreur 500 | `DateTime.ToString` ne se traduit pas en SQL : on compte par jour en base, on met en forme ensuite | `AIController.GetForecast` |
+| Comparaison CRM et rémunération en erreur 500 | PostgreSQL refuse une date `Kind=Unspecified` : dates en UTC | `AnalyticsCrmController`, `AgentService.CalculerRemunerationAsync` |
+
+**Migration `AddUniqueIndexesAndPhoneIndex`** : uniquement trois `CreateIndex` (e-mail unique, un pointage ouvert par agent, index
+sur `Contacts.Telephone`). EF voulait aussi supprimer l'ancien index simple sur `AdvancedAttendances.UserId` (devenu redondant) ;
+ce `DropIndex` a été retiré à la main pour que la migration ne fasse que créer (aucun `DropColumn`, `DropTable`, `AlterColumn`).
+Vérification avant d'appliquer sur une base existante : aucun e-mail en double, aucun pointage ouvert en double
+(`select "Email" from "Utilisateur" group by 1 having count(*)>1;`).
+
+**Vérifié sur un vrai PostgreSQL** : 70 agents qui se connectent en même temps depuis une seule IP (70 sur 70), 6 créations simultanées du
+même e-mail (1 créé, 5 refusés, aucune erreur 500), 8 pointages simultanés (1 accepté), compte désactivé refusé à la requête suivante,
+doublon d'e-mail refusé par PostgreSQL lui-même, et les trois routes qui plantaient répondent 200. Les index uniques ne sont pas
+appliqués par la base en mémoire des tests : d'où cette vérification à part.
+
+### Deuxième série (même liste « P1 »)
+
+| Problème | Correction | Où |
+|---|---|---|
+| Un fichier refusé ou sans numéro valide restait copié sur le disque | la copie n'est gardée que si au moins un contact a été importé | `FichierImportHelper` |
+| Deux imports simultanés du même fichier créaient chaque contact en double | verrou PostgreSQL (`pg_advisory_xact_lock`) : un import à la fois | `FichierImportHelper` |
+| L'import chargeait **toute** la table des contacts en mémoire | recherche des doublons lot par lot (1 000 numéros) grâce à l'index `IX_Contacts_Telephone` | `FichierImportHelper`, `ApplicationDbContext` |
+| Mails de bienvenue : « Must issue a STARTTLS command first » à chaque compte créé | SSL/STARTTLS par défaut (sauf port 25), réglage `Email:UseSsl` respecté | `EmailService` |
+| SMTP non configuré = 70 erreurs avec pile d'appels | un simple avertissement dans le journal, sans erreur | `EmailService` |
+| Rôle Qualité affiché « QUALITE » dans le mail (clé `QUAL`) | libellés alignés sur les vraies valeurs de rôle | `EmailService.RoleLabel` |
+| Les réglages e-mail et l'URL du site n'existaient pas dans le déploiement | `Email__*` et `App__Url` ajoutés | `docker-compose.yml`, `render.yaml`, `.env.example` |
+| **`backup.sh` n'existait pas** alors que le README le décrit | script créé : dump `.dump` + `.sql.gz`, rétention, **vérification que la sauvegarde est relisible**, échec bruyant | `backup.sh` |
+
+À faire par toi (pas du code) : renouveler les secrets déjà publiés (mot de passe de la base, secret JWT, clé Groq), renseigner un vrai compte
+SMTP, lancer `backup.sh` en tâche planifiée, et **tester une restauration** sur un autre serveur.
+
+---
+
+## 9. Chat de groupe : les règles sont maintenant appliquées par le serveur
+
+**Problème.** Les canaux du chat étaient cachés seulement dans le navigateur (`getAllowedChannels`). Le serveur ne vérifiait rien :
+n'importe quel utilisateur connecté pouvait lire `GET /api/chat/ADMIN`, rejoindre le groupe et y écrire.
+
+**Règles voulues** (une seule source de vérité : `Backend/Helpers/ChatChannels.cs`) :
+
+| | |
+|---|---|
+| Un groupe par rôle | Agents, Confirmatrices 1, Confirmatrices 2, Confirmatrices client, Commerciaux, Qualité, Technique, Administration, + Général (annonces) |
+| **Lire** | admin et super admin lisent tout ; les autres lisent Général + le groupe de leur rôle (une confirmatrice : selon son type CONF1 / CONF2 / CONFCLIENT) |
+| **Écrire** | admin et super admin écrivent partout (ils choisissent n'importe quel rôle) ; les autres rôles écrivent au groupe de n'importe quel rôle **sauf** : Agents (les agents ne s'écrivent pas entre eux), Confirmatrices client et Commerciaux (admin et super admin seulement), Général (annonces : admins seulement) |
+| Écrire sans lire | possible : un agent écrit au groupe Qualité sans lire ses échanges (liste « Écrire à un autre groupe » dans l'écran) |
+
+**Où.** `ChatChannels.cs` (règles), `ChatController` (historique : 403 / 404, liste des canaux avec `canRead` / `canWrite`), `ChatHub`
+(`JoinChannel`, `SendMessage` : refus avec message clair, message vide ou de plus de 2000 caractères refusé), `TeamChatPage.tsx`
+(deux listes, champ de saisie désactivé en lecture seule, message d'erreur du serveur affiché).
+
+**À savoir.**
+- Hypothèse à confirmer : **Général est en écriture réservée aux admins** (sinon les agents pourraient s'écrire entre eux par là).
+  Un seul endroit à changer si ce n'est pas voulu : `AdminOnlyToWrite` dans `ChatChannels.cs`.
+- Les anciens messages enregistrés dans le canal `CONFIRMATRICES` (remplacé par CONF1 / CONF2 / CONFCLIENT) ne sont plus affichés.
+- Non traité : la liste de conversations de la messagerie 1 à 1 (2 requêtes par utilisateur) et la validation du destinataire.
+
+**Vérifié.** 301 tests automatiques (matrice rôle × canal, API, hub sans réseau), puis en direct avec 10 connexions SignalR simultanées
+(34 vérifications) et dans un navigateur pour l'agent, la qualité, l'admin et le commercial (23 vérifications).
+
+---
+
+## 10. Pointage : un seul écran perso, une seule source de données
+
+| Avant | Après |
+|---|---|
+| Deux pages perso presque identiques (`agent/MonPointagePage` pour les agents, `shared/MonHistoriquePointagePage` pour les autres) | une seule : `MonHistoriquePointagePage` pour tous les rôles (« Mon Pointage », période 7/14/30/60 jours, total des pénalités) |
+| Deux widgets d'entrée / sortie (`AttendanceWidget` et `SessionAttendanceWidget`) ; les 4 tableaux de bord (commercial, conf 1, conf 2, conf client) ne l'affichaient que pendant le chargement | un seul widget (`AttendanceWidget`) ; retiré des tableaux de bord (le bouton d'entrée existe déjà dans l'en-tête) |
+| « Pointage équipe » du technique lisait l'**ancienne** table `Pointages` (seulement les pauses du dialer) : jamais les vrais pointages | la route `/technique/pointage` affiche la page admin « Pointage en Direct » (table `AdvancedAttendances`, déjà autorisée pour le rôle TECH) |
+| Compteur « pointages aujourd'hui » du tableau de bord technique : ancienne table | personnes distinctes pointées aujourd'hui dans `AdvancedAttendances` |
+| Code mort : `technique/Pointage.tsx`, `technique/MonPointageTech.tsx`, `GET /api/technique/pointage`, `GET /api/admin/pointage`, `AdminService.GetPointageAsync`, `PointageAdminDTO` | supprimé |
+
+Vérifié : 341 tests automatiques, puis 21 vérifications dans un navigateur (agent, technique, qualité, admin, conf 1, 2, client, commercial).
+
+---
+
+## 11. Un seul Dashboard (au lieu de trois)
+
+Avant : « Supervision Live », « Dashboard » et « Dashboard Super Admin » répétaient les mêmes chiffres (agents actifs, appels du jour, score moyen,
+graphique par heure, liste des agents en direct).
+
+Maintenant : **une seule page « Dashboard »** (`/admin/dashboard`, pour admin et super admin), construite à partir de l'ancien Dashboard Super Admin :
+
+| Onglet | Contenu |
+|---|---|
+| Vue d'ensemble | agents en ligne, en appel, appels du jour, taux de conversion, **comparaisons jour / semaine / mois**, performance horaire, alertes, statut des agents |
+| Analytique Avancé | statuts RDV, score et RDV par agent, classement (colonne **Salaire Mois : super admin seulement**), villes et départements |
+| Performance des appels | évolution mensuelle des appels, conversions et refus |
+
+Supprimés : `RealTimePage`, l'ancien `DashboardPage`, la route `/superadmin/dashboard`, l'onglet « Pointage » (copie de la page Pointage), la gestion
+d'utilisateurs qui était dans l'ancien Dashboard (page Utilisateurs). Les anciennes adresses `/admin/realtime` et `/superadmin/dashboard` redirigent
+vers `/admin/dashboard`, qui est aussi la page d'arrivée après connexion de l'admin et du super admin.
+
+Défauts corrigés au passage :
+- quand le serveur ne répondait pas, la page affichait des **chiffres inventés** (284 appels, 64,1 %, « Agent 1 »…) : un bandeau d'erreur s'affiche à la place ;
+- les cartes de comparaison de l'ancien Dashboard affichaient **toujours 0** (elles lisaient `current.total` qui n'existe pas dans la réponse) ;
+- le bouton « Gérer les permissions » pointait vers une adresse qui n'existe pas et était montré à l'admin ; il mène maintenant à `/admin/permissions` et n'est visible que par le super admin.
+
+Perdu volontairement : l'export PDF de l'ancien Dashboard et le bouton « envoyer un rappel » aux agents inactifs de Supervision Live (à reprendre dans cette page si besoin).
+
+---
+
+## 12. « Gestion des agents » : classement et statistiques dans la même page
+
+Avant : trois entrées de menu (« Gestion des agents », « Scorecards agents », « Stats agents »).
+Maintenant : **une seule page** `/admin/agents` avec une navigation sur le côté :
+
+| Section | Contenu |
+|---|---|
+| Agents | la liste et les actions de gestion (inchangé) |
+| Stats agents | **Classement** (podium, recherche, tableau) · **Agents nécessitant un suivi** · **Détail d'un agent** (sélecteur, qualité moyenne, total d'appels, positifs / négatifs, évolution de la qualité) |
+
+Les anciennes adresses `/admin/scorecards` et `/admin/agent-stats` ouvrent directement la section Stats agents (`/admin/agents?section=stats`).
+Fichiers : `AgentsPage.tsx` (navigation latérale), `AgentsStatsPanel.tsx` (nouveau) ; supprimés : `ScorecardsPage.tsx`, `AgentStatsPage.tsx`.
+
+Retiré parce que **inventé** : la « matrice des compétences » (le score moyen ± des écarts fixes), la courbe hebdomadaire dessinée à partir du score quand
+il n'y avait pas de données, la « recommandation IA » (la même phrase pour tous les agents) et le bouton « Écouter les appels » qui ne faisait rien.
+
+Point ouvert (serveur, non modifié) : dans le classement, **Score, Qualité, À revoir et Tendance sont calculés à partir du taux de conversion**
+(`score = 50 + taux × 0,5`, qualité = score + 5, « à revoir » toujours 0, tendance déduite du score lui-même). Un agent sans aucun appel affiche donc 50/100.
+Seuls les appels et les conversions sont réels. À remplacer par la vraie note de qualité (évaluations / analyse des appels) : décision à prendre.
+
+---
+
+## 13. Fiche client : l'agent la remplit, tous les agendas l'affichent
+
+Demande : les informations de l'événement d'agenda (projet, RDV avec, date de création, pris pour, adresse, code postal, commune, GSM, propriétaire depuis,
+chauffage, chaudière, fournisseur, consommation, électricité, toit, étude, PV, 15 m², travaux, déménagement, nombre de personnes) doivent
+(1) être saisies par l'agent et (2) apparaître dans le panneau latéral de l'agenda quand on clique sur un RDV (il en manquait beaucoup).
+
+**Base de données** : 7 colonnes ajoutées à `Contacts` (toutes facultatives) : `Civilite`, `EstProprietaire`, `FournisseurEnergie`, `FactureElectricite`, `Surface15m2`,
+`TravauxEnCours`, `ProjetDemenagement`. Migration `AddFicheClientFields` : la méthode `Up` ne contient que des `AddColumn` (les `DropColumn` ne sont que dans `Down`,
+l'annulation générée automatiquement). Les autres champs (projet, adresse, code postal, commune, GSM, chauffage, âge de la chaudière, consommation, toit, étude, PV, personnes,
+« propriétaire depuis ») existaient déjà.
+
+**Serveur**
+- `Helpers/ContactMapper.cs` : **un seul** endroit pour lire / écrire la fiche (création, modification, lecture). Un champ laissé vide ne **efface jamais** ce qui est déjà enregistré,
+  et une `Source` vide ne remplace plus la source existante.
+- `GET /api/Contact` et `GET /api/Contact/{id}` renvoient maintenant la fiche complète (avant : seulement nom, téléphone, e-mail, adresse…). `POST` et `PUT` l'acceptent.
+- `Helpers/RdvMapper.cs` : un seul mappage « RDV + fiche » utilisé par Conf 1, Conf 2, Conf Client (les copies du même code sont supprimées). Le Commercial renvoie aussi les nouveaux champs et la date de création.
+
+**Écrans**
+- `components/crm/ClientInfo.tsx` (nouveau) : les champs (`ClientIdentityFields`, `ClientHousingFields`, boutons Oui / Non) et la fiche en lecture seule (`ClientInfoSheet`, dans l'ordre de l'événement : « Propriétaire : Oui, depuis 14 ans (2012) », « Électricité : 180 € »…). Une valeur manquante s'affiche « — » pour qu'on voie ce qu'il reste à demander.
+- Agent : **Créer une fiche contact** (les 3 sections Logement / Énergie / Foyer sont remplacées par les champs partagés + section « Adresse et projet ») et **Appel en direct** (nouvelle carte « Fiche client » préremplie, bouton « Enregistrer la fiche client »).
+- Panneau latéral des agendas (`FicheContactPanel.tsx` : Conf 1, Conf 2, Conf Client) et agenda du Commercial : la fiche complète.
+
+**Choix d'interprétation à confirmer** : « 15 m² » = oui / non (au moins 15 m² disponibles) ; « Élec » = montant de la facture (texte libre, affiché avec « € » si c'est un nombre) ;
+« chaudière » = âge en années ; « propriétaire depuis » est stocké en **année** (le nombre d'années est calculé à l'affichage).
+
+**Non modifié** : « pris pour » et « date de création du RDV » viennent des RDV existants. La création d'un RDV par l'agent reste dans le code non fusionné (voir plus haut) ;
+les agendas `agent/AgendaPage` et `admin/AgendaPage` utilisent un autre modèle (`appointments`) et n'ont pas été touchés.
+
+Tests : `ClientFicheTests` (4 tests : création + relecture de toute la fiche, modification partielle sans perte, un agent ne modifie pas le contact d'un collègue, les 5 agendas renvoient la même fiche). Suite complète : 345 tests verts.
+Vérifié dans un vrai navigateur sur PostgreSQL : l'agent crée la fiche (toutes les valeurs relues en base), la modifie depuis l'appel en direct, la confirmatrice 1 et le commercial voient les 19 lignes dans le panneau.

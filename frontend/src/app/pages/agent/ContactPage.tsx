@@ -5,6 +5,9 @@ import { agentService, type Contact, type CreateAppelDTO } from '../../services/
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from '../../services/toast';
 import {
+  ClientHousingFields, ClientIdentityFields, emptyFiche, ficheFromContact, ficheToPayload, type ClientFiche,
+} from '../../components/crm/ClientInfo';
+import {
   Phone, PhoneOff, Mic, MicOff, Pause, Play,
   ArrowLeft, Send, CheckCircle, XCircle, RotateCcw,
   MapPin, Mail, Home, Zap, BarChart2,
@@ -124,6 +127,13 @@ export default function ContactPage() {
   const [rdvId, setRdvId]         = useState<string | null>(null);
   const [appelDone, setAppelDone] = useState(false);
 
+  // ── Fiche client (what the agent collects during the call; shown in the agendas afterwards) ──
+  const [fiche, setFiche]           = useState<ClientFiche>(emptyFiche());
+  const [ficheSaving, setFicheSaving] = useState(false);
+  const [ficheDirty, setFicheDirty]   = useState(false);
+  const patchFiche = (patch: Partial<ClientFiche>) => { setFiche(f => ({ ...f, ...patch })); setFicheDirty(true); };
+  const isAgent = user?.role === 'agent';
+
   // ── Call ───────────────────────────────────────────────────────────────────
   const [enAppel, setEnAppel]   = useState(false);
   const [duree, setDuree]       = useState(0);
@@ -150,6 +160,8 @@ export default function ContactPage() {
   const [notes, setNotes]                 = useState('');
   const [dateRappel, setDateRappel]       = useState('');
   const [submitting, setSubmitting]       = useState(false);
+  // Garde synchrone : un double clic part avant le re-rendu qui désactive le bouton
+  const submittingRef = useRef(false);
 
   // ── AI ─────────────────────────────────────────────────────────────────────
   const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
@@ -190,6 +202,35 @@ export default function ContactPage() {
         .finally(() => setLoading(false));
     }
   }, [user?.id]);
+
+  // The dialer list only carries a few fields: load the whole fiche of the contact being called
+  useEffect(() => {
+    if (!isAgent || !contact?.id) return;
+    let cancelled = false;
+    setFicheDirty(false);
+    agentService.getContactById(contact.id)
+      .then(full => { if (!cancelled) setFiche(ficheFromContact(full)); })
+      .catch(() => { if (!cancelled) setFiche(ficheFromContact(contact)); });
+    return () => { cancelled = true; };
+  }, [contact?.id, isAgent]);
+
+  const handleSaveFiche = async () => {
+    if (!contact) return;
+    setFicheSaving(true);
+    try {
+      const saved = await agentService.updateContact(contact.id, {
+        ...ficheToPayload(fiche), telephone: contact.telephone, source: contact.source,
+      } as any);
+      setFiche(ficheFromContact(saved));
+      setContact(c => (c ? { ...c, ...(saved as any) } : c));
+      setFicheDirty(false);
+      toast.success('Fiche client enregistrée');
+    } catch {
+      toast.error("Impossible d'enregistrer la fiche client");
+    } finally {
+      setFicheSaving(false);
+    }
+  };
 
   // ── Call timer ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -309,6 +350,8 @@ export default function ContactPage() {
     const err = getValidationError(action);
     if (err) { toast.warning(err); return; }
 
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     const isConf = !!(returnTo && rdvId);
     try {
@@ -352,6 +395,7 @@ export default function ContactPage() {
     } catch {
       toast.error("Erreur lors de l'enregistrement");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -673,6 +717,26 @@ export default function ContactPage() {
               </button>
             )}
           </div>
+
+          {/* Fiche client : the agent fills it while talking */}
+          {isAgent && (
+            <div className="glass-card p-5 space-y-5" data-testid="fiche-client-card">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-semibold text-sm">Fiche client</h3>
+                {ficheDirty && <span className="text-[10px] text-warning font-medium">Modifications non enregistrées</span>}
+              </div>
+              <ClientIdentityFields value={fiche} onChange={patchFiche} withName />
+              <ClientHousingFields value={fiche} onChange={patchFiche} />
+              <button
+                type="button"
+                onClick={handleSaveFiche}
+                disabled={ficheSaving || !ficheDirty}
+                className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {ficheSaving ? 'Enregistrement…' : 'Enregistrer la fiche client'}
+              </button>
+            </div>
+          )}
         </div>{/* end COL 1 */}
 
         {/* ──────────────────────────────────────────────────────────────── */}

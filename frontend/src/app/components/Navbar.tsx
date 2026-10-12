@@ -42,7 +42,7 @@ const BREAK_MAPPING: Record<PauseType, string> = {
 };
 
 const PAUSE_OPTIONS: PauseOption[] = [
-  { id: 'cafe', label: 'Cafe', icon: <Coffee size={14} />, duration: 15, color: 'amber' },
+  { id: 'cafe', label: 'Cafe', icon: <Coffee size={14} />, duration: 10, color: 'amber' },
   { id: 'dejeuner', label: 'Dejeuner', icon: <Coffee size={14} />, duration: 60, color: 'orange' },
   { id: 'priere', label: 'Priere', icon: <Coffee size={14} />, duration: 20, color: 'emerald' },
   { id: 'technique', label: 'Technique', icon: <Coffee size={14} />, duration: 30, color: 'blue' },
@@ -322,8 +322,8 @@ export function Navbar({ onMobileMenuToggle, mobileMenuOpen }: { onMobileMenuTog
 
       {/* RIGHT SECTION */}
       <div className="flex items-center gap-2">
-        {/* APPEL EN DIRECT — CallButton 3 états */}
-        <CallButton />
+        {/* APPEL EN DIRECT — CallButton 3 états: agents only */}
+        {user?.role === 'agent' && <CallButton />}
 
         {/* POINTAGE — change entre entrée et sortie selon le statut */}
         {agentStatus === 'offline' && (

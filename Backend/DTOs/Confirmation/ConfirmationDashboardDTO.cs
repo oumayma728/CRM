@@ -15,6 +15,7 @@ public class RdvConfirmationDTO
 {
     public long Id { get; set; }
     public long ContactId { get; set; }
+    public string? Civilite { get; set; }
     public string ContactNom { get; set; } = string.Empty;
     public string ContactPrenom { get; set; } = string.Empty;
     public string Telephone { get; set; } = string.Empty;
@@ -37,16 +38,22 @@ public class RdvConfirmationDTO
     public string? CommentaireBanque { get; set; }
     public string? Projet { get; set; }
     // Qualification contact
+    public bool? EstProprietaire { get; set; }
     public DateTime? ProprietaireDepuis { get; set; }
     public string? ModeChauffage { get; set; }
     public string? ConsommationChauffage { get; set; }
     public int? AgeChaudiere { get; set; }
+    public string? FournisseurEnergie { get; set; }
+    public string? FactureElectricite { get; set; }
     public bool? EtudePV { get; set; }
     public bool? EquipePV { get; set; }
     public bool? EquipePAC { get; set; }
     public string? EtatToiture { get; set; }
     public string? EtatIsolation { get; set; }
     public double? Surface { get; set; }
+    public bool? Surface15m2 { get; set; }
+    public bool? TravauxEnCours { get; set; }
+    public bool? ProjetDemenagement { get; set; }
     public int? NombrePersonnes { get; set; }
     public string? ProfessionMr { get; set; }
     public string? ProfessionMme { get; set; }
